@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#040807">
+<title>Registre GCBLO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="css/terminal.css">
+<link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <!-- Zone de sortie : tout ce que les commandes affichent -->
+  <main class="ecran" id="ecran" aria-live="polite" aria-label="Sortie du terminal"></main>
+
+  <!-- Zone de saisie : propositions (au-dessus), ligne de commande, ligne d'aide (dessous) -->
+  <footer class="saisie-zone">
+    <ul class="propositions" id="propositions" role="listbox" aria-label="Propositions" hidden></ul>
+    <form class="ligne" id="formulaire" onsubmit="return false">
+      <label class="invite" id="invite" for="saisie">gcblo:~$</label>
+      <div class="champ">
+        <div class="miroir" id="miroir" aria-hidden="true"></div>
+        <input id="saisie" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send" aria-describedby="aideLigne">
+      </div>
+    </form>
+    <div class="aide-ligne" id="aideLigne"></div>
+  </footer>
+
+  <script type="module" src="js/main.js"></script>
+  <noscript>Cette application a besoin de JavaScript.</noscript>
+</body>
+</html>

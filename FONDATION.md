@@ -229,8 +229,8 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | --- | --- | --- |
 | 0 | Ce document | ✅ validé le 02/11/2026 |
 | 1 | Données et règles (`config`, `dates`, `store`, `dossiers`) + tests | La page de tests est entièrement verte |
-| 2 | Moteur de l'invite : `grammaire`, `analyse`, `completion` + tests de phrases | Chaque phrase d'exemple donne la bonne commande et les bonnes propositions |
-| 3 | Écran : registre et invite en thème Terminal (saisie, propositions, aperçu, couleurs), sauvegarde JSON, reprise v1 | Taper des commandes et voir le registre réagir, sur téléphone et PC |
+| 2 | Moteur de l'invite : `grammaire`, `analyse`, `completion` + tests de phrases | ✅ 02/11/2026 |
+| 3 | Écran : terminal (sortie + invite, propositions, aperçu, couleurs), sauvegarde JSON, reprise v1 | ✅ version de base le 02/11/2026, publiée à la place de la v1 ; le style viendra ensuite |
 | 4 | Jarvis agit : `actions`, confirmations, annulation, fil de réponses, lumière | Piloter tout le registre au clavier |
 | 5 | Finitions : micro et voix, accessibilité, petits écrans | Utilisation au quotidien |
 
