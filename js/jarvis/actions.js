@@ -7,8 +7,10 @@
  *
  * Ce dont il a besoin lui est donné à la création (rien n'est caché) :
  *   regles, store            les données et leurs règles
+ *   reglages                 destinataires des emails par type
  *   ecran                    { ligne(html, classe), tableau(dossiers), fiche(dossier), vider() }
  *   confirmer(question)      → Promise<boolean>  (l'invite pose la question o/n)
+ *   demander(question, choix) → Promise<choix|null>  (question à choix, avec propositions)
  *   ouvrirLien(url)          ouvre l'email (mailto:)
  *   telecharger(nom, texte)  propose un fichier à enregistrer
  *   choisirFichier()         → Promise<File|null>
@@ -16,7 +18,8 @@
 import { COMMANDES, SORTES } from './grammaire.js';
 import { criteresListe } from './analyse.js';
 import { TYPES, STATUTS, STOCKAGE, typeParCode, statutParCode } from '../config.js';
-import { formater } from '../dates.js';
+import { formater, depuisJour, ecartJours } from '../dates.js';
+import { lireCollage } from '../collage.js';
 import { convertirV1, estFormatV1 } from '../reprise-v1.js';
 
 /** Échappe un texte avant de l'insérer dans du HTML. */
@@ -24,7 +27,7 @@ export const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;'
 const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`;
 const SEUIL_CONFIRMATION = 3;
 
-export function creerActions({ regles, store, ecran, confirmer, ouvrirLien, telecharger, choisirFichier }) {
+export function creerActions({ regles, store, reglages, ecran, confirmer, demander, ouvrirLien, telecharger, choisirFichier }) {
   let annulation = null;       // { libelle, faire() } : de quoi défaire la dernière modification
 
   const ok = html => ecran.ligne(`✓ ${html}`, 'ok');
@@ -57,19 +60,48 @@ export function creerActions({ regles, store, ecran, confirmer, ouvrirLien, tele
       ok(`${v.cibles.length === 1 ? esc(v.cibles[0].gcblo) : pluriel(r.modifies, 'dossier modifié', 'dossiers modifiés')} : ${esc(libelle)}${r.inchanges ? ` (${r.inchanges} déjà à jour)` : ''}`);
     },
 
-    relance(v) {
-      const d = v.cible;
+    /**
+     * Sans date : prépare l'email (un seul email récapitulatif par destinataire si
+     * plusieurs dossiers), note la relance, puis propose la relance suivante à J+7.
+     * Avec une date : planifie la relance de tous les dossiers donnés.
+     */
+    async relance(v) {
+      const cibles = v.cibles, ids = cibles.map(d => d.id);
+      const qui = cibles.length === 1 ? esc(cibles[0].gcblo) : pluriel(cibles.length, 'dossier', 'dossiers');
+
       if (v.date) {
-        const r = regles.modifier(d.id, { dateRelance: v.date });
+        if (cibles.length > SEUIL_CONFIRMATION && !(await confirmer(`planifier la relance de ${cibles.length} dossiers au ${formater(v.date)} ?`))) return info('rien n\'a été modifié');
+        const r = regles.modifierPlusieurs(ids, { dateRelance: v.date });
         if (!r.ok) return erreur(esc(premiereErreur(r)));
-        if (r.avant) annulation = { libelle: `la date de relance de ${d.gcblo}`, faire: () => regles.restaurer([r.avant]) };
-        return ok(`relance de ${esc(d.gcblo)} prévue le ${formater(v.date)}`);
+        if (r.modifies) annulation = { libelle: `la date de relance de ${qui}`, faire: () => regles.restaurer(r.avant) };
+        return ok(`relance de ${qui} prévue le ${formater(v.date)}`);
       }
-      const { objet, corps } = regles.email(d);
-      ouvrirLien(`mailto:?subject=${encodeURIComponent(objet)}&body=${encodeURIComponent(corps.replace(/\n/g, '\r\n'))}`);
-      regles.noterRelance(d.id);
-      ok(`email de relance préparé pour ${esc(d.gcblo)}`);
-      info(`astuce : <span class="c-verbe">relance</span> <span class="c-dossier">${esc(d.gcblo)}</span> <span class="c-valeur">+7</span> pour planifier la suivante`);
+
+      // Un email par destinataire (le destinataire dépend du type du dossier)
+      const parDestinataire = new Map();
+      for (const d of cibles) {
+        const a = reglages.destinataire(d.type);
+        parDestinataire.set(a, [...(parDestinataire.get(a) || []), d]);
+      }
+      const emails = [...parDestinataire].map(([a, liste]) => {
+        const { objet, corps } = regles.email(liste);
+        return { a, liste, url: `mailto:${encodeURIComponent(a)}?subject=${encodeURIComponent(objet)}&body=${encodeURIComponent(corps.replace(/\n/g, '\r\n'))}` };
+      });
+      ouvrirLien(emails[0].url);
+      regles.noterRelances(ids);
+      ok(`${emails.length > 1 ? `${emails.length} emails préparés` : cibles.length > 1 ? 'email récapitulatif préparé' : 'email de relance préparé'} pour ${qui}`);
+      // Le navigateur n'ouvre qu'un email par action : les suivants sont des liens à cliquer
+      emails.slice(1).forEach(e => ecran.ligne(`  <a href="${esc(e.url)}">ouvrir l'email suivant</a> <span class="dim">→ ${esc(e.a || 'sans destinataire')} · ${pluriel(e.liste.length, 'dossier', 'dossiers')}</span>`));
+      const sans = [...new Set(cibles.filter(d => !reglages.destinataire(d.type)).map(d => typeParCode(d.type).libelle))];
+      if (sans.length) info(`<span class="dim">astuce : <span class="c-verbe">email</span> <span class="c-valeur">${esc(sans[0].toLowerCase())}</span> prenom.nom@… pour pré-remplir le destinataire ${esc(sans.join(', '))}</span>`);
+
+      // R5 — relance suivante
+      const suivante = regles.jourRelanceSuivante();
+      if (await confirmer(`planifier la prochaine relance au ${formater(suivante)} pour ${cibles.length === 1 ? cibles[0].gcblo : `ces ${cibles.length} dossiers`} ?`)) {
+        const r = regles.modifierPlusieurs(ids, { dateRelance: suivante });
+        if (r.ok && r.modifies) annulation = { libelle: `la date de relance de ${qui}`, faire: () => regles.restaurer(r.avant) };
+        ok(`prochaine relance le ${formater(suivante)}`);
+      }
     },
 
     fci(v) {
@@ -97,6 +129,21 @@ export function creerActions({ regles, store, ecran, confirmer, ouvrirLien, tele
       if (!r.ok) return erreur(esc(premiereErreur(r)));
       annulation = { libelle: `la suppression de ${pluriel(r.retires.length, 'dossier', 'dossiers')}`, faire: () => regles.restaurer(r.retires) };
       ok(`${pluriel(r.retires.length, 'dossier supprimé', 'dossiers supprimés')} · tapez <span class="c-verbe">annule</span> pour revenir en arrière`);
+    },
+
+    jour() { point(); },
+
+    email(v) {
+      if (!v.type) {
+        info('destinataires des relances :');
+        TYPES.forEach(t => info(`  <span class="ty-${t.code}">${esc(t.libelle.padEnd(10))}</span>${esc(reglages.destinataire(t.code) || '—')}`));
+        return info('<span class="dim">pour régler : email ‹type› ‹adresse›</span>');
+      }
+      const libelle = typeParCode(v.type).libelle;
+      if (v.adresse === undefined || v.adresse === null) return info(`destinataire ${esc(libelle)} : ${esc(reglages.destinataire(v.type) || 'aucun')}`);
+      const r = reglages.definirDestinataire(v.type, v.adresse);
+      if (r.erreur) return erreur(esc(r.erreur));
+      ok(v.adresse ? `les relances ${esc(libelle)} iront à ${esc(v.adresse)}` : `destinataire ${esc(libelle)} effacé`);
     },
 
     stats() {
@@ -153,7 +200,76 @@ export function creerActions({ regles, store, ecran, confirmer, ouvrirLien, tele
     }
   };
 
+  /** R8 — le point du jour, affiché à l'ouverture et par la commande « jour ». */
+  function point() {
+    const p = regles.pointDuJour();
+    const date = depuisJour(regles.aujourdhui()).toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+    ecran.ligne(`<b>point du jour</b> <span class="dim">· ${esc(date)}</span>`, 'info');
+    const section = (titre, liste, classe, detail) => {
+      if (!liste.length) return;
+      const lignes = liste.slice(0, 8).map(d =>
+        `  <span class="c-dossier">${esc(d.gcblo)}</span>  <span class="ty-${d.type}">${esc(typeParCode(d.type).libelle.padEnd(8))}</span> <span class="dim">${esc(detail(d))}</span>`);
+      if (liste.length > 8) lignes.push(`  <span class="dim">… et ${liste.length - 8} autres</span>`);
+      ecran.ligne(`<span class="${classe}">${esc(titre)} (${liste.length})</span>\n${lignes.join('\n')}`);
+    };
+    const quand = d => {
+      const ecart = ecartJours(d.dateRelance, regles.aujourdhui());
+      return ecart < 0 ? `relance du ${formater(d.dateRelance).slice(0, 5)} · ${-ecart} j de retard` : `relance le ${formater(d.dateRelance).slice(0, 5)}`;
+    };
+    section('en retard', p.retard, 'retard', quand);
+    section('à relancer aujourd\'hui', p.aujourdhui, 'proche', d => statutParCode(d.statutDft).libelle);
+    section('à relancer sous 3 jours', p.proches, 'proche', quand);
+    section('refusés, à reprendre', p.refuses, 'st-REFUSE', d => statutParCode(d.statutDft).libelle);
+    const conseils = [
+      p.retard.length && '<span class="c-verbe">relance</span> <span class="c-valeur">retard</span>',
+      p.aujourdhui.length + p.proches.length && '<span class="c-verbe">relance</span> <span class="c-valeur">proches</span>',
+      p.refuses.length && '<span class="c-verbe">ls</span> <span class="c-valeur">refuse</span>'
+    ].filter(Boolean);
+    if (!p.retard.length && !p.aujourdhui.length && !p.proches.length && !p.refuses.length) ecran.ligne('✓ rien d\'urgent aujourd\'hui', 'ok');
+    else ecran.ligne(`<span class="dim">→</span> ${conseils.join('<span class="dim">  ·  </span>')}`);
+  }
+
+  /**
+   * R9 — une liste collée (Excel, mail) : lecture, récapitulatif, type demandé une
+   * seule fois pour les lignes qui n'en ont pas, confirmation, création en lot.
+   */
+  async function collage(texte) {
+    const lot = lireCollage(texte, store.tous());
+    const parties = [
+      pluriel(lot.nouveaux.length, 'nouveau', 'nouveaux'),
+      lot.existants.length && `${lot.existants.length} déjà présent${lot.existants.length > 1 ? 's' : ''}`,
+      lot.doublons.length && `${lot.doublons.length} en double dans la liste`,
+      lot.illisibles.length && `${lot.illisibles.length} ligne${lot.illisibles.length > 1 ? 's' : ''} sans GCBLO`
+    ].filter(Boolean);
+    info(`${pluriel(lot.lus, 'GCBLO trouvé', 'GCBLO trouvés')} : ${parties.join(', ')}`);
+    lot.conflits.forEach(c => ecran.ligne(`  ⚠ ${esc(c.gcblo)} figure en ${esc(typeParCode(c.garde).libelle)} et en ${esc(typeParCode(c.autre).libelle)} : gardé en ${esc(typeParCode(c.garde).libelle)}, à vérifier (<span class="c-verbe">passe</span> <span class="c-dossier">${esc(c.gcblo)}</span> <span class="c-mot">en</span> <span class="c-valeur">${esc(c.autre.toLowerCase())}</span> pour corriger)`, 'proche'));
+    if (lot.existants.length) info(`<span class="dim">  déjà présents : ${esc(lot.existants.slice(0, 6).map(e => e.gcblo).join(', '))}${lot.existants.length > 6 ? '…' : ''}</span>`);
+    if (!lot.nouveaux.length) return info('rien à créer');
+
+    // Le type : celui des colonnes ou de la ligne, sinon demandé une fois pour tous
+    const sansType = lot.nouveaux.filter(n => !n.type);
+    if (sansType.length) {
+      const choix = await demander(`type pour ${sansType.length === lot.nouveaux.length ? 'ces' : `les ${sansType.length}`} ${pluriel(sansType.length, 'dossier', 'dossiers')} sans type ?`, ['num21', 'air', 'sogetrel']);
+      if (!choix) return info('rien n\'a été créé');
+      const code = { num21: 'NUM21', air: 'AIR', sogetrel: 'SOGETREL' }[choix];
+      sansType.forEach(n => { n.type = code; });
+    }
+    const apercu = lot.nouveaux.slice(0, 10).map(n => `  <span class="c-dossier">${esc(n.gcblo)}</span>  <span class="ty-${n.type}">${esc(typeParCode(n.type).libelle.padEnd(8))}</span> <span class="dim">${esc(n.fci.join(', ') || 'sans FCI')}</span>`);
+    if (lot.nouveaux.length > 10) apercu.push(`  <span class="dim">… et ${lot.nouveaux.length - 10} autres</span>`);
+    ecran.ligne(apercu.join('\n'));
+    if (!(await confirmer(`créer ${pluriel(lot.nouveaux.length, 'dossier', 'dossiers')} ?`))) return info('rien n\'a été créé');
+
+    const r = regles.creerPlusieurs(lot.nouveaux.map(n => ({ type: n.type, gcblo: n.gcblo, fci: n.fci })));
+    if (r.crees.length) {
+      annulation = { libelle: `la création de ${pluriel(r.crees.length, 'dossier', 'dossiers')}`, faire: () => regles.supprimer(...r.crees.map(d => d.id)) };
+      ok(`${pluriel(r.crees.length, 'dossier créé', 'dossiers créés')} · tapez <span class="c-verbe">annule</span> pour revenir en arrière`);
+    }
+    r.refuses.forEach(x => erreur(`${esc(x.saisie.gcblo)} : ${esc(x.erreur)}`));
+  }
+
   return {
+    point,
+    collage,
     /** Exécute une analyse complète. */
     async executer(analyse) {
       const fn = commandes[analyse.commande.id];

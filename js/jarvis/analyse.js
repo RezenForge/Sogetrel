@@ -16,9 +16,10 @@
  *
  * Elle est appelée à chaque touche : elle doit rester rapide et sans effet.
  */
-import { COMMANDES, MOTS_STATUT, MOTS_TYPE, MOTS_FILTRE, JOURS, plat, commandeParVerbe } from './grammaire.js';
+import { COMMANDES, MOTS_STATUT, MOTS_TYPE, MOTS_FILTRE, GROUPES, JOURS, plat, commandeParVerbe } from './grammaire.js';
 import { FORMATS, typeParCode } from '../config.js';
-import { normaliserGcblo } from '../dossiers.js';
+import { normaliserGcblo, etatRelance } from '../dossiers.js';
+import { estEmail } from '../reglages.js';
 import { ajouterJours, ecartJours, estJour, versJour } from '../dates.js';
 
 /* ---------------- Découpage ---------------- */
@@ -80,10 +81,16 @@ export function lireDate(mot, aujourdhui) {
  * Essaie de lire un mot comme valeur d'une « sorte » donnée.
  * Renvoie { ok, valeur?, erreur?, candidats? }.
  */
-export function accepter(sorte, mot, ctx) {
+export function accepter(sorte, mot, ctx, { multiple = false } = {}) {
   const p = plat(mot);
   switch (sorte) {
     case 'dossier': {
+      // Groupe (« retard », « proches ») : seulement là où plusieurs dossiers sont permis
+      if (GROUPES[p]) {
+        if (!multiple) return { ok: false, erreur: `« ${mot} » désigne un groupe : un seul dossier est attendu ici` };
+        const liste = ctx.dossiers.filter(d => etatRelance(d, ctx.aujourdhui) === GROUPES[p]);
+        return liste.length ? { ok: true, valeur: liste, groupe: p } : { ok: false, erreur: `aucun dossier dans le groupe « ${p} »` };
+      }
       const trouves = chercherDossiers(mot, ctx.dossiers);
       if (trouves.length === 1) return { ok: true, valeur: trouves[0] };
       if (trouves.length > 1) return { ok: false, erreur: `« ${mot} » : ${trouves.length} dossiers correspondent, précisez`, candidats: trouves };
@@ -115,6 +122,9 @@ export function accepter(sorte, mot, ctx) {
       const f = String(mot).toUpperCase();
       return FORMATS.fci.test(f) ? { ok: true, valeur: f } : { ok: false, erreur: `« ${mot} » : un FCI est F suivi de 11 chiffres` };
     }
+    case 'adresse':
+      if (p === 'aucun' || p === 'aucune') return { ok: true, valeur: '' };
+      return estEmail(mot) ? { ok: true, valeur: mot } : { ok: false, erreur: `« ${mot} » n'est pas une adresse email` };
     case 'commande':
       return commandeParVerbe(mot) ? { ok: true, valeur: commandeParVerbe(mot) } : { ok: false, erreur: `commande inconnue : « ${mot} »` };
     case 'texte':
@@ -130,6 +140,7 @@ const MOTS_CONNUS = {
   'statut-ou-type': [...Object.keys(MOTS_STATUT), ...Object.keys(MOTS_TYPE)],
   filtre: [...Object.keys(MOTS_STATUT), ...Object.keys(MOTS_TYPE), ...Object.keys(MOTS_FILTRE)],
   date: ['demain', 'apres-demain', 'aujourdhui', ...JOURS],
+  dossier: Object.keys(GROUPES),
   commande: COMMANDES.flatMap(c => c.verbes)
 };
 /** Vrai si `mot` est le début d'un mot connu de cette sorte (« re » → « refuse »). */
@@ -177,7 +188,7 @@ export function analyser(texte, curseur = texte.length, ctx = { dossiers: [], au
     const sl = slots[i];
     if (!sl) return false;
     if (sl.mot) return sl.mot.startsWith(plat(mot)) || peutCommencer(i + 1, mot, partiel);
-    return accepter(sl.sorte, mot, ctx).ok || (partiel && debutPossible(sl.sorte, mot));
+    return accepter(sl.sorte, mot, ctx, sl).ok || (partiel && debutPossible(sl.sorte, mot));
   };
   const aDesValeurs = sl => Array.isArray(res.valeurs[sl.nom]) && res.valeurs[sl.nom].length > 0;
 
@@ -225,12 +236,17 @@ export function analyser(texte, curseur = texte.length, ctx = { dossiers: [], au
         break;
       }
 
-      const r = accepter(sl.sorte, m.texte, ctx);
+      const r = accepter(sl.sorte, m.texte, ctx, sl);
       // Dans une liste déjà commencée, un mot qui ne convient pas peut être le début de la suite
       if (!r.ok && sl.multiple && aDesValeurs(sl) && peutCommencer(s + 1, m.texte, courant)) { s++; continue; }
 
-      m.role = r.ok ? roleDe(sl.sorte) : 'erreur';
-      if (sl.multiple) (res.valeurs[sl.nom] ||= []).push(r.ok ? r.valeur : null);
+      m.role = !r.ok ? 'erreur' : r.groupe ? 'valeur' : roleDe(sl.sorte);
+      if (sl.multiple) {
+        const liste = (res.valeurs[sl.nom] ||= []);
+        // Un groupe apporte plusieurs dossiers d'un coup ; on évite les doublons
+        const nouveaux = !r.ok ? [null] : Array.isArray(r.valeur) ? r.valeur : [r.valeur];
+        nouveaux.forEach(v => { if (v === null || !liste.includes(v)) liste.push(v); });
+      }
       else res.valeurs[sl.nom] = r.ok ? r.valeur : null;
       if (!r.ok) { if (courant) res.erreurCourante = r.erreur; else res.erreurs.push(r.erreur); }
       if (courant) res.enCours = { sorte: sl.sorte, slot: sl, mot: m.texte, debut: m.debut, fin: m.fin, candidats: r.candidats || null, liaison };

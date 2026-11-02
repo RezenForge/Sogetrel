@@ -57,10 +57,13 @@ Un dossier **clos** n'a plus d'alerte de relance.
 1. **Doublon** : on ne peut pas créer deux dossiers avec le même GCBLO, quel que soit le type.
 2. **Relance en retard** : la date de relance est passée et le dossier n'est pas clos. La ligne est marquée en rouge.
 3. **Relance proche** : la date tombe aujourd'hui ou dans les 3 jours. La ligne est marquée en orange.
-4. **Email de relance** : objet `Relance dossier [GCBLO]`, corps avec le GCBLO et les FCI (ou « aucun »). Il s'ouvre dans Outlook avec le destinataire réglé dans les paramètres.
+4. **Email de relance** : objet `Relance dossier [GCBLO]`, corps avec le GCBLO et les FCI (ou « aucun »). Il s'ouvre dans Outlook, adressé au **destinataire du type** du dossier (réglé une fois par type : NUM21, AIR, Sogetrel).
+   **Relance groupée** : pour plusieurs dossiers, un seul email récapitulatif par destinataire (objet `Relance dossiers (N)`, une ligne par dossier avec ses FCI). Après l'email, la relance suivante à J+7 est proposée pour tous.
 5. **Relance suivante** : après une relance, on peut planifier la suivante à J+7 (délai réglable). Le statut DFT ne change pas.
 6. **Historique** : chaque création, modification ou relance ajoute une ligne. On ne la modifie jamais.
 7. **Suppression** : toujours confirmée et annulable juste après.
+8. **Point du jour** : à l'ouverture et sur demande, quatre listes : relances en retard, relances du jour, relances dans les 3 jours, dossiers refusés (à reprendre). Les dossiers clos n'y figurent jamais.
+9. **Création en lot** (collage d'une liste) : chaque ligne est validée comme une création normale (R1 à R6). Les lignes valides sont créées ensemble, les autres sont listées avec leur motif. Tout le lot s'annule d'un coup.
 
 Toutes ces règles vivent dans **un seul fichier** (`js/dossiers.js`), et chacune a un test.
 
@@ -138,9 +141,12 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 | Afficher | `montre [‹type›] [‹statut›] [retard] [sans-fci] [texte]` | `montre air en retard` |
 | Ouvrir | `ouvre ‹dossier›` | `ouvre 501404` |
 | Compter | `combien [‹type›] [‹statut›]` | `combien de refusés` |
-| Divers | `quoi de neuf` · `annule` · `aide` · `sauvegarde` · `restaure` | |
+| Point du jour | `jour` (aussi affiché à l'ouverture) | `jour` |
+| Destinataires | `email [‹type›] [‹adresse›\|aucun]` | `email air jean.dupont@exemple.fr` |
+| Coller une liste | coller dans l'invite plusieurs lignes copiées d'Excel ou d'un mail | colonnes du classeur robot reconnues |
+| Divers | `annule` · `aide` · `sauvegarde` · `restaure` · `clear` | |
 
-`‹dossiers›` accepte : un GCBLO complet ou un morceau (`501404`), plusieurs (`501404 501423`, `501404 et 501423`), `le` (le dernier dossier évoqué), ou un groupe (`tous les air`, `tous les refusés`, `tous en retard`).
+`‹dossiers›` accepte : un GCBLO complet ou un morceau (`501404`), plusieurs (`501404 501423`), ou un groupe : `retard` (relances en retard) et `proches` (relances dans les 3 jours). Exemple : `relance retard` prépare l'email récapitulatif de tous les retards. *Prévu ensuite : `le` (dernier dossier évoqué), `tous les air`, `tous les refusés`.*
 
 Enchaîner : `ajoute SBA202020-THF010 air puis relance-le demain`.
 
@@ -253,3 +259,12 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | « Refusé » | Reste ouvert : les alertes de relance restent actives |
 | Champs d'un dossier | Ceux du §2, sans ajout pour l'instant |
 | Interface principale | L'invite de commande avec autocomplétion ; la liste montre le résultat |
+
+---
+
+## 9. Journal des évolutions
+
+| Date | Évolution |
+| --- | --- |
+| 02/11/2026 | v2 publiée : terminal avec autocomplétion, reprise de la v1 |
+| 02/11/2026 | Point du jour (R8), collage d'une liste (R9), relance groupée et destinataires par type (R4) |

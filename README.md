@@ -18,6 +18,17 @@ Au premier lancement, les dossiers de la version 1 enregistrés dans ce navigate
 | `Entrée` | exécute (ou choisit la proposition sélectionnée) |
 | `Échap` | ferme les propositions, puis vide la ligne |
 
+### Au quotidien
+
+| Pour… | Faire |
+| --- | --- |
+| savoir quoi faire aujourd'hui | rien : le **point du jour** s'affiche à l'ouverture (ou `jour`) |
+| ajouter une liste de dossiers | **coller** dans l'invite une liste copiée d'Excel ou d'un mail : le type est repris des colonnes du classeur robot, sinon demandé une fois |
+| relancer tous les retards | `relance retard` : un email récapitulatif par destinataire, puis la relance suivante à J+7 est proposée |
+| adresser les relances | `email air prenom.nom@…` (une fois par type) ; `email` affiche les réglages |
+| changer un statut | `passe 501404 en refuse` |
+| tout le reste | `aide` |
+
 ## Avancement
 
 | Étape | Contenu | État |
@@ -26,7 +37,8 @@ Au premier lancement, les dossiers de la version 1 enregistrés dans ce navigate
 | 1 | Données et règles + tests | ✅ |
 | 2 | Moteur de l'invite (grammaire, analyse, autocomplétion) + tests | ✅ |
 | 3 | Terminal : écran, saisie, reprise v1, sauvegarde | ✅ version de base — style à venir |
-| 4 | Jarvis : enchaînements, groupes (« tous les air »), lumière | à venir |
+| + | Point du jour, collage d'une liste, relance groupée, destinataires par type | ✅ |
+| 4 | Jarvis : phrases naturelles, enchaînements, « tous les air », lumière | à venir |
 | 5 | Finitions : voix, accessibilité, petits écrans | à venir |
 
 ## Lancer les tests
@@ -50,10 +62,12 @@ js/dates.js              dates « jour » sans heure ni fuseau
 js/store.js              garde et enregistre les dossiers, prévient l'écran des changements
 js/dossiers.js           les règles : seul module autorisé à modifier les dossiers
 js/reprise-v1.js         relit les dossiers et sauvegardes de la version 1
+js/reglages.js           destinataires des emails par type
+js/collage.js            lit une liste collée (Excel, mail, classeur robot)
 js/jarvis/grammaire.js   les commandes, sous forme de tableau (source unique)
 js/jarvis/analyse.js     comprend la ligne tapée (ne modifie rien)
 js/jarvis/completion.js  propositions, texte grisé, aperçu (ne modifie rien)
 js/jarvis/actions.js     exécute une commande via les règles
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   94 tests : règles, analyse, autocomplétion
+tests/                   116 tests : règles, analyse, autocomplétion, collage, relances
 ```

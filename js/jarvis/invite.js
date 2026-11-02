@@ -16,6 +16,8 @@ import { proposer, apercu } from './completion.js';
 import { esc } from './actions.js';
 import { typeParCode, statutParCode } from '../config.js';
 import { formater } from '../dates.js';
+import { ressembleAUneListe } from '../collage.js';
+import { plat } from './grammaire.js';
 
 const CLE_HISTORIQUE = 'gcblo.v2.historique';
 
@@ -27,8 +29,9 @@ export function creerInvite({ racine, contexte }) {
   let historique = [];
   try { historique = JSON.parse(localStorage.getItem(CLE_HISTORIQUE)) || []; } catch { /* historique facultatif */ }
   let posHistorique = -1;
-  let attente = null;            // question oui/non en cours : { resoudre }
+  let attente = null;            // question en cours : { resoudre, choix: null (oui/non) | ['…', …] }
   let executer = async () => {};
+  let surCollage = null;         // reçoit le texte d'une liste collée
 
   /* ---------------- Zone de sortie ---------------- */
 
@@ -95,7 +98,15 @@ export function creerInvite({ racine, contexte }) {
   /** Recalcule tout à partir du texte et du curseur, puis redessine. */
   function rafraichir() {
     // Pendant une question oui/non : on affiche juste ce qui est tapé, sans analyse
-    if (attente) { miroir.innerHTML = esc(champ.value); return; }
+    if (attente) {
+      // Question à choix : les choix possibles sont proposés comme d'habitude
+      const choix = attente.choix ? attente.choix.filter(c => c.startsWith(plat(champ.value))) : [];
+      const fantome = choix.length && champ.value ? choix[0].slice(champ.value.length) : '';
+      etat = { analyse: null, choisi: -1, prop: { propositions: choix.map(c => ({ inserer: c, libelle: c, detail: '', sorte: 'valeur' })), fantome, remplace: { debut: 0, fin: champ.value.length } } };
+      miroir.innerHTML = esc(champ.value) + (fantome ? `<span class="fantome">${esc(fantome)}</span>` : '');
+      dessinerPropositions();
+      return;
+    }
     const texte = champ.value, curseur = champ.selectionStart ?? texte.length;
     const ctx = contexte();
     const analyse = analyser(texte, curseur, ctx);
@@ -116,7 +127,7 @@ export function creerInvite({ racine, contexte }) {
 
   function dessinerPropositions() {
     const { propositions } = etat.prop;
-    listeEl.hidden = !propositions.length || attente !== null;
+    listeEl.hidden = !propositions.length || (attente !== null && !attente.choix);
     listeEl.innerHTML = propositions.map((p, i) => `
       <li role="option" data-i="${i}" class="${i === etat.choisi ? 'choisi' : ''} ${p.alerte || ''}" aria-selected="${i === etat.choisi}">
         <span class="p-libelle c-${p.sorte === 'verbe' ? 'verbe' : p.sorte === 'dossier' ? 'dossier' : p.sorte === 'mot' ? 'mot' : 'valeur'}">${esc(p.libelle)}</span>
@@ -142,11 +153,13 @@ export function creerInvite({ racine, contexte }) {
   async function valider() {
     const texte = champ.value.trim();
     if (attente) {
-      const oui = /^(o|oui|y|yes)$/i.test(texte);
       const r = attente; attente = null;
-      ecran.ligne(`<span class="dim">${esc(inviteEl.textContent)}</span> ${esc(texte || 'non')}`, 'echo');
+      // Oui/non, ou le choix qui commence par ce qui est tapé (un seul possible)
+      const trouves = r.choix ? r.choix.filter(c => c === plat(texte) || (texte && c.startsWith(plat(texte)))) : [];
+      const reponse = r.choix ? (trouves.length === 1 ? trouves[0] : null) : /^(o|oui|y|yes)$/i.test(texte);
+      ecran.ligne(`<span class="dim">${esc(inviteEl.textContent)}</span> ${esc(r.choix ? (reponse || 'annulé') : (reponse ? 'oui' : 'non'))}`, 'echo');
       remettreInvite(); champ.value = '';
-      r.resoudre(oui);
+      r.resoudre(reponse);
       rafraichir();
       return;
     }
@@ -200,19 +213,34 @@ export function creerInvite({ racine, contexte }) {
       }
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (ouvert && etat.choisi >= 0) accepter(etat.choisi); else valider();
+      if (ouvert && etat.choisi >= 0) { accepter(etat.choisi); if (attente?.choix) valider(); } else valider();
     } else if (e.key === 'Escape') {
       e.preventDefault();
       if (ouvert) { listeEl.hidden = true; etat.choisi = -1; } else { champ.value = ''; rafraichir(); }
     }
   });
   listeEl.addEventListener('mousedown', e => e.preventDefault());       // garder le focus dans le champ
-  listeEl.addEventListener('click', e => { const li = e.target.closest('[data-i]'); if (li) accepter(Number(li.dataset.i)); champ.focus(); });
+  listeEl.addEventListener('click', e => {
+    const li = e.target.closest('[data-i]');
+    if (li) { accepter(Number(li.dataset.i)); if (attente?.choix) valider(); }
+    champ.focus();
+  });
+  // Coller une liste (plusieurs GCBLO, ou plusieurs lignes) : traitée comme un lot, pas comme une commande
+  champ.addEventListener('paste', async e => {
+    const texte = e.clipboardData?.getData('text') || '';
+    if (attente || !surCollage || !ressembleAUneListe(texte)) return;
+    e.preventDefault();
+    const lignes = texte.split(/\r?\n/).filter(l => l.trim()).length;
+    ecran.ligne(`<span class="invite-echo">gcblo:~$</span> <span class="dim">(liste collée : ${lignes} ligne${lignes > 1 ? 's' : ''})</span>`, 'echo');
+    await surCollage(texte);
+    rafraichir();
+  });
   racine.querySelector('#ecran').addEventListener('click', () => { if (!getSelection().toString()) champ.focus(); });
 
   return {
     ecran,
     brancher(fn) { executer = fn; },
+    brancherCollage(fn) { surCollage = fn; },
     /** Pose une question oui/non dans l'invite elle-même. */
     confirmer(question) {
       return new Promise(resoudre => {
@@ -221,6 +249,16 @@ export function creerInvite({ racine, contexte }) {
         inviteEl.classList.add('question');
         listeEl.hidden = true; miroir.innerHTML = ''; aideEl.textContent = 'o = oui · n ou Entrée = non';
         champ.value = ''; champ.focus();
+      });
+    },
+    /** Pose une question à choix ; renvoie le choix, ou null si la réponse ne correspond à aucun. */
+    demander(question, choix) {
+      return new Promise(resoudre => {
+        attente = { resoudre, choix };
+        inviteEl.textContent = `${question} [${choix.join('/')}]`;
+        inviteEl.classList.add('question');
+        aideEl.className = 'aide-ligne'; aideEl.textContent = 'Tab complète · Entrée valide · réponse vide = annuler';
+        champ.value = ''; champ.focus(); rafraichir();
       });
     },
     rafraichir,

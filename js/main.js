@@ -9,6 +9,7 @@
  */
 import { creerStore, supportNavigateur, supportMemoire } from './store.js';
 import { creerDossiers } from './dossiers.js';
+import { creerReglages } from './reglages.js';
 import { aujourdhui } from './dates.js';
 import { convertirV1, lireV1Navigateur } from './reprise-v1.js';
 import { creerInvite } from './jarvis/invite.js';
@@ -19,6 +20,7 @@ let stockageOk = true;
 try { localStorage.setItem('gcblo.test', '1'); localStorage.removeItem('gcblo.test'); } catch { stockageOk = false; }
 const store = creerStore(stockageOk ? supportNavigateur() : supportMemoire());
 const regles = creerDossiers(store);
+const reglages = creerReglages();
 
 /* 2. Reprise de la v1, une seule fois (seulement si la v2 est encore vide). */
 let reprise = null;
@@ -38,6 +40,7 @@ const invite = creerInvite({
     dossiers: store.tous(),
     aujourdhui: aujourdhui(new Date()),
     regles,
+    reglages,
     recents,
     // Les commandes utilisées récemment remontent en tête des propositions
     memoriser: id => { const i = recents.indexOf(id); if (i >= 0) recents.splice(i, 1); recents.unshift(id); }
@@ -48,8 +51,10 @@ const invite = creerInvite({
 const actions = creerActions({
   regles,
   store,
+  reglages,
   ecran: invite.ecran,
   confirmer: question => invite.confirmer(question),
+  demander: (question, choix) => invite.demander(question, choix),
   ouvrirLien: url => { const a = document.createElement('a'); a.href = url; a.click(); },
   telecharger: (nom, texte) => {
     const url = URL.createObjectURL(new Blob([texte], { type: 'application/json' }));
@@ -65,18 +70,19 @@ const actions = creerActions({
   })
 });
 invite.brancher(analyse => actions.executer(analyse));
+invite.brancherCollage(texte => actions.collage(texte));
 
 /* 5. Prévenir si l'enregistrement échoue. */
 store.ecouter(e => { if (!e.enregistre) invite.ecran.ligne('✗ enregistrement impossible : faites une « sauvegarde » pour ne rien perdre', 'err'); });
 
 /* 6. Accueil. */
 const e = invite.ecran;
-const s = regles.statistiques();
 e.ligne('<b>Registre GCBLO</b> <span class="dim">v2 · terminal</span>', 'titre');
 if (reprise?.dossiers.length) e.ligne(`✓ ${reprise.dossiers.length} dossiers repris de la version 1${reprise.ignores ? ` (${reprise.ignores} ignorés)` : ''}`, 'ok');
 if (!stockageOk) e.ligne('✗ ce navigateur bloque l\'enregistrement : les données seront perdues à la fermeture', 'err');
-e.ligne(`${s.total} dossiers${s.retard ? ` · <span class="retard">${s.retard} relance${s.retard > 1 ? 's' : ''} en retard</span>` : ''}${s.proche ? ` · <span class="proche">${s.proche} proche${s.proche > 1 ? 's' : ''}</span>` : ''}`, 'info');
-e.ligne('<span class="dim">Commencez à taper : les propositions suivent. <span class="c-verbe">aide</span> liste les commandes.</span>', 'info');
+e.ligne(`<span class="dim">${store.tous().length} dossiers · commencez à taper, les propositions suivent · <span class="c-verbe">aide</span> liste les commandes · collez une liste copiée d'Excel pour l'ajouter</span>`, 'info');
+e.ligne('', 'info');
+actions.point();
 invite.rafraichir();
 invite.focus();
 

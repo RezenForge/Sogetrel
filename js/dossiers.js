@@ -40,6 +40,18 @@ export function lireFci(saisie) {
   return { fci, invalides };
 }
 
+/**
+ * R2 / R3 — état d'alerte de relance d'un dossier, au jour donné : 'retard', 'proche' ou null.
+ * Fonction pure, exportée : l'invite s'en sert aussi pour les groupes « retard » et « proches ».
+ */
+export function etatRelance(dossier, jour) {
+  if (!dossier.dateRelance || statutParCode(dossier.statutDft)?.clos) return null;
+  const ecart = ecartJours(dossier.dateRelance, jour);
+  if (ecart < 0) return 'retard';
+  if (ecart <= RELANCE.joursProches) return 'proche';
+  return null;
+}
+
 const identifiant = () => (globalThis.crypto?.randomUUID?.() ?? `id-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`);
 
 /* ---------------- Les règles ---------------- */
@@ -108,18 +120,10 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
     return { ok: true, dossier, avant: actuel };
   }
 
-  /** R2 / R3 — état d'alerte de relance d'un dossier : 'retard', 'proche' ou null. */
-  function etatRelance(dossier, reference = jour()) {
-    if (!dossier.dateRelance || statutParCode(dossier.statutDft)?.clos) return null;
-    const ecart = ecartJours(dossier.dateRelance, reference);
-    if (ecart < 0) return 'retard';
-    if (ecart <= RELANCE.joursProches) return 'proche';
-    return null;
-  }
-
   return {
     valider,
-    etatRelance,
+    /** R2 / R3 — voir etatRelance() plus haut ; par défaut, au jour d'aujourd'hui. */
+    etatRelance: (dossier, reference = jour()) => etatRelance(dossier, reference),
 
     /** Crée un dossier. Le type est obligatoire ; le reste a des valeurs par défaut. */
     creer(saisie) {
@@ -129,6 +133,25 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
       const dossier = { id: identifiant(), ...valeur, creeLe: date, modifieLe: date, historique: [{ date, action: 'creation', detail: 'Dossier créé' }] };
       store.ajouter(dossier);
       return { ok: true, dossier: store.parId(dossier.id) };
+    },
+
+    /**
+     * R9 — crée plusieurs dossiers en un seul enregistrement. Chaque saisie est
+     * validée comme une création normale ; un GCBLO présent deux fois dans le lot
+     * n'est créé qu'une fois. Renvoie { crees, refuses: [{ saisie, erreur }] }.
+     */
+    creerPlusieurs(saisies) {
+      const date = instant();
+      const crees = [], refuses = [], vus = new Set();
+      for (const saisie of saisies) {
+        const { ok, erreurs, valeur } = valider(saisie);
+        if (!ok) { refuses.push({ saisie, erreur: Object.values(erreurs)[0] }); continue; }
+        if (vus.has(valeur.gcblo)) { refuses.push({ saisie, erreur: `${valeur.gcblo} est en double dans la liste` }); continue; }
+        vus.add(valeur.gcblo);
+        crees.push({ id: identifiant(), ...valeur, creeLe: date, modifieLe: date, historique: [{ date, action: 'creation', detail: 'Dossier créé (liste collée)' }] });
+      }
+      if (crees.length) store.ajouter(...crees);
+      return { crees: crees.map(d => store.parId(d.id)), refuses };
     },
 
     /** Modifie un dossier. `changements` ne contient que les champs à changer. */
@@ -165,7 +188,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
       const existants = versions.filter(v => store.parId(v.id));
       const absents = versions.filter(v => !store.parId(v.id));
       if (existants.length) store.remplacer(...existants);
-      absents.forEach(v => store.ajouter(v));
+      if (absents.length) store.ajouter(...absents);
       return { ok: true, restaures: versions.length };
     },
 
@@ -178,14 +201,44 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
       return { ok: true, dossier: store.parId(id) };
     },
 
+    /** R4 + R6 — même chose pour plusieurs dossiers, en un seul enregistrement. */
+    noterRelances(ids) {
+      const e = entree('relance', 'Email de relance préparé (groupé)');
+      const versions = ids.map(id => store.parId(id)).filter(Boolean).map(d => ({ ...d, modifieLe: e.date, historique: [...d.historique, e] }));
+      if (versions.length) store.remplacer(...versions);
+      return { ok: true, notes: versions.length };
+    },
+
     /** R5 — planifie la relance suivante à J + délai. Le statut DFT ne change pas. */
     planifierRelanceSuivante(id, delai = RELANCE.delaiSuivante) {
       return this.modifier(id, { dateRelance: ajouterJours(jour(), delai) });
     },
 
-    /** R4 — objet et corps de l'email de relance. */
-    email(dossier) {
-      return { objet: EMAIL.objet(dossier), corps: EMAIL.corps(dossier) };
+    /** Le jour d'aujourd'hui selon l'horloge des règles (« AAAA-MM-JJ »). */
+    aujourdhui: () => jour(),
+
+    /** Date de la relance suivante (aujourd'hui + délai). */
+    jourRelanceSuivante(delai = RELANCE.delaiSuivante) { return ajouterJours(jour(), delai); },
+
+    /** R4 — objet et corps de l'email de relance (un dossier, ou plusieurs en un seul email). */
+    email(dossierOuListe) {
+      const liste = Array.isArray(dossierOuListe) ? dossierOuListe : [dossierOuListe];
+      return liste.length === 1
+        ? { objet: EMAIL.objet(liste[0]), corps: EMAIL.corps(liste[0]) }
+        : { objet: EMAIL.objetGroupe(liste), corps: EMAIL.corpsGroupe(liste) };
+    },
+
+    /** R8 — le point du jour : quatre listes, triées par date de relance. */
+    pointDuJour(liste = store.tous()) {
+      const ref = jour();
+      const parRelance = (a, b) => (a.dateRelance || '').localeCompare(b.dateRelance || '') || a.gcblo.localeCompare(b.gcblo);
+      const ouverts = liste.filter(d => !statutParCode(d.statutDft)?.clos);
+      return {
+        retard: ouverts.filter(d => etatRelance(d, ref) === 'retard').sort(parRelance),
+        aujourdhui: ouverts.filter(d => d.dateRelance === ref).sort(parRelance),
+        proches: ouverts.filter(d => etatRelance(d, ref) === 'proche' && d.dateRelance !== ref).sort(parRelance),
+        refuses: ouverts.filter(d => d.statutDft === 'REFUSE').sort((a, b) => a.gcblo.localeCompare(b.gcblo))
+      };
     },
 
     /**

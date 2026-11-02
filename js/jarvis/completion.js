@@ -10,9 +10,10 @@
  *
  * ctx = { dossiers, aujourdhui, regles, recents: [verbes récents] }
  */
-import { COMMANDES, MOTS_STATUT, MOTS_TYPE, JOURS, plat, motPourCode } from './grammaire.js';
+import { COMMANDES, MOTS_STATUT, MOTS_TYPE, GROUPES, JOURS, plat, motPourCode } from './grammaire.js';
 import { STATUTS, TYPES, statutParCode, typeParCode } from '../config.js';
 import { formater } from '../dates.js';
+import { etatRelance } from '../dossiers.js';
 import { chercherDossiers, lireDate, criteresListe } from './analyse.js';
 
 const MAX = 8;
@@ -46,14 +47,19 @@ function dossiers(mot, ctx, enCours, analyse) {
     const urgence = pourRelance ? ({ retard: 0, proche: 1 }[alerte(d)] ?? 2) : 0;
     return urgence * 1000 + pos;
   };
-  return base.filter(d => !deja.has(d.id))
+  // Groupes (« retard », « proches ») là où plusieurs dossiers sont permis, s'ils ne sont pas vides
+  const groupes = !enCours.slot?.multiple ? [] : Object.entries(GROUPES)
+    .map(([mot_, etat]) => ({ mot_, n: ctx.dossiers.filter(d => etatRelance(d, ctx.aujourdhui) === etat).length, etat }))
+    .filter(g => g.n && g.mot_.startsWith(plat(mot)))
+    .map(g => ({ inserer: g.mot_ + ' ', libelle: g.mot_, detail: `groupe · ${g.n} dossier${g.n > 1 ? 's' : ''} ${g.etat === 'retard' ? 'en retard' : 'à relancer sous 3 jours'}`, sorte: 'valeur', alerte: g.etat === 'retard' ? 'retard' : null }));
+  return [...groupes, ...base.filter(d => !deja.has(d.id))
     .sort((a, b) => score(a) - score(b) || a.gcblo.localeCompare(b.gcblo))
     .slice(0, MAX)
     .map(d => {
       const e = alerte(d);
       const relance = d.dateRelance ? ` · relance ${formater(d.dateRelance).slice(0, 5)}${e === 'retard' ? ' (retard)' : ''}` : '';
       return { inserer: d.gcblo + ' ', libelle: d.gcblo, detail: `${typeParCode(d.type)?.libelle} · ${statutParCode(d.statutDft)?.libelle}${relance}`, sorte: 'dossier', alerte: e };
-    });
+    })];
 }
 
 const statuts = () => STATUTS.map(s => ({ inserer: motPourCode(MOTS_STATUT, s.code) + ' ', libelle: motPourCode(MOTS_STATUT, s.code), detail: `statut : ${s.libelle}`, sorte: 'valeur' }));
@@ -86,6 +92,12 @@ export function proposer(analyse, ctx) {
       { inserer: 'retard ', libelle: 'retard', detail: 'relance en retard', sorte: 'valeur' },
       { inserer: 'sans-fci ', libelle: 'sans-fci', detail: 'sans FCI', sorte: 'valeur' }], mot); break;
     case 'date': liste = commencePar(dates(ctx), mot); break;
+    case 'adresse': {
+      const actuel = ctx.reglages?.destinataire(analyse.valeurs.type) || '';
+      liste = commencePar([...(actuel ? [{ inserer: actuel + ' ', libelle: actuel, detail: 'adresse actuelle', sorte: 'valeur' }] : []),
+        { inserer: 'aucun ', libelle: 'aucun', detail: 'efface le destinataire', sorte: 'valeur' }], mot);
+      break;
+    }
     case 'commande': liste = verbes(mot, ctx).map(p => ({ ...p, inserer: p.inserer })); break;
     default: liste = [];
   }
@@ -117,7 +129,18 @@ export function apercu(analyse, ctx) {
       const quoi = v.valeur.statut ? `statut → ${statutParCode(v.valeur.statut).libelle}` : `type → ${typeParCode(v.valeur.type).libelle}`;
       return `→ ${v.cibles.length === 1 ? v.cibles[0].gcblo : n(v.cibles)} : ${quoi}${v.cibles.length > 3 ? ' (confirmation)' : ''}`;
     }
-    case 'relance': return v.date ? `→ relance de ${v.cible.gcblo} prévue le ${formater(v.date)}` : `→ email de relance pour ${v.cible.gcblo}`;
+    case 'relance': {
+      const qui = v.cibles.length === 1 ? v.cibles[0].gcblo : n(v.cibles);
+      if (v.date) return `→ relance de ${qui} prévue le ${formater(v.date)}`;
+      const types = [...new Set(v.cibles.map(d => d.type))];
+      const sans = types.filter(t => !ctx.reglages?.destinataire(t)).map(t => typeParCode(t).libelle);
+      return `→ ${v.cibles.length === 1 ? 'email de relance' : `${types.length > 1 ? `${types.length} emails récapitulatifs` : 'email récapitulatif'}`} pour ${qui}${sans.length ? ` · sans destinataire : ${sans.join(', ')}` : ''}`;
+    }
+    case 'jour': return '→ le point du jour';
+    case 'email':
+      if (!v.type) return '→ affiche les destinataires';
+      if (v.adresse === undefined || v.adresse === null) return `→ destinataire ${typeParCode(v.type).libelle} : ${ctx.reglages?.destinataire(v.type) || 'aucun'}`;
+      return `→ destinataire ${typeParCode(v.type).libelle} : ${v.adresse || 'effacé'}`;
     case 'fci': return `→ ${v.cible.gcblo} : + ${v.fci.join(', ')}`;
     case 'note': return `→ note ajoutée à ${v.cible.gcblo}`;
     case 'ouvre': return `→ fiche de ${v.cible.gcblo}`;

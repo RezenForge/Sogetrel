@@ -64,7 +64,7 @@ groupe('Autocomplétion', () => {
   test('texte fantôme du verbe', () => egal(P('rel').fantome, 'ance'));
   test('dossier : morceau de référence → GCBLO complets', () => egal(P('ouvre 5014').propositions.map(p => p.libelle), ['SBA501404-THF010', 'SBA501423-THF010']));
   test('dossier : fantôme complète la référence', () => egal(P('ouvre LRO').fantome, '500767-THF010'));
-  test('relance : les dossiers en retard d\'abord', () => egal(P('relance ').propositions[0].libelle, 'SBA501404-THF010'));
+  test('relance : le groupe « retard » puis les dossiers en retard d\'abord', () => egal(P('relance ').propositions.slice(0, 2).map(p => p.libelle), ['retard', 'SBA501404-THF010']));
   test('après un dossier : proposer « en »', () => egal(P('passe 501404 ').propositions[0].inserer, 'en '));
   test('après « en » : statuts puis types', () => {
     const l = P('passe 501404 en ').propositions.map(p => p.libelle);

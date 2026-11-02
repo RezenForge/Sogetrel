@@ -53,6 +53,19 @@ export const EMAIL = Object.freeze({
     'Merci pour votre retour.',
     '',
     'Cordialement'
+  ].join('\n'),
+  /** Relance groupée : un seul email pour plusieurs dossiers. */
+  objetGroupe: dossiers => `Relance dossiers (${dossiers.length})`,
+  corpsGroupe: dossiers => [
+    'Bonjour,',
+    '',
+    'Je reviens vers vous concernant les dossiers suivants :',
+    '',
+    ...dossiers.map(d => `- ${d.gcblo} — FCI : ${d.fci.length ? d.fci.join(', ') : 'aucun'}`),
+    '',
+    'Merci pour votre retour.',
+    '',
+    'Cordialement'
   ].join('\n')
 });
 

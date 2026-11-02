@@ -73,9 +73,10 @@ export function creerStore(support = supportNavigateur()) {
     parId: id => dossiers.find(d => d.id === id) || null,
     parGcblo: gcblo => dossiers.find(d => d.gcblo === gcblo) || null,
 
-    ajouter(dossier) {
-      dossiers = Object.freeze([...dossiers, geler(dossier)]);
-      enregistrer('ajout', [dossier.id]);
+    /** Ajoute un ou plusieurs dossiers, en un seul enregistrement. */
+    ajouter(...nouveaux) {
+      dossiers = Object.freeze([...dossiers, ...nouveaux.map(geler)]);
+      enregistrer('ajout', nouveaux.map(d => d.id));
     },
 
     /** Remplace un ou plusieurs dossiers par leur nouvelle version (même id). */

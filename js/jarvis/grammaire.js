@@ -23,9 +23,9 @@ export const COMMANDES = Object.freeze([
   { id: 'passe', verbes: ['passe'], resume: 'change le statut DFT ou le type',
     forme: 'passe ‹dossiers› en ‹statut|type›',
     emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }, { mot: 'en' }, { nom: 'valeur', sorte: 'statut-ou-type' }] },
-  { id: 'relance', verbes: ['relance'], resume: 'prépare l\'email ; avec une date, planifie la relance',
-    forme: 'relance ‹dossier› [date]',
-    emplacements: [{ nom: 'cible', sorte: 'dossier' }, { nom: 'date', sorte: 'date', optionnel: true }] },
+  { id: 'relance', verbes: ['relance'], resume: 'prépare l\'email (groupé si plusieurs dossiers) ; avec une date, planifie la relance',
+    forme: 'relance ‹dossiers|retard|proches› [date]',
+    emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }, { nom: 'date', sorte: 'date', optionnel: true }] },
   { id: 'fci', verbes: ['fci'], resume: 'ajoute des FCI à un dossier',
     forme: 'fci ‹dossier› ‹fci…›',
     emplacements: [{ nom: 'cible', sorte: 'dossier' }, { nom: 'fci', sorte: 'fci', multiple: true }] },
@@ -38,6 +38,11 @@ export const COMMANDES = Object.freeze([
   { id: 'supprime', verbes: ['supprime', 'rm'], resume: 'supprime des dossiers (confirmation demandée)',
     forme: 'supprime ‹dossiers›',
     emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }] },
+  { id: 'jour', verbes: ['jour', 'point', 'briefing'], resume: 'le point du jour : retards, relances du jour et proches, refusés',
+    forme: 'jour', emplacements: [] },
+  { id: 'email', verbes: ['email', 'destinataire'], resume: 'règle le destinataire des relances pour un type (ou les affiche)',
+    forme: 'email [type] [adresse|aucun]',
+    emplacements: [{ nom: 'type', sorte: 'type', optionnel: true }, { nom: 'adresse', sorte: 'adresse', optionnel: true }] },
   { id: 'stats', verbes: ['stats'], resume: 'compteurs par type, statut et alertes', forme: 'stats', emplacements: [] },
   { id: 'annule', verbes: ['annule', 'undo'], resume: 'annule la dernière modification', forme: 'annule', emplacements: [] },
   { id: 'sauvegarde', verbes: ['sauvegarde'], resume: 'télécharge une sauvegarde JSON', forme: 'sauvegarde', emplacements: [] },
@@ -60,6 +65,8 @@ export const MOTS_STATUT = Object.freeze({
   refuse: 'REFUSE', refus: 'REFUSE'
 });
 export const MOTS_TYPE = Object.freeze({ num21: 'NUM21', air: 'AIR', sogetrel: 'SOGETREL' });
+/** Groupes de dossiers utilisables à la place d'une référence (là où plusieurs dossiers sont acceptés). */
+export const GROUPES = Object.freeze({ retard: 'retard', proches: 'proche' });
 export const MOTS_FILTRE = Object.freeze({ retard: 'retard', 'en-retard': 'retard', 'sans-fci': 'sansFci', sansfci: 'sansFci' });
 
 /** Jours de la semaine, dimanche = 0 (comme Date.getDay). */
@@ -67,7 +74,8 @@ export const JOURS = Object.freeze(['dimanche', 'lundi', 'mardi', 'mercredi', 'j
 
 /** Ce que veut dire chaque « sorte » d'emplacement (affiché dans l'aide). */
 export const SORTES = Object.freeze({
-  dossier: 'un GCBLO complet ou un morceau (ex. 501404)',
+  dossier: 'un GCBLO complet ou un morceau (ex. 501404) ; là où plusieurs sont permis : retard, proches',
+  adresse: 'une adresse email, ou « aucun » pour l\'effacer',
   'nouveau-gcblo': 'un GCBLO au format AAA000000-AAA000',
   type: 'num21, air ou sogetrel',
   'statut-ou-type': 'a-faire, en-validation, mis-a-dispo, refuse — ou un type',
