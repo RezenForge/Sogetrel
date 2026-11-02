@@ -86,6 +86,10 @@
 
   /* Cadres pixel : bordure dessinée par ombres (coins crantés automatiques) */
   --px: 3px;
+
+  /* Palette des petits bâtisseurs (mêmes couleurs dans les deux thèmes) */
+  --px-hat: #f2b233; --px-hat-dark: #b8740f; --px-ink: #24180f; --px-skin: #f0c08a;
+  --px-cloth: #3d6fb6; --px-vest: #e8722a; --px-steel: #a3a9b0; --px-wood: #8a5a2b;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -210,7 +214,8 @@ svg.px.lg { width: 24px; height: 24px; }
 .side { display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto; padding: var(--px); margin: calc(-1 * var(--px)); }
 .main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 
-@media (max-width: 899px) {
+/* En dessous de 1440 px : compteurs en bandeau, registre pleine largeur, actions en bas */
+@media (max-width: 1439px) {
   .app { display: flex; flex-direction: column; gap: 10px; padding-block: 10px 0; padding-bottom: 0; }
   .side { display: contents; }
   .stats { order: 1; }
@@ -244,16 +249,18 @@ svg.px.lg { width: 24px; height: 24px; }
 .dock .pbtn.gold { grid-column: 1 / -1; height: 42px; font-size: 15px; }
 .dock .menu .pbtn { width: 100%; }
 .dock .only-phone { display: none; }
-@media (max-width: 899px) {
+@media (max-width: 1439px) {
   .dock {
     grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 8px; margin-inline: calc(-1 * max(14px, env(safe-area-inset-left, 0px))) calc(-1 * max(14px, env(safe-area-inset-right, 0px)));
     padding: 10px max(14px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
     background: var(--surface-2); box-shadow: 0 calc(-1 * var(--px)) 0 var(--stroke);
   }
-  .dock .pbtn.gold { grid-column: auto; height: 44px; }
-  .dock .pbtn { height: 44px; padding: 0 6px; flex-direction: column; gap: 3px; font-size: 11px; }
-  .dock .pbtn.gold { flex-direction: row; font-size: 14px; }
+  .dock .pbtn, .dock .pbtn.gold { grid-column: auto; height: 44px; }
   .dock .only-phone { display: inline-flex; }
+}
+@media (max-width: 899px) {
+  .dock .pbtn { padding: 0 6px; flex-direction: column; gap: 3px; font-size: 11px; }
+  .dock .pbtn.gold { flex-direction: row; font-size: 14px; }
   .dock kbd { display: none; }
 }
 
@@ -263,7 +270,7 @@ svg.px.lg { width: 24px; height: 24px; }
   position: absolute; left: 0; right: 0; top: calc(100% + 8px); z-index: 20; min-width: 220px;
   display: grid; padding: 6px;
 }
-@media (max-width: 899px) { .dock .menu-pop { top: auto; bottom: calc(100% + 10px); left: auto; right: 0; } }
+@media (max-width: 1439px) { .dock .menu-pop { top: auto; bottom: calc(100% + 10px); left: auto; right: 0; } }
 .menu-pop button {
   display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 9px 10px;
   text-align: left; cursor: pointer; font-size: 14px;
@@ -284,8 +291,9 @@ svg.px.lg { width: 24px; height: 24px; }
 .stat.alert .v { color: var(--c); }
 .stat .l { font-size: 12px; color: var(--muted); letter-spacing: .03em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .stat[aria-pressed="true"] { background: var(--sunk); box-shadow: 0 -3px 0 var(--c), 0 3px 0 var(--c), -3px 0 0 var(--c), 3px 0 0 var(--c), inset 0 3px 0 var(--shade); }
+@media (max-width: 1439px) { .stats { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; } .stat { padding: 8px 12px; } .stat .v { font-size: 30px; } }
 @media (max-width: 899px) {
-  .stats { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; }
+  .stats { gap: 7px; }
   .stat { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 2px; padding: 7px 2px 6px; }
   .stat .ico { grid-row: auto; }
   .stat .v { font-size: 25px; }
@@ -384,6 +392,21 @@ svg.px.lg { width: 24px; height: 24px; }
 .row.falling { z-index: 2; pointer-events: none; }
 .fx-layer { position: fixed; z-index: 40; overflow: hidden; pointer-events: none; }
 .fx-layer i { position: absolute; left: 0; top: 0; display: block; }
+/* Construction d'une nouvelle ligne (voir BuildFx) */
+.list { position: relative; }
+.build-layer { position: absolute; z-index: 3; pointer-events: none; }
+.bld { position: absolute; left: 0; bottom: 1px; width: 28px; height: 28px; }
+.bld svg { position: absolute; inset: 0; width: 100%; height: 100%; shape-rendering: crispEdges; }
+.bld .f2 { visibility: hidden; }
+.bld .f1 { animation: frame-a var(--rate, .26s) steps(1) infinite; }
+.bld .f2 { animation: frame-b var(--rate, .26s) steps(1) infinite; }
+@keyframes frame-a { 0% { visibility: visible; } 50% { visibility: hidden; } }
+@keyframes frame-b { 0% { visibility: hidden; } 50% { visibility: visible; } }
+.bld-front { position: absolute; top: 0; bottom: 0; left: 0; width: 6px;
+  background: repeating-linear-gradient(180deg, var(--accent) 0 6px, var(--stroke) 6px 8px); }
+.bld-scaffold { position: absolute; inset: 0; box-shadow: inset 0 0 0 2px var(--stroke-soft);
+  background: repeating-linear-gradient(135deg, var(--sunk) 0 8px, transparent 8px 16px); outline: 2px dashed var(--stroke); outline-offset: -6px; }
+.bld-spark { position: absolute; left: 0; top: 0; width: 3px; height: 3px; background: var(--px-hat); }
 .c-gcblo { font-size: 20px; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .c-fci .data, .c-aff, .c-rel .data { font-size: 18px; }
 .d-short { display: none; }
@@ -1460,8 +1483,25 @@ const PixelIcons = {
     stats:    ['......##.', '......##.', '...##.##.', '...##.##.', '##.##.##.', '##.##.##.', '##.##.##.', '#########'],
     scroll:   ['.#######.', '#.#+++++#', '.##+++++#', '..#+###+#', '..#+++++#', '..#+###+#', '..#+++++#', '..######.', '.........'],
     moon:     ['..####.', '.##....', '##.....', '##.....', '##.....', '.##....', '..####.'],
-    sun:      ['#..#..#', '.#####.', '.#aaa#.', '##aaa##', '.#aaa#.', '.#####.', '#..#..#']
+    sun:      ['#..#..#', '.#####.', '.#aaa#.', '##aaa##', '.#aaa#.', '.#####.', '#..#..#'],
+
+    /* Bâtisseurs (12×14) — y casque, Y bord, k encre, s peau, o gilet, b bleu de travail, h acier, w bois */
+    'bld-walk1': ['....yyyy....', '...yyyyyy...', '..YYYYYYYY..', '....ssss....', '....sksk....', '....ssss....', '...oooooo...',
+                  '..sobbbbos..', '...obbbbo...', '...bbbbbb...', '....bbbb....', '....bbbb....', '...kkkkkk...', '............'],
+    'bld-walk2': ['....yyyy....', '...yyyyyy...', '..YYYYYYYY..', '....ssss....', '....sksk....', '....ssss....', '...oooooo...',
+                  '..sobbbbos..', '...obbbbo...', '...bbbbbb...', '...bb..bb...', '..bb....bb..', '.kkk....kkk.', '............'],
+    'bld-ham1':  ['....yyyy..hh', '...yyyyyy.hh', '..YYYYYYYYw.', '....ssss.w..', '....sksk.w..', '....ssss.s..', '...oooooos..',
+                  '...oobbo....', '...obbbbo...', '...bbbbbb...', '...bb..bb...', '...bb..bb...', '..kkk..kkk..', '............'],
+    'bld-ham2':  ['....yyyy....', '...yyyyyy...', '..YYYYYYYY..', '....ssss....', '....sksk....', '....ssss....', '...oooooo...',
+                  '...oobboss..', '...obbbbo.w.', '...bbbbbb.w.', '...bb..bbhhh', '...bb..bbhhh', '..kkk..kkk..', '............'],
+    'bld-carry1':['..wwwwwwww..', '..wwwwwwww..', '..s.yyyy.s..', '..syyyyyys..', '..YYYYYYYY..', '....ssss....', '....sksk....',
+                  '...oooooo...', '...obbbbo...', '...bbbbbb...', '....bbbb....', '....bbbb....', '...kkkkkk...', '............'],
+    'bld-carry2':['..wwwwwwww..', '..wwwwwwww..', '..s.yyyy.s..', '..syyyyyys..', '..YYYYYYYY..', '....ssss....', '....sksk....',
+                  '...oooooo...', '...obbbbo...', '...bbbbbb...', '...bb..bb...', '..bb....bb..', '.kkk....kkk.', '............']
   },
+  /** Couleurs des caractères de sprite (variables CSS). */
+  palette: { a: '--accent', y: '--px-hat', Y: '--px-hat-dark', k: '--px-ink', s: '--px-skin', o: '--px-vest',
+             b: '--px-cloth', h: '--px-steel', w: '--px-wood' },
   build() {
     const NS = 'http://www.w3.org/2000/svg';
     const sprite = document.getElementById('sprite');
@@ -1480,7 +1520,7 @@ const PixelIcons = {
           let end = x; while (row[end + 1] === ch) end++;
           const r = document.createElementNS(NS, 'rect');
           r.setAttribute('x', x); r.setAttribute('y', y); r.setAttribute('width', end - x + 1); r.setAttribute('height', 1);
-          if (ch === 'a') r.setAttribute('style', 'fill:var(--accent)');
+          if (PixelIcons.palette[ch]) r.setAttribute('style', `fill:var(${PixelIcons.palette[ch]})`);
           else { r.setAttribute('fill', 'currentColor'); if (ch === '+') r.setAttribute('fill-opacity', '.4'); }
           if (name === 'torch' && ch === 'a') r.setAttribute('class', 'flame');
           sym.appendChild(r);
@@ -1713,6 +1753,102 @@ const ListView = {
  *      (compensation du défilement, sinon la liste se recale d'un bloc).
  * Désactivée (simple fondu) si l'utilisateur a demandé moins d'animations.
  */
+/**
+ * Animation de création « chantier » : trois petits bâtisseurs traversent la
+ * nouvelle ligne de gauche à droite. Le premier pose les briques (la ligne
+ * apparaît derrière lui), le deuxième martèle en projetant des étincelles,
+ * le troisième apporte des planches. Puis ils sortent et la ligne clignote.
+ * Le calque est placé dans la zone de défilement : il suit la liste si on défile.
+ */
+const BuildFx = {
+  SPEED: 0.5,          // px par ms
+  STEP_MS: 45,         // durée d'une image (aspect rétro)
+
+  sprite(kind, rate) {
+    const el = document.createElement('div');
+    el.className = 'bld';
+    el.style.setProperty('--rate', rate);
+    el.innerHTML = `<svg class="f1"><use href="#p-bld-${kind}1"/></svg><svg class="f2"><use href="#p-bld-${kind}2"/></svg>`;
+    return el;
+  },
+
+  spark(layer, x, y) {
+    for (let k = 0; k < 4; k++) {
+      const p = document.createElement('i');
+      p.className = 'bld-spark';
+      layer.appendChild(p);
+      const vx = (Math.random() - .3) * 120, vy = -(60 + Math.random() * 80);
+      p.animate(CrushFx.stepped(5, t => {
+        const s = t * .3;
+        return { transform: `translate(${Math.round(x + vx * s)}px, ${Math.round(y + vy * s + 300 * s * s)}px)`, opacity: t < .8 ? 1 : 0 };
+      }), { duration: 300, fill: 'forwards' }).finished.then(() => p.remove());
+    }
+  },
+
+  async build(id) {
+    const list = $('#list');
+    const row = [...$$('#rows .row')].find(r => r.dataset.id === id);
+    if (!row) return;
+    row.scrollIntoView({ block: 'nearest' });
+    if (CrushFx.reduced()) {
+      row.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200 });
+      return;
+    }
+
+    const W = row.offsetWidth, H = row.offsetHeight;
+    const buildMs = Math.min(1800, Math.max(900, W / BuildFx.SPEED));
+    const exitMs = 420, total = buildMs + exitMs;
+    const frames = ms => Math.max(4, Math.round(ms / BuildFx.STEP_MS));
+
+    // Calque de chantier superposé à la ligne
+    const layer = document.createElement('div');
+    layer.className = 'build-layer';
+    Object.assign(layer.style, { left: row.offsetLeft + 'px', top: row.offsetTop + 'px', width: W + 'px', height: H + 'px' });
+    const scaffold = document.createElement('div'); scaffold.className = 'bld-scaffold';
+    const front = document.createElement('div'); front.className = 'bld-front';
+    layer.append(scaffold, front);
+    const crew = [
+      { el: BuildFx.sprite('walk', '.24s'), gap: 6 },     // poseur de briques, en tête
+      { el: BuildFx.sprite('ham', '.18s'), gap: 40 },     // marteleur
+      { el: BuildFx.sprite('carry', '.28s'), gap: 76 }    // porteur de planches
+    ];
+    crew.forEach(c => layer.appendChild(c.el));
+    list.appendChild(layer);
+
+    // Avancement du chantier : x(t) = W·t, la ligne se dévoile derrière le premier bâtisseur
+    const n = frames(buildMs);
+    const reveal = t => Math.round(W * t);
+    const anims = [
+      row.animate(CrushFx.stepped(n, t => ({ clipPath: `inset(0 ${W - reveal(t)}px 0 0)` })), { duration: buildMs }),
+      scaffold.animate(CrushFx.stepped(n, t => ({ clipPath: `inset(0 0 0 ${reveal(t)}px)` })), { duration: buildMs, fill: 'forwards' }),
+      front.animate(CrushFx.stepped(n, t => ({ transform: `translateX(${reveal(t) - 3}px)`, opacity: t < 1 ? 1 : 0 })), { duration: buildMs, fill: 'forwards' }),
+      ...crew.map(c => c.el.animate(CrushFx.stepped(frames(total), t => {
+        const ms = t * total;
+        const x = ms <= buildMs ? reveal(ms / buildMs) : W + (ms - buildMs) * BuildFx.SPEED * 1.2;
+        const hop = ms > buildMs && ms < buildMs + 160 ? -6 : 0;          // petit saut de fin de chantier
+        return { transform: `translate(${Math.round(x - c.gap - 28)}px, ${hop}px)` };
+      }), { duration: total, fill: 'forwards' }))
+    ];
+
+    // Étincelles du marteau à intervalles réguliers
+    const hammerer = crew[1];
+    const sparkTimer = setInterval(() => {
+      const m = new DOMMatrixReadOnly(getComputedStyle(hammerer.el).transform);
+      const x = m.m41 + 28, y = H - 8;
+      if (x > 0 && x < W) BuildFx.spark(layer, x, y);
+    }, 180);
+
+    await anims[0].finished.catch(() => {});
+    clearInterval(sparkTimer);
+    // Ligne terminée : clignotement doré
+    const live = [...$$('#rows .row')].find(r => r.dataset.id === id);
+    live?.animate([{ boxShadow: 'inset 0 0 0 3px var(--accent)' }, { boxShadow: 'inset 0 0 0 0 transparent' }],
+      { duration: 360, iterations: 2, easing: 'steps(2, end)' });
+    await Promise.all(anims.slice(3).map(a => a.finished.catch(() => {})));
+    layer.remove();
+  }
+};
+
 const CrushFx = {
   busy: false,
   FRAMES: 10,        // nombre d'images de la chute (aspect rétro)
@@ -1886,6 +2022,7 @@ const FormDialog = {
     }
     $('#dlgForm').close();
     Toast.show(FormDialog.editingId ? (res.unchanged ? 'Aucune modification.' : `${res.dossier.gcblo} mis à jour.`) : `${res.dossier.gcblo} ajouté au registre.`);
+    if (!FormDialog.editingId) BuildFx.build(res.dossier.id);
   }
 };
 

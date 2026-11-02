@@ -29,6 +29,8 @@ Raccourcis : `N` nouveau dossier · `/` recherche · double-clic sur une ligne =
 - Habillage « donjon 2D » en pixel art (thèmes Donjon et Parchemin), purement visuel.
 - Écran unique : sur téléphone la page ne défile pas, seule la liste des dossiers défile ; un appui sur un dossier affiche ses actions.
 - Jauges des statuts DFT (fenêtre « Stats » sur téléphone).
+- Animations pixel : à la création, trois petits bâtisseurs construisent la ligne ; à la suppression, les lignes du dessus tombent et l'écrasent. Remplacées par un simple fondu si le système demande moins d'animations.
+- Mise en page : colonne latérale à partir de 1440 px ; en dessous, compteurs en bandeau et actions en bas d'écran.
 
 ## Dépendances
 
