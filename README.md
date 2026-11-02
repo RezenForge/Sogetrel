@@ -48,6 +48,7 @@ C'est un interpréteur de mots-clés intégré (pas d'IA en ligne) : il fonction
 - Historique par dossier : création, modifications, relances préparées.
 - Exports Excel, CSV (séparateur `;`) et sauvegarde / restauration JSON.
 - Habillage « donjon 2D » en pixel art (thèmes Donjon et Parchemin), purement visuel.
+- Thème **Terminal** (« hacker ») : console noire, couleurs ANSI, infos présentées comme des sorties de commandes (`gcblo stats`, `gcblo ls --type=… --dft=…` qui reflète les filtres). Jarvis y devient une lumière qui respire au milieu de la barre de commande : bleue au repos, ambre s'il y a des relances en retard, verte en frappe et après une réussite, rouge en écoute ou en cas d'erreur. Un clic dessus lance le briefing (ou le micro). Thème accessible par le bouton de thème ou en disant « mode terminal ».
 - Écran unique : sur téléphone la page ne défile pas, seule la liste des dossiers défile ; un appui sur un dossier affiche ses actions.
 - Jauges des statuts DFT (fenêtre « Stats » sur téléphone).
 - Animations pixel : à la création, trois petits bâtisseurs construisent la ligne ; à la suppression, les lignes du dessus tombent et l'écrasent. Remplacées par un simple fondu si le système demande moins d'animations.
@@ -55,7 +56,7 @@ C'est un interpréteur de mots-clés intégré (pas d'IA en ligne) : il fonction
 
 ## Dépendances
 
-SheetJS 0.18.5 (CDN) pour l'import/export Excel, polices Pixelify Sans et VT323 (Google Fonts).
+SheetJS 0.18.5 (CDN) pour l'import/export Excel, polices Pixelify Sans, VT323 et JetBrains Mono (Google Fonts).
 Sans connexion, l'app reste utilisable : seul l'Excel est désactivé (CSV et JSON fonctionnent) et les polices retombent sur une police système.
 
 ## Architecture

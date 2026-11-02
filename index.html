@@ -36,7 +36,7 @@
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=VT323&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=VT323&family=JetBrains+Mono:wght@400;600;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
@@ -211,7 +211,7 @@ svg.px.lg { width: 24px; height: 24px; }
   padding-right: max(14px, env(safe-area-inset-right, 0px));
   padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
 }
-.side { display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto; padding: var(--px); margin: calc(-1 * var(--px)); }
+.side { display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: var(--px); margin: calc(-1 * var(--px)); }
 .main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 
 /* En dessous de 1440 px : compteurs en bandeau, registre pleine largeur, actions en bas */
@@ -626,6 +626,241 @@ input[type="date"].field-in { font-family: var(--font-data); font-size: 19px; }
   .jv-log { left: 6px; width: calc(100% - 12px); max-height: 46vh; }
 }
 @media (prefers-reduced-motion: reduce) { .jv-prompt svg, #jvMic.on { animation: none; } }
+
+/* ==========================================================================
+   THÈME TERMINAL (« hacker ») — data-theme="terminal"
+   Console noire, police à chasse fixe, couleurs ANSI, balayage cathodique.
+   Les infos se lisent comme des sorties de commandes ; Jarvis est une
+   lumière qui respire au milieu de la barre de commande.
+   ========================================================================== */
+:root[data-theme="terminal"] {
+  --bg: #040807; --wall: none;
+  --surface: #07100c; --surface-2: #0a1712; --sunk: #020504;
+  --stroke: #1e7a45; --stroke-soft: #123b24;
+  --fg: #c6f7d4; --muted: #6fbf8a; --subtle: #3f7a55;
+  --accent: #39ff88; --accent-hi: #7dffb0; --accent-fg: #00160a;
+  --hilite: transparent; --shade: transparent; --overlay: rgba(0, 8, 4, .78); --focus: #39ff88;
+  --cat-num21: #59a8ff; --cat-num21-soft: transparent;
+  --cat-air: #ffd75f;   --cat-air-soft: transparent;
+  --cat-sogetrel: #ff6ad5; --cat-sogetrel-soft: transparent;
+  --st-neutral: #b9c7bf; --st-neutral-soft: transparent;
+  --st-info: #3ce7ff;    --st-info-soft: transparent;
+  --st-warning: #ffb347; --st-warning-soft: transparent;
+  --st-success: #39ff88; --st-success-soft: transparent;
+  --st-danger: #ff4f5e;  --st-danger-soft: transparent;
+  --row-overdue: rgba(255, 79, 94, .09); --row-overdue-edge: #ff4f5e;
+  --row-soon: rgba(255, 179, 71, .08);   --row-soon-edge: #ffb347;
+  --font-display: "JetBrains Mono", "Cascadia Mono", Consolas, "Lucida Console", monospace;
+  --font-data: "JetBrains Mono", "Cascadia Mono", Consolas, "Lucida Console", monospace;
+  --font-text: "JetBrains Mono", "Cascadia Mono", Consolas, "Lucida Console", monospace;
+  --px: 1px;
+  color-scheme: dark;
+}
+:root[data-theme="terminal"] body { font-size: 13px; }
+/* Balayage d'écran cathodique, très léger */
+:root[data-theme="terminal"] body::after {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 70;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .22) 0 1px, transparent 1px 3px),
+              radial-gradient(ellipse at center, transparent 60%, rgba(0, 0, 0, .45) 100%);
+}
+:root[data-theme="terminal"] ::selection { background: var(--accent); color: var(--accent-fg); }
+:root[data-theme="terminal"] .glow,
+:root[data-theme="terminal"] .bar h1,
+:root[data-theme="terminal"] .stat .v,
+:root[data-theme="terminal"] .t-prompt { text-shadow: 0 0 6px color-mix(in srgb, currentColor 55%, transparent); }
+
+/* Barre de titre : invite avec curseur clignotant */
+:root[data-theme="terminal"] .bar { box-shadow: 0 1px 0 var(--stroke); }
+:root[data-theme="terminal"] .bar .torch { display: none; }
+:root[data-theme="terminal"] .bar h1 { font-size: 15px; font-weight: 700; color: var(--accent); }
+:root[data-theme="terminal"] .bar h1::before { content: "> "; }
+:root[data-theme="terminal"] .bar h1::after { content: "_"; animation: t-blink 1s steps(1) infinite; }
+:root[data-theme="terminal"] .bar h1 span { color: var(--fg); }
+@keyframes t-blink { 50% { opacity: 0; } }
+
+/* Boutons : [ commande ] */
+:root[data-theme="terminal"] .pbtn {
+  background: transparent; color: var(--accent); font-weight: 600; font-size: 13px; text-transform: lowercase;
+  box-shadow: inset 0 0 0 1px var(--stroke);
+}
+:root[data-theme="terminal"] .pbtn:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+:root[data-theme="terminal"] .pbtn:active { transform: none; box-shadow: inset 0 0 0 1px var(--accent); }
+:root[data-theme="terminal"] .pbtn.gold { background: var(--accent); color: var(--accent-fg); box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 40%, transparent); }
+:root[data-theme="terminal"] .pbtn.danger.solid { background: var(--st-danger); color: #fff; }
+:root[data-theme="terminal"] .pbtn kbd { color: inherit; }
+:root[data-theme="terminal"] svg.px { color: currentColor; }
+:root[data-theme="terminal"] .dock { box-shadow: 0 -1px 0 var(--stroke); }
+
+/* Compteurs : sortie de « gcblo stats » */
+:root[data-theme="terminal"] .stats { background: var(--surface); box-shadow: inset 0 0 0 1px var(--stroke-soft); padding: 10px 12px; gap: 4px 18px; }
+:root[data-theme="terminal"] .stats::before {
+  content: "sogetrel@gcblo:~$ gcblo stats"; grid-column: 1 / -1; color: var(--accent); font-weight: 700; margin-bottom: 4px;
+}
+:root[data-theme="terminal"] .stat {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 3px 6px;
+  background: none; box-shadow: none; text-align: left;
+}
+:root[data-theme="terminal"] .stat .ico { display: none; }
+:root[data-theme="terminal"] .stat .l { order: 0; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .02em; }
+:root[data-theme="terminal"] .stat .l::after { content: " ....."; color: var(--subtle); }
+:root[data-theme="terminal"] .stat .v { order: 1; font-size: 20px; font-weight: 700; color: var(--c); }
+:root[data-theme="terminal"] .stat[aria-pressed="true"] { background: color-mix(in srgb, var(--c) 14%, transparent); box-shadow: inset 2px 0 0 var(--c); }
+@media (min-width: 1440px) {
+  :root[data-theme="terminal"] .side { overflow-x: hidden; }
+  :root[data-theme="terminal"] .stats { grid-template-columns: minmax(0, 1fr); }
+  :root[data-theme="terminal"] .stat .l::after { content: " ..............."; }
+}
+@media (max-width: 1439px) { :root[data-theme="terminal"] .stats { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+@media (max-width: 899px) {
+  :root[data-theme="terminal"] .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 7px 10px; gap: 0 12px; }
+  :root[data-theme="terminal"] .stats::before { font-size: 11px; margin-bottom: 2px; }
+  :root[data-theme="terminal"] .stat { padding: 1px 2px; }
+  :root[data-theme="terminal"] .stat .l { font-size: 10px; }
+  :root[data-theme="terminal"] .stat .l::after { content: ""; }
+  :root[data-theme="terminal"] .stat .v { font-size: 16px; }
+}
+
+/* Jauges : barres ASCII */
+:root[data-theme="terminal"] .gauges-panel { box-shadow: inset 0 0 0 1px var(--stroke-soft); }
+:root[data-theme="terminal"] .panel-title { color: var(--accent); }
+:root[data-theme="terminal"] .panel-title::before { content: "$ "; }
+:root[data-theme="terminal"] .panel-title::after { border-top: 1px dashed var(--stroke-soft); }
+:root[data-theme="terminal"] .gauge { box-shadow: none; background: none; padding: 0; height: 12px; }
+:root[data-theme="terminal"] .gauge > span { background: repeating-linear-gradient(90deg, var(--c) 0 7px, transparent 7px 9px); box-shadow: 0 0 8px color-mix(in srgb, var(--c) 40%, transparent); }
+:root[data-theme="terminal"] .lg .v, :root[data-theme="terminal"] .lg .p { font-size: 14px; }
+
+/* Commande « gcblo ls » au-dessus du registre */
+.term-cmd { display: none; }
+:root[data-theme="terminal"] .term-cmd {
+  display: block; padding: 0 12px 8px; font: 12px/1.5 var(--font-data); color: var(--fg);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.t-prompt { color: var(--accent); font-weight: 700; }
+.t-flag { color: var(--st-info); }
+.t-val { color: var(--cat-air); }
+.t-out { color: var(--subtle); }
+@media (max-width: 899px) { :root[data-theme="terminal"] .term-cmd { font-size: 11px; padding: 0 10px 6px; } }
+
+/* Registre : lignes de console */
+:root[data-theme="terminal"] .main.frame { box-shadow: inset 0 0 0 1px var(--stroke); }
+:root[data-theme="terminal"] .list { border-top: 1px solid var(--stroke); background: var(--surface); }
+:root[data-theme="terminal"] .field-in, :root[data-theme="terminal"] .search input, :root[data-theme="terminal"] .select, :root[data-theme="terminal"] .textarea {
+  background: var(--sunk); box-shadow: inset 0 0 0 1px var(--stroke-soft); font-family: var(--font-data); font-size: 13px;
+}
+:root[data-theme="terminal"] .search input { font-size: 14px; }
+:root[data-theme="terminal"] .search .count { font-size: 12px; }
+:root[data-theme="terminal"] .list-head { background: var(--surface-2); box-shadow: 0 1px 0 var(--stroke-soft); }
+:root[data-theme="terminal"] .list-head button, :root[data-theme="terminal"] .list-head .h-act { font-size: 11px; color: var(--subtle); }
+:root[data-theme="terminal"] .list-head > div:first-child button::before { content: "# "; }
+:root[data-theme="terminal"] .row { min-height: 38px; padding-block: 4px; border-bottom: 1px dashed var(--stroke-soft); }
+:root[data-theme="terminal"] .row:hover, :root[data-theme="terminal"] .row.open { background: color-mix(in srgb, var(--accent) 6%, transparent); box-shadow: inset 2px 0 0 var(--accent); }
+:root[data-theme="terminal"] .row.row-overdue { box-shadow: inset 2px 0 0 var(--row-overdue-edge); }
+:root[data-theme="terminal"] .row.row-soon { box-shadow: inset 2px 0 0 var(--row-soon-edge); }
+:root[data-theme="terminal"] .c-gcblo { font-size: 15px; font-weight: 700; color: var(--fg); }
+:root[data-theme="terminal"] .c-fci .data, :root[data-theme="terminal"] .c-aff, :root[data-theme="terminal"] .c-rel .data { font-size: 13px; }
+:root[data-theme="terminal"] .c-fci { color: var(--muted); }
+:root[data-theme="terminal"] .c-aff, :root[data-theme="terminal"] .c-rel { color: var(--subtle); }
+:root[data-theme="terminal"] .c-com { font-size: 12px; }
+:root[data-theme="terminal"] .none { font-style: normal; color: var(--subtle); font-size: 12px; }
+:root[data-theme="terminal"] .none::before { content: "//"; margin-right: 4px; }
+:root[data-theme="terminal"] .cat { box-shadow: none; background: none; padding: 0; height: auto; font-size: 12px; font-weight: 700; letter-spacing: 0; }
+:root[data-theme="terminal"] .cat svg.px { display: none; }
+:root[data-theme="terminal"] .cat::before { content: "["; }
+:root[data-theme="terminal"] .cat::after { content: "]"; }
+:root[data-theme="terminal"] .status-select, :root[data-theme="terminal"] .pill {
+  background-color: transparent; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sc) 55%, transparent);
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em;
+}
+:root[data-theme="terminal"] .status-select { text-shadow: 0 0 6px color-mix(in srgb, var(--sc) 50%, transparent); }
+:root[data-theme="terminal"] .status-select option { text-transform: none; }
+:root[data-theme="terminal"] .ibtn { color: var(--subtle); }
+:root[data-theme="terminal"] .ibtn:hover { color: var(--accent); background: none; box-shadow: inset 0 0 0 1px var(--stroke); }
+:root[data-theme="terminal"] .chip { box-shadow: inset 0 0 0 1px var(--c, var(--accent)); background: none; }
+@media (max-width: 899px) {
+  :root[data-theme="terminal"] .c-gcblo { font-size: 15px; }
+  :root[data-theme="terminal"] .c-fci, :root[data-theme="terminal"] .c-rel { font-size: 13px; }
+}
+
+/* Fenêtres : titre façon invite */
+:root[data-theme="terminal"] dialog.frame { box-shadow: 0 0 0 1px var(--stroke), 0 0 40px color-mix(in srgb, var(--accent) 12%, transparent); }
+:root[data-theme="terminal"] .dlg-head h2 { font-size: 16px; color: var(--accent); }
+:root[data-theme="terminal"] .dlg-head h2::before { content: "> "; }
+:root[data-theme="terminal"] .dlg-head h2.data { font-size: 18px; }
+:root[data-theme="terminal"] .kv dd { font-size: 14px; }
+:root[data-theme="terminal"] .dlg-foot, :root[data-theme="terminal"] .mail .subj { border-color: var(--stroke-soft); border-style: dashed; border-width: 1px 0 0; }
+:root[data-theme="terminal"] .mail, :root[data-theme="terminal"] .note { box-shadow: inset 0 0 0 1px var(--stroke-soft); }
+:root[data-theme="terminal"] .seg span { font-size: 12px; }
+:root[data-theme="terminal"] .report b { font-size: 24px; color: var(--accent); }
+
+/* Notifications : [ok] / [err] */
+:root[data-theme="terminal"] .toast { background: var(--sunk); box-shadow: inset 0 0 0 1px var(--stroke); font-size: 12px; }
+:root[data-theme="terminal"] .toast::before { content: "[ok]"; color: var(--accent); font-weight: 700; }
+:root[data-theme="terminal"] .toast.error::before { content: "[err]"; color: var(--st-danger); }
+:root[data-theme="terminal"] .toast button { background: none; color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+
+/* Jarvis : fil de console + lumière qui respire au milieu */
+.jv-light { display: none; }
+:root[data-theme="terminal"] .jarvis { border-top: 1px solid var(--stroke); background: var(--surface-2); padding-top: 18px; }
+:root[data-theme="terminal"] .jv-prompt .jv-orb, :root[data-theme="terminal"] .jv-prompt .jv-name { display: none; }
+:root[data-theme="terminal"] .jv-prompt::before { content: "jarvis:~$"; color: var(--accent); font: 700 13px/1 var(--font-data); text-transform: none; letter-spacing: 0; }
+@media (max-width: 899px) { :root[data-theme="terminal"] .jv-prompt::before { content: "$"; } }
+:root[data-theme="terminal"] #jvInput { font-size: 15px; background: transparent; box-shadow: none; caret-color: var(--accent); }
+:root[data-theme="terminal"] #jvInput:focus { box-shadow: inset 0 -1px 0 var(--accent); }
+:root[data-theme="terminal"] #jvInput::placeholder { font-family: var(--font-data); font-size: 12px; }
+:root[data-theme="terminal"] .jv-log { bottom: calc(100% + 30px); box-shadow: 0 0 0 1px var(--stroke), 0 0 30px color-mix(in srgb, var(--accent) 10%, transparent); background: rgba(2, 6, 4, .96); }
+:root[data-theme="terminal"] .jv-head { border-bottom: 1px dashed var(--stroke-soft); font-family: var(--font-data); text-transform: lowercase; }
+:root[data-theme="terminal"] .jv-head span::before { content: "── "; }
+:root[data-theme="terminal"] .jv-msgs { gap: 6px; }
+:root[data-theme="terminal"] .jv-msg { font-size: 12.5px; line-height: 1.5; }
+:root[data-theme="terminal"] .jv-msg.me { justify-content: flex-start; }
+:root[data-theme="terminal"] .jv-msg.me .jv-txt { max-width: none; padding: 0; background: none; box-shadow: none; color: var(--fg); font-size: 12.5px; }
+:root[data-theme="terminal"] .jv-msg.me .jv-txt::before { content: "$ "; color: var(--accent); font-weight: 700; }
+:root[data-theme="terminal"] .jv-msg.jv svg.px { display: none; }
+:root[data-theme="terminal"] .jv-msg.jv .jv-txt { color: var(--muted); }
+:root[data-theme="terminal"] .jv-msg.jv .jv-txt::before { content: "jarvis › "; color: var(--st-info); font-weight: 700; }
+:root[data-theme="terminal"] .jv-msg.warn .jv-txt::before { content: "jarvis ! "; color: var(--st-danger); }
+:root[data-theme="terminal"] .jv-chip { background: none; color: var(--accent); box-shadow: inset 0 0 0 1px var(--stroke); font-size: 12px; height: 26px; }
+:root[data-theme="terminal"] .jv-chip::before { content: "["; } :root[data-theme="terminal"] .jv-chip::after { content: "]"; }
+:root[data-theme="terminal"] .jv-chip.primary { background: var(--accent); color: var(--accent-fg); }
+:root[data-theme="terminal"] .jv-chip.danger { background: var(--st-danger); color: #fff; }
+:root[data-theme="terminal"] .jv-ref { font-size: 13px; font-weight: 700; }
+:root[data-theme="terminal"] .jv-help b { font-size: 12.5px; color: var(--fg); }
+:root[data-theme="terminal"] .jv-sg { background: none; box-shadow: inset 0 0 0 1px var(--stroke-soft); font-size: 12px; color: var(--muted); }
+:root[data-theme="terminal"] .jv-sg:first-child { box-shadow: inset 0 0 0 1px var(--accent); color: var(--accent); }
+:root[data-theme="terminal"] .jv-note { font-style: normal; }
+
+/* La lumière : cœur lumineux + anneau, respiration lente ; couleur et rythme selon l'état */
+:root[data-theme="terminal"] .jv-light {
+  display: block; position: absolute; left: 50%; top: 0; z-index: 5; width: 46px; height: 46px; padding: 0; border: 0; border-radius: 50%;
+  transform: translate(-50%, -50%); cursor: pointer; background: radial-gradient(circle, var(--surface-2) 55%, transparent 56%);
+  --c: var(--st-info); --speed: 4.2s;
+}
+:root[data-theme="terminal"] .jv-light .core {
+  position: absolute; inset: 11px; border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, #fff 0, var(--c) 34%, color-mix(in srgb, var(--c) 30%, transparent) 62%, transparent 72%);
+  box-shadow: 0 0 12px var(--c), 0 0 30px color-mix(in srgb, var(--c) 70%, transparent), 0 0 60px color-mix(in srgb, var(--c) 35%, transparent);
+  animation: jv-breathe var(--speed) ease-in-out infinite;
+}
+:root[data-theme="terminal"] .jv-light .ring {
+  position: absolute; inset: 3px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--c) 65%, transparent);
+  animation: jv-ring var(--speed) ease-in-out infinite;
+}
+@keyframes jv-breathe { 0%, 100% { transform: scale(.78); opacity: .7; filter: brightness(.85); } 50% { transform: scale(1.06); opacity: 1; filter: brightness(1.3); } }
+@keyframes jv-ring { 0%, 100% { transform: scale(.86); opacity: .25; } 50% { transform: scale(1.14); opacity: .85; } }
+@keyframes jv-spin { to { transform: rotate(360deg); } }
+:root[data-theme="terminal"] .jarvis[data-state="alert"] .jv-light { --c: var(--st-warning); --speed: 2.6s; }
+:root[data-theme="terminal"] .jarvis[data-state="typing"] .jv-light { --c: var(--accent); --speed: 1.3s; }
+:root[data-theme="terminal"] .jarvis[data-state="listening"] .jv-light { --c: var(--st-danger); --speed: .7s; }
+:root[data-theme="terminal"] .jarvis[data-state="speaking"] .jv-light { --c: var(--st-info); --speed: .45s; }
+:root[data-theme="terminal"] .jarvis[data-state="ok"] .jv-light { --c: var(--accent); --speed: 1.6s; }
+:root[data-theme="terminal"] .jarvis[data-state="error"] .jv-light { --c: var(--st-danger); --speed: 1.2s; }
+:root[data-theme="terminal"] .jarvis[data-state="thinking"] .jv-light { --c: var(--st-info); --speed: 1.8s; }
+:root[data-theme="terminal"] .jarvis[data-state="thinking"] .jv-light .ring {
+  border-color: color-mix(in srgb, var(--c) 25%, transparent); border-top-color: var(--c); animation: jv-spin .9s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="terminal"] .jv-light .core, :root[data-theme="terminal"] .jv-light .ring, :root[data-theme="terminal"] .bar h1::after { animation: none; }
+}
 </style>
 </head>
 <body>
@@ -692,6 +927,7 @@ input[type="date"].field-in { font-family: var(--font-data); font-size: 19px; }
       </div>
     </div>
     <div class="list-meta" id="listMeta" hidden><span id="specialChip"></span></div>
+    <div class="term-cmd" id="termCmd" aria-hidden="true"></div>
     <div class="list" id="list" role="table" aria-label="Dossiers">
       <div class="list-head" role="row" id="listHead"></div>
       <div id="rows" role="rowgroup"></div>
@@ -703,6 +939,7 @@ input[type="date"].field-in { font-family: var(--font-data); font-size: 19px; }
         <div class="jv-head"><span>Jarvis</span><button type="button" class="ibtn" data-jv-close aria-label="Replier la conversation"><svg class="px sm"><use href="#p-x"/></svg></button></div>
         <div class="jv-msgs" id="jvMsgs" aria-live="polite"></div>
       </div>
+      <button type="button" class="jv-light" id="jvLight" aria-label="Jarvis" title="Jarvis"><span class="ring"></span><span class="core"></span></button>
       <div class="jv-suggest" id="jvSuggest" hidden></div>
       <form class="jv-bar" id="jvForm" autocomplete="off">
         <label for="jvInput" class="jv-prompt" id="jvPrompt"><span class="jv-orb"><svg class="px"><use href="#p-orb"/></svg><b class="jv-badge" id="jvBadge" hidden></b></span><span class="jv-name">Jarvis</span></label>
@@ -1560,7 +1797,7 @@ const CommandService = {
     thanks: /^(merci|super|parfait|top|genial|nickel|cool)\b/,
     undo:   /^(annule\w*|undo|retabli\w*|reviens en arriere|ctrl ?z)\b/,
     brief:  /\b(briefing|brief|quoi de neuf|programme|planning|ma journee|a relancer|dois[- ]je relancer|dois relancer|relancer aujourd ?hui|urgences?|priorites?)\b/,
-    theme:  /\b(theme|mode)\b.*\b(sombre|clair|donjon|parchemin|auto|nuit|jour)\b/,
+    theme:  /\b(theme|mode)\b.*\b(sombre|clair|donjon|parchemin|auto|nuit|jour|terminal|hack\w*|matrix|console)\b/,
     reset:  /\b(reinitialis\w*|reset|tout afficher|affiche tout|montre tout|voir tout|enleve les filtres|efface les filtres|retire les filtres|sans filtre)\b/,
     export: /\b(export\w*|sauvegard\w*|backup)\b/,
     count:  /\b(combien|nombre|stat\w*|bilan|recap\w*)\b/,
@@ -1776,7 +2013,7 @@ const CommandService = {
     if (V.thanks.test(t) && t.split(' ').length <= 3) return { ...base, intent: 'thanks' };
     if (V.brief.test(t) && !refs.any && !V.add.test(t) && !V.del.test(t)) return { ...base, intent: 'briefing' };
     if (V.theme.test(t)) {
-      const mode = /sombre|donjon|nuit/.test(t) ? 'dark' : /clair|parchemin|jour/.test(t) ? 'light' : 'system';
+      const mode = /terminal|hack|matrix|console/.test(t) ? 'terminal' : /sombre|donjon|nuit/.test(t) ? 'dark' : /clair|parchemin|jour/.test(t) ? 'light' : 'system';
       return { ...base, intent: 'theme', mode };
     }
     if (V.reset.test(t)) return { ...base, intent: 'reset' };
@@ -1865,6 +2102,7 @@ const PixelIcons = {
     stats:    ['......##.', '......##.', '...##.##.', '...##.##.', '##.##.##.', '##.##.##.', '##.##.##.', '#########'],
     scroll:   ['.#######.', '#.#+++++#', '.##+++++#', '..#+###+#', '..#+++++#', '..#+###+#', '..#+++++#', '..######.', '.........'],
     moon:     ['..####.', '.##....', '##.....', '##.....', '##.....', '.##....', '..####.'],
+    term:     ['#########', '#.......#', '#.#.....#', '#..#....#', '#.#..##.#', '#.......#', '#########'],
     sun:      ['#..#..#', '.#####.', '.#aaa#.', '##aaa##', '.#aaa#.', '.#####.', '#..#..#'],
 
     orb:      ['..#####..', '.#+++++#.', '#++aaa++#', '#+aa#aa+#', '#+a###a+#', '#+aa#aa+#', '#++aaa++#', '.#+++++#.', '..#####..'],
@@ -1972,9 +2210,9 @@ const Clipboard = {
 
 /** Thème : automatique / parchemin (clair) / donjon (sombre). */
 const Theme = {
-  order: ['system', 'light', 'dark'],
-  labels: { system: 'Auto', light: 'Parchemin', dark: 'Donjon' },
-  icons: { system: 'torch', light: 'sun', dark: 'moon' },
+  order: ['system', 'light', 'dark', 'terminal'],
+  labels: { system: 'Auto', light: 'Parchemin', dark: 'Donjon', terminal: 'Terminal' },
+  icons: { system: 'torch', light: 'sun', dark: 'moon', terminal: 'term' },
   apply(mode) {
     if (mode === 'system') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', mode);
@@ -2106,6 +2344,19 @@ const ListView = {
       </div>
     </div>`;
   },
+  /** Thème Terminal : la commande équivalente aux filtres affichés. */
+  renderCmd(n, total) {
+    const el = $('#termCmd'); if (!el) return;
+    const flag = (k, v) => `<span class="t-flag">--${k}</span>${v != null ? `=<span class="t-val">${Util.esc(v)}</span>` : ''}`;
+    const flags = [
+      ViewState.categorie && flag('type', Ref.category(ViewState.categorie)?.label),
+      ViewState.statut && flag('dft', Ref.status(ViewState.statut).id.toLowerCase()),
+      ViewState.special === 'overdue' && flag('retard'), ViewState.special === 'nofci' && flag('sans-fci'),
+      ViewState.q && flag('grep', `"${ViewState.q}"`),
+      flag('sort', `${ViewState.sortKey}:${ViewState.sortDir}`)
+    ].filter(Boolean).join(' ');
+    el.innerHTML = `<span class="t-prompt">sogetrel@gcblo:~$</span> gcblo ls ${flags} <span class="t-out">→ ${n}/${total}</span>`;
+  },
   render(rows, total) {
     ListView.renderHead();
     const box = $('#rows');
@@ -2125,6 +2376,7 @@ const ListView = {
       box.innerHTML = rows.map(ListView.row).join('');
     }
     $('#resultCount').textContent = total ? `${rows.length} / ${total}` : '';
+    ListView.renderCmd(rows.length, total);
     const sp = { overdue: ['En retard', 'var(--st-danger)'], nofci: ['Sans FCI', 'var(--st-warning)'] }[ViewState.special];
     $('#listMeta').hidden = !sp;
     $('#specialChip').innerHTML = sp ? `<button type="button" class="chip" style="--c:${sp[1]}" data-clear-special>${sp[0]} ${px('x', 'sm')}</button>` : '';
@@ -2557,7 +2809,10 @@ const Jarvis = {
     $('#jvMsgs').scrollTop = $('#jvMsgs').scrollHeight;
     if (who === 'jv') { Jarvis.speak(msg.querySelector('.jv-txt').innerText); Jarvis.autoHide(); }
   },
-  reply(html, opts) { Jarvis.post('jv', html, opts); },
+  reply(html, opts = {}) {
+    Jarvis.post('jv', html, opts);
+    if (!window.speechSynthesis?.speaking) Jarvis.setState(opts.tone === 'warn' ? 'error' : Jarvis.ctx.pending ? 'thinking' : 'ok', Jarvis.ctx.pending ? 0 : 1400);
+  },
   autoHide() {
     clearTimeout(Jarvis.hideTimer);
     Jarvis.hideTimer = setTimeout(() => { if (!Jarvis.ctx.pending && document.activeElement !== $('#jvInput')) $('#jvLog').hidden = true; }, 15000);
@@ -2568,8 +2823,29 @@ const Jarvis = {
   catLabel: id => Ref.category(id)?.label || id,
   undoChip() { return { label: 'Annuler', run: () => Jarvis.run({ intent: 'undo' }) }; },
 
+  /**
+   * État de la lumière (thème Terminal) : idle | alert | typing | listening |
+   * thinking | speaking | ok | error. Les états brefs reviennent seuls à l'état de base.
+   */
+  baseState: 'idle',
+  setState(state, ms = 0) {
+    const el = $('#jarvis'); if (!el) return;
+    clearTimeout(Jarvis.stateTimer);
+    el.dataset.state = state;
+    if (ms) Jarvis.stateTimer = setTimeout(() => { el.dataset.state = Jarvis.baseState; }, ms);
+  },
+  /** Petite impulsion lumineuse (frappe au clavier). */
+  pulse() {
+    const core = $('#jvLight .core');
+    core?.animate?.([{ filter: 'brightness(1.8)', scale: '1.15' }, { filter: 'brightness(1)', scale: '1' }], { duration: 220, easing: 'ease-out' });
+  },
+
   /** Voyant sur l'orbe : relances en retard. */
   updateBadge(stats) {
+    Jarvis.baseState = stats.overdue ? 'alert' : 'idle';
+    const cur = $('#jarvis')?.dataset.state;
+    if (!cur || cur === 'idle' || cur === 'alert') Jarvis.setState(Jarvis.baseState);
+    $('#jvLight').title = stats.overdue ? `Jarvis · ${Util.plural(stats.overdue, 'relance en retard', 'relances en retard')}` : 'Jarvis';
     const b = $('#jvBadge'); if (!b) return;
     b.hidden = !stats.overdue;
     b.textContent = stats.overdue > 9 ? '9+' : String(stats.overdue);
@@ -2583,6 +2859,8 @@ const Jarvis = {
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text.replace(/\s+/g, ' ').replace(/-THF/g, ' T H F ').slice(0, 260));
       u.lang = 'fr-FR'; u.rate = 1.05; u.pitch = .9;
+      u.onstart = () => Jarvis.setState('speaking');
+      u.onend = () => Jarvis.setState(Jarvis.baseState);
       speechSynthesis.speak(u);
     } catch { /* voix indisponible */ }
   },
@@ -2603,10 +2881,10 @@ const Jarvis = {
         : 'Je n\'ai rien entendu. Réessayez, ou tapez la commande.', { tone: 'warn' });
     };
     rec.onend = () => {
-      Jarvis.rec = null; $('#jvMic').classList.remove('on');
+      Jarvis.rec = null; $('#jvMic').classList.remove('on'); Jarvis.setState(Jarvis.baseState);
       if (finalText.trim()) Jarvis.submit(finalText, { voice: true });
     };
-    Jarvis.rec = rec; $('#jvMic').classList.add('on');
+    Jarvis.rec = rec; $('#jvMic').classList.add('on'); Jarvis.setState('listening');
     try { rec.start(); } catch { Jarvis.rec = null; $('#jvMic').classList.remove('on'); }
   },
 
@@ -2786,7 +3064,7 @@ const Jarvis = {
           <li><b>relance 501404</b> (email) · <b>relance 501404 lundi</b> / <b>dans 3 jours</b></li>
           <li><b>ajoute le fci F12345678901 à 501404</b> · <b>note sur 501404 : texte</b></li>
           <li><b>montre les dossiers air</b> · <b>en retard</b> · <b>sans fci</b> · <b>tout afficher</b></li>
-          <li><b>combien de refusés ?</b> · <b>stats</b> · <b>exporte en excel</b> · <b>mode sombre</b></li>
+          <li><b>combien de refusés ?</b> · <b>stats</b> · <b>exporte en excel</b> · <b>mode terminal</b></li>
         </ul>Enchaînez avec « puis » : « ajoute … AIR puis relance-le demain ».
         Après une action, « le » désigne le même dossier. Les fautes de frappe sont corrigées.`);
     },
@@ -3024,7 +3302,15 @@ const Jarvis = {
     Jarvis.history = StorageAdapter.load(APP.uiKey + '.jarvis', []) || [];
     const input = $('#jvInput');
     $('#jvForm').addEventListener('submit', e => { e.preventDefault(); Jarvis.submit(input.value); });
-    input.addEventListener('input', () => { Jarvis.histPos = -1; Jarvis.showSuggest(); });
+    input.addEventListener('input', () => {
+      Jarvis.histPos = -1; Jarvis.showSuggest();
+      Jarvis.setState(input.value ? 'typing' : Jarvis.baseState, input.value ? 1600 : 0); Jarvis.pulse();
+    });
+    $('#jvLight').addEventListener('click', () => {
+      if (Jarvis.baseState === 'alert' && !input.value) Jarvis.submit('quoi de neuf');
+      else if (Jarvis.SR && UiPrefs.get().theme === 'terminal' && !input.value) Jarvis.listen();
+      else input.focus();
+    });
     input.addEventListener('keydown', e => {
       if (e.key === 'Tab' && Jarvis.suggest?.length) { e.preventDefault(); Jarvis.acceptSuggest(0); }
       else if (e.key === 'ArrowUp' && Jarvis.history.length) {
