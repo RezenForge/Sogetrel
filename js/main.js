@@ -10,6 +10,7 @@
 import { creerStore, supportNavigateur, supportMemoire } from './store.js';
 import { creerDossiers } from './dossiers.js';
 import { creerReglages } from './reglages.js';
+import { creerMeteo } from './meteo.js';
 import { aujourdhui } from './dates.js';
 import { convertirV1, lireV1Navigateur } from './reprise-v1.js';
 import { creerInvite } from './jarvis/invite.js';
@@ -52,6 +53,7 @@ const actions = creerActions({
   regles,
   store,
   reglages,
+  meteo: creerMeteo(),
   ecran: invite.ecran,
   confirmer: question => invite.confirmer(question),
   demander: (question, choix) => invite.demander(question, choix),

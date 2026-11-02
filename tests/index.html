@@ -24,7 +24,8 @@
   import './regles.test.js';
   import './invite.test.js';
   import './ameliorations.test.js';
-  window.bilanTests = afficher(document.getElementById('resultats'));
+  import './meteo.test.js';
+  afficher(document.getElementById('resultats')).then(bilan => { window.bilanTests = bilan; });
 </script>
 </body>
 </html>

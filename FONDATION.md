@@ -16,6 +16,7 @@ La version précédente est conservée sur la branche `v1-prototype`.
 | Préparation de l'email de relance (Outlook) | Autres thèmes que Terminal |
 | **L'invite de commande Jarvis, avec autocomplétion intelligente** (interface principale) | Connexion Microsoft 365 (Outlook, SharePoint) |
 | Sauvegarde / restauration JSON, reprise des dossiers de la v1 | |
+| Météo d'une ville (commande `meteo`) | |
 | Thème Terminal avec la lumière de Jarvis | |
 
 **Principe directeur** : tout se fait depuis l'invite de commande, sans rien apprendre par cœur. On tape quelques lettres, l'invite propose la suite. La liste des dossiers est l'écran qui montre le résultat. Les clics restent possibles, mais en second.
@@ -143,6 +144,7 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 | Compter | `combien [‹type›] [‹statut›]` | `combien de refusés` |
 | Point du jour | `jour` (aussi affiché à l'ouverture) | `jour` |
 | Destinataires | `email [‹type›] [‹adresse›\|aucun]` | `email air jean.dupont@exemple.fr` |
+| Météo | `meteo ‹ville› [jour\|demain\|semaine]` | `meteo le taillan medoc semaine` |
 | Coller une liste | coller dans l'invite plusieurs lignes copiées d'Excel ou d'un mail | colonnes du classeur robot reconnues |
 | Divers | `annule` · `aide` · `sauvegarde` · `restaure` · `clear` | |
 
@@ -198,7 +200,7 @@ texte tapé + position du curseur
 - `analyse.js` et `completion.js` ne touchent jamais aux données : ils sont testés seuls, phrase par phrase.
 - Les confirmations sont **obligatoires** pour supprimer, et pour toute action qui touche plus de 3 dossiers.
 
-Jarvis est un **interpréteur intégré, pas une IA en ligne** : il fonctionne hors connexion et rien ne quitte le navigateur.
+Jarvis est un **interpréteur intégré, pas une IA en ligne** : il fonctionne hors connexion et rien ne quitte le navigateur. **Seule exception : `meteo`**, qui envoie le nom de la ville au service Open-Meteo (gratuit, sans compte), puis ses coordonnées. Aucune donnée de dossier n'est envoyée. Ce module est isolé dans `js/meteo.js`.
 
 ### La lumière
 
@@ -268,3 +270,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | --- | --- |
 | 02/11/2026 | v2 publiée : terminal avec autocomplétion, reprise de la v1 |
 | 02/11/2026 | Point du jour (R8), collage d'une liste (R9), relance groupée et destinataires par type (R4) |
+| 02/11/2026 | Commande `meteo` (Open-Meteo), villes consultées proposées en complétion |

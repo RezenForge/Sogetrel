@@ -1,8 +1,8 @@
 /**
  * reglages.js — les réglages de l'utilisateur (pas des règles métier).
  *
- * Pour l'instant : le destinataire des emails de relance pour chaque type
- * (NUM21, AIR, Sogetrel). Ils sont enregistrés dans le navigateur, à part
+ * Le destinataire des emails de relance pour chaque type (NUM21, AIR,
+ * Sogetrel), et les villes consultées en météo (pour les proposer). Ils sont enregistrés dans le navigateur, à part
  * des dossiers. Le support est interchangeable, comme pour le store.
  */
 import { TYPES } from './config.js';
@@ -21,7 +21,8 @@ export function supportReglagesNavigateur(cle = CLE) {
 
 export function creerReglages(support = supportReglagesNavigateur()) {
   const vide = Object.fromEntries(TYPES.map(t => [t.code, '']));
-  let reglages = { destinataires: { ...vide, ...(support.lire()?.destinataires || {}) } };
+  const lu = support.lire() || {};
+  let reglages = { destinataires: { ...vide, ...(lu.destinataires || {}) }, villes: Array.isArray(lu.villes) ? lu.villes : [] };
 
   return {
     /** Le destinataire d'un type ('' s'il n'est pas réglé). */
@@ -32,8 +33,15 @@ export function creerReglages(support = supportReglagesNavigateur()) {
     definirDestinataire(type, adresse) {
       if (!(type in reglages.destinataires)) return { ok: false, erreur: `type inconnu : ${type}` };
       if (adresse && !estEmail(adresse)) return { ok: false, erreur: `« ${adresse} » n'est pas une adresse email` };
-      reglages = { destinataires: { ...reglages.destinataires, [type]: adresse || '' } };
+      reglages = { ...reglages, destinataires: { ...reglages.destinataires, [type]: adresse || '' } };
       return { ok: support.ecrire(reglages) };
+    },
+    /** Les villes consultées récemment (météo), la plus récente d'abord. */
+    villes: () => [...reglages.villes],
+    noterVille(nom) {
+      const v = String(nom).trim().toLowerCase();
+      reglages = { ...reglages, villes: [v, ...reglages.villes.filter(x => x !== v)].slice(0, 8) };
+      support.ecrire(reglages);
     }
   };
 }

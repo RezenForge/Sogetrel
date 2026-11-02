@@ -10,7 +10,7 @@
  *
  * ctx = { dossiers, aujourdhui, regles, recents: [verbes récents] }
  */
-import { COMMANDES, MOTS_STATUT, MOTS_TYPE, GROUPES, JOURS, plat, motPourCode } from './grammaire.js';
+import { COMMANDES, MOTS_STATUT, MOTS_TYPE, GROUPES, PERIODES, JOURS, plat, motPourCode } from './grammaire.js';
 import { STATUTS, TYPES, statutParCode, typeParCode } from '../config.js';
 import { formater } from '../dates.js';
 import { etatRelance } from '../dossiers.js';
@@ -65,6 +65,9 @@ function dossiers(mot, ctx, enCours, analyse) {
 const statuts = () => STATUTS.map(s => ({ inserer: motPourCode(MOTS_STATUT, s.code) + ' ', libelle: motPourCode(MOTS_STATUT, s.code), detail: `statut : ${s.libelle}`, sorte: 'valeur' }));
 const types = () => TYPES.map(t => ({ inserer: motPourCode(MOTS_TYPE, t.code) + ' ', libelle: motPourCode(MOTS_TYPE, t.code), detail: `type : ${t.libelle}`, sorte: 'valeur' }));
 
+const periodes = () => [['jour', 'aujourd\'hui, heure par heure'], ['demain', 'demain, heure par heure'], ['semaine', '7 jours']]
+  .map(([m, d]) => ({ inserer: m + ' ', libelle: m, detail: d, sorte: 'valeur' }));
+
 function dates(ctx) {
   const mots = ['demain', '+3', '+7', 'apres-demain', ...JOURS.slice(1), JOURS[0]];
   return mots.map(m => {
@@ -92,6 +95,14 @@ export function proposer(analyse, ctx) {
       { inserer: 'retard ', libelle: 'retard', detail: 'relance en retard', sorte: 'valeur' },
       { inserer: 'sans-fci ', libelle: 'sans-fci', detail: 'sans FCI', sorte: 'valeur' }], mot); break;
     case 'date': liste = commencePar(dates(ctx), mot); break;
+    case 'ville': {
+      // Villes déjà consultées, et la période dès qu'un nom de ville est commencé
+      const deja = (analyse.valeurs.ville || []).length > (mot ? 1 : 0);
+      const villes = (ctx.reglages?.villes?.() || []).map(v => ({ inserer: v + ' ', libelle: v, detail: 'ville déjà consultée', sorte: 'valeur' }));
+      liste = commencePar([...(deja ? periodes() : []), ...(deja ? [] : villes)], mot);
+      break;
+    }
+    case 'periode': liste = commencePar(periodes(), mot); break;
     case 'adresse': {
       const actuel = ctx.reglages?.destinataire(analyse.valeurs.type) || '';
       liste = commencePar([...(actuel ? [{ inserer: actuel + ' ', libelle: actuel, detail: 'adresse actuelle', sorte: 'valeur' }] : []),
@@ -137,6 +148,7 @@ export function apercu(analyse, ctx) {
       return `→ ${v.cibles.length === 1 ? 'email de relance' : `${types.length > 1 ? `${types.length} emails récapitulatifs` : 'email récapitulatif'}`} pour ${qui}${sans.length ? ` · sans destinataire : ${sans.join(', ')}` : ''}`;
     }
     case 'jour': return '→ le point du jour';
+    case 'meteo': return `→ météo de ${v.ville.join(' ')} · ${{ jour: 'aujourd\'hui', demain: 'demain', semaine: '7 jours' }[v.periode || 'jour']} (service Open-Meteo)`;
     case 'email':
       if (!v.type) return '→ affiche les destinataires';
       if (v.adresse === undefined || v.adresse === null) return `→ destinataire ${typeParCode(v.type).libelle} : ${ctx.reglages?.destinataire(v.type) || 'aucun'}`;

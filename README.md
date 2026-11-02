@@ -27,6 +27,7 @@ Au premier lancement, les dossiers de la version 1 enregistrés dans ce navigate
 | relancer tous les retards | `relance retard` : un email récapitulatif par destinataire, puis la relance suivante à J+7 est proposée |
 | adresser les relances | `email air prenom.nom@…` (une fois par type) ; `email` affiche les réglages |
 | changer un statut | `passe 501404 en refuse` |
+| la météo | `meteo bordeaux`, `meteo le taillan medoc semaine`, `meteo merignac demain` |
 | tout le reste | `aide` |
 
 ## Avancement
@@ -50,6 +51,10 @@ Le code est découpé en modules JavaScript : le navigateur ne les charge que de
 
 La page affiche « ✓ tout est vert » quand toutes les règles sont respectées.
 
+## Services extérieurs
+
+Seule la commande `meteo` contacte un service : [Open-Meteo](https://open-meteo.com), gratuit et sans compte. Elle n'envoie que le nom de la ville. Open-Meteo est gratuit pour un usage non commercial ; pour un usage professionnel régulier, leurs conditions prévoient un abonnement.
+
 ## Organisation
 
 ```
@@ -64,10 +69,11 @@ js/dossiers.js           les règles : seul module autorisé à modifier les dos
 js/reprise-v1.js         relit les dossiers et sauvegardes de la version 1
 js/reglages.js           destinataires des emails par type
 js/collage.js            lit une liste collée (Excel, mail, classeur robot)
+js/meteo.js              prévisions Open-Meteo (seul module qui contacte un service extérieur)
 js/jarvis/grammaire.js   les commandes, sous forme de tableau (source unique)
 js/jarvis/analyse.js     comprend la ligne tapée (ne modifie rien)
 js/jarvis/completion.js  propositions, texte grisé, aperçu (ne modifie rien)
 js/jarvis/actions.js     exécute une commande via les règles
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   116 tests : règles, analyse, autocomplétion, collage, relances
+tests/                   124 tests : règles, analyse, autocomplétion, collage, relances, météo (service simulé)
 ```

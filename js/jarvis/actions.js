@@ -7,7 +7,8 @@
  *
  * Ce dont il a besoin lui est donné à la création (rien n'est caché) :
  *   regles, store            les données et leurs règles
- *   reglages                 destinataires des emails par type
+ *   reglages                 destinataires des emails par type, villes récentes
+ *   meteo                    service météo (meteo.js)
  *   ecran                    { ligne(html, classe), tableau(dossiers), fiche(dossier), vider() }
  *   confirmer(question)      → Promise<boolean>  (l'invite pose la question o/n)
  *   demander(question, choix) → Promise<choix|null>  (question à choix, avec propositions)
@@ -20,6 +21,7 @@ import { criteresListe } from './analyse.js';
 import { TYPES, STATUTS, STOCKAGE, typeParCode, statutParCode } from '../config.js';
 import { formater, depuisJour, ecartJours } from '../dates.js';
 import { lireCollage } from '../collage.js';
+import { temps } from '../meteo.js';
 import { convertirV1, estFormatV1 } from '../reprise-v1.js';
 
 /** Échappe un texte avant de l'insérer dans du HTML. */
@@ -27,7 +29,7 @@ export const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;'
 const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`;
 const SEUIL_CONFIRMATION = 3;
 
-export function creerActions({ regles, store, reglages, ecran, confirmer, demander, ouvrirLien, telecharger, choisirFichier }) {
+export function creerActions({ regles, store, reglages, meteo, ecran, confirmer, demander, ouvrirLien, telecharger, choisirFichier }) {
   let annulation = null;       // { libelle, faire() } : de quoi défaire la dernière modification
 
   const ok = html => ecran.ligne(`✓ ${html}`, 'ok');
@@ -132,6 +134,48 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
     },
 
     jour() { point(); },
+
+    /** Météo d'une ville : aujourd'hui ou demain (heure par heure), ou 7 jours. */
+    async meteo(v) {
+      const nom = v.ville.join(' ');
+      const periode = v.periode || 'jour';
+      let lieux, p;
+      try {
+        lieux = await meteo.chercherVille(nom);
+        if (!lieux.length) return erreur(`ville introuvable : « ${esc(nom)} »`);
+        p = await meteo.prevision(lieux[0]);
+      } catch (e) { return erreur(esc(e.message)); }
+      const lieu = lieux[0];
+      reglages.noterVille(nom);
+
+      // Mise en forme compacte : tient dans ~40 caractères (écran de téléphone)
+      const degres = t => `<span class="${t <= 3 ? 'ty-NUM21' : t >= 28 ? 'retard' : t >= 22 ? 'proche' : ''}">${Math.round(t)}°</span>`;
+      const minMax = (a, b) => `${degres(a)}/${degres(b)}`;
+      const risque = r => `<span class="${r >= 60 ? 'c-valeur' : 'dim'}">${String(r ?? 0).padStart(3)} %</span>`;
+      const mm = x => String(x ?? 0).replace('.', ',');
+      const ciel = (code, largeur) => { const [sym, l] = temps(code); return `${sym} ${esc(l.padEnd(largeur))}`; };
+      const nomJour = j => depuisJour(j).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' }).replace('.', '');
+      const largeurTemp = (a, b) => `${Math.round(a)}°/${Math.round(b)}°`.length;
+      const ou = `${esc(lieu.nom)}${lieu.region ? ` <span class="dim">(${esc(lieu.region)}${lieu.pays && lieu.pays !== 'France' ? `, ${esc(lieu.pays)}` : ''})</span>` : ''}`;
+
+      if (periode === 'semaine') {
+        const lignes = p.jours.map(j => `${esc(nomJour(j.jour).padEnd(9))} ${ciel(j.code, 13)} ${minMax(j.min, j.max)}${' '.repeat(Math.max(1, 8 - largeurTemp(j.min, j.max)))}${risque(j.risquePluie)}  <span class="dim">${mm(j.pluie)} mm · vent ${Math.round(j.vent)}</span>`);
+        return ecran.ligne(`<b>météo</b> · ${ou} · <span class="dim">7 jours</span>\n<pre>${lignes.join('\n')}</pre>`);
+      }
+      const j = periode === 'demain' ? p.jours[1] : p.jours[0];
+      if (!j) return erreur('prévision indisponible pour ce jour');
+      const lignes = [];
+      if (periode === 'jour') {
+        lignes.push(`<span class="dim">maintenant</span>  ${degres(p.actuel.temperature)}  ${ciel(p.actuel.code, 0).trim()}`);
+        lignes.push(`<span class="dim">            vent ${Math.round(p.actuel.vent)} km/h · humidité ${Math.round(p.actuel.humidite)} %</span>`);
+      }
+      lignes.push(`<span class="dim">${periode === 'jour' ? 'journée   ' : 'demain    '}</span>  ${minMax(j.min, j.max)}  ${ciel(j.code, 0).trim()}`);
+      lignes.push(`<span class="dim">            pluie ${mm(j.pluie)} mm ·</span>${risque(j.risquePluie)}`);
+      const heures = p.heures.filter(h => h.jour === j.jour && h.heure >= 6 && h.heure <= 21 && h.heure % 3 === 0)
+        .map(h => `<span class="dim">${String(h.heure).padStart(2, '0')}h</span> ${String(Math.round(h.temperature)).padStart(2)}° ${temps(h.code)[0]}`);
+      for (let i = 0; i < heures.length; i += 3) lignes.push(heures.slice(i, i + 3).join('   '));
+      ecran.ligne(`<b>météo</b> · ${ou} · <span class="dim">${esc(depuisJour(j.jour).toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: '2-digit' }))}</span>\n<pre>${lignes.join('\n')}</pre>`);
+    },
 
     email(v) {
       if (!v.type) {

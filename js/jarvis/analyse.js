@@ -16,7 +16,7 @@
  *
  * Elle est appelée à chaque touche : elle doit rester rapide et sans effet.
  */
-import { COMMANDES, MOTS_STATUT, MOTS_TYPE, MOTS_FILTRE, GROUPES, JOURS, plat, commandeParVerbe } from './grammaire.js';
+import { COMMANDES, MOTS_STATUT, MOTS_TYPE, MOTS_FILTRE, GROUPES, PERIODES, JOURS, plat, commandeParVerbe } from './grammaire.js';
 import { FORMATS, typeParCode } from '../config.js';
 import { normaliserGcblo, etatRelance } from '../dossiers.js';
 import { estEmail } from '../reglages.js';
@@ -122,6 +122,11 @@ export function accepter(sorte, mot, ctx, { multiple = false } = {}) {
       const f = String(mot).toUpperCase();
       return FORMATS.fci.test(f) ? { ok: true, valeur: f } : { ok: false, erreur: `« ${mot} » : un FCI est F suivi de 11 chiffres` };
     }
+    case 'ville':
+      // Tout mot sert au nom de la ville, sauf une période (« semaine ») qui passe à l'emplacement suivant
+      return PERIODES[p] ? { ok: false, erreur: `« ${mot} » est une période, pas une ville` } : { ok: true, valeur: mot };
+    case 'periode':
+      return PERIODES[p] ? { ok: true, valeur: PERIODES[p] } : { ok: false, erreur: `période inconnue : « ${mot} » (jour, demain, semaine)` };
     case 'adresse':
       if (p === 'aucun' || p === 'aucune') return { ok: true, valeur: '' };
       return estEmail(mot) ? { ok: true, valeur: mot } : { ok: false, erreur: `« ${mot} » n'est pas une adresse email` };
@@ -141,6 +146,7 @@ const MOTS_CONNUS = {
   filtre: [...Object.keys(MOTS_STATUT), ...Object.keys(MOTS_TYPE), ...Object.keys(MOTS_FILTRE)],
   date: ['demain', 'apres-demain', 'aujourdhui', ...JOURS],
   dossier: Object.keys(GROUPES),
+  periode: Object.keys(PERIODES),
   commande: COMMANDES.flatMap(c => c.verbes)
 };
 /** Vrai si `mot` est le début d'un mot connu de cette sorte (« re » → « refuse »). */

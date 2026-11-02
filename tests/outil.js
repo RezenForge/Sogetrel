@@ -8,13 +8,19 @@
  * Les résultats s'affichent dans la page tests/index.html.
  */
 const resultats = [];
+const enAttente = [];          // tests asynchrones (qui renvoient une promesse)
 let groupeCourant = '';
 
 export function groupe(nom, fn) { groupeCourant = nom; fn(); groupeCourant = ''; }
 
 export function test(nom, fn) {
-  try { fn(); resultats.push({ groupe: groupeCourant, nom, ok: true }); }
-  catch (e) { resultats.push({ groupe: groupeCourant, nom, ok: false, message: e.message }); }
+  const entree = { groupe: groupeCourant, nom, ok: true };
+  resultats.push(entree);
+  const echec = e => { entree.ok = false; entree.message = e?.message || String(e); };
+  try {
+    const r = fn();
+    if (r && typeof r.then === 'function') enAttente.push(r.then(() => {}, echec));
+  } catch (e) { echec(e); }
 }
 
 /** Égalité profonde (objets, listes) via JSON. */
@@ -27,8 +33,9 @@ export function vrai(valeur, precision = 'attendu vrai') {
   if (!valeur) throw new Error(precision);
 }
 
-/** Affiche les résultats dans l'élément donné et renvoie le bilan. */
-export function afficher(cible) {
+/** Attend les tests asynchrones, affiche les résultats dans l'élément donné et renvoie le bilan. */
+export async function afficher(cible) {
+  await Promise.all(enAttente);
   const echecs = resultats.filter(r => !r.ok);
   const parGroupe = Map.groupBy ? Map.groupBy(resultats, r => r.groupe) : resultats.reduce((m, r) => m.set(r.groupe, [...(m.get(r.groupe) || []), r]), new Map());
   const echapper = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
