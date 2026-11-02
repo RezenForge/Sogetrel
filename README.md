@@ -1,82 +1,59 @@
-# Registre GCBLO
+# Registre GCBLO — v2
 
-Application web mono-fichier (`index.html`) qui remplace le classeur Excel/VBA
-« ROBOT_AFFECTATION_NUMERUS21_ET_AIR » pour le suivi des affectations GCBLO
-entre trois types : **NUM21**, **AIR** et **Sogetrel**.
+Suivi des affectations de dossiers GCBLO (NUM21, AIR, Sogetrel), piloté depuis une invite de commande avec autocomplétion.
+
+- **Le projet, ses règles et son organisation** : [FONDATION.md](FONDATION.md). C'est le document de référence : toute décision passe d'abord par lui.
+- **L'ancienne version** est conservée sur la branche `v1-prototype`.
 
 ## Utilisation
 
-1. Ouvrir `index.html` dans Edge ou Chrome (double-clic, aucun serveur nécessaire).
-2. **Importer Excel** : choisir l'ancien classeur robot (`.xlsx`, `.xlsm` ou `.xls`).
-   Les colonnes `GCBLO NUM21 / FCI` et `GCBLO AIR / FCI` sont reconnues
-   automatiquement, de même qu'un tableau classique `GCBLO / FCI / Catégorie`.
-3. Les données sont enregistrées automatiquement dans le navigateur (localStorage).
-   Faire régulièrement **Exporter → Sauvegarde JSON** : vider le cache du navigateur
-   efface les données.
+Ouvrir **https://rezenforge.github.io/Sogetrel/** et commencer à taper : les propositions suivent. `aide` liste les commandes.
 
-Raccourcis : `N` nouveau dossier · `/` recherche · `J` ou `Ctrl+K` Jarvis · double-clic sur une ligne = préparer la relance.
+Au premier lancement, les dossiers de la version 1 enregistrés dans ce navigateur sont repris automatiquement. Faire régulièrement `sauvegarde` : vider le cache du navigateur efface les données.
 
-### Jarvis
-
-Ligne de commande en bas du registre : on écrit (ou on dicte avec le micro) ce qu'on veut faire, en français.
-
-| Exemple | Effet |
+| Touche | Effet |
 | --- | --- |
-| `quoi de neuf` | retards, relances du jour, refus (aussi au clic sur le voyant rouge de Jarvis) |
-| `ajoute SBA202020-THF010 AIR fci F12345678901` | crée le dossier (demande le type s'il manque) |
-| `supprime 501404` · `supprime tous les refusés` | demande confirmation puis supprime |
-| `passe 501404 en cours de validation` · `passe-le en refusé` | change le statut DFT |
-| `passe 501404 et 501423 en refusé` · `passe tous les AIR en cours de validation` | action groupée (confirmation au-delà de 3 dossiers) |
-| `passe 501404 en Sogetrel` | change le type |
-| `relance 501404` · `relance 501404 lundi` / `dans 3 jours` | prépare l'email · planifie la relance |
-| `ajoute le fci F… à 501404` · `note sur 501404 : texte` | complète le dossier |
-| `montre les dossiers air` · `en retard` · `sans fci` · `tout afficher` | filtre le registre |
-| `combien de refusés ?` · `stats` · `exporte en excel` · `mode sombre` · `annule` · `aide` | divers |
+| `Tab` ou `→` | accepte la proposition (texte grisé) |
+| `↑` `↓` | parcourent les propositions, ou l'historique si la ligne est vide |
+| `Entrée` | exécute (ou choisit la proposition sélectionnée) |
+| `Échap` | ferme les propositions, puis vide la ligne |
 
-Enchaîner avec « puis » : `ajoute SBA202020-THF010 AIR puis relance-le dans 3 jours`. Les fautes de frappe sont corrigées (« suprime le dosiser »), des suggestions s'affichent pendant la frappe (`Tab` pour accepter, références complétées automatiquement), `↑` rappelle les commandes précédentes et chaque action propose « Annuler ».
+## Avancement
 
-C'est un interpréteur de mots-clés intégré (pas d'IA en ligne) : il fonctionne hors connexion et rien ne quitte le navigateur. Le micro et la voix dépendent du navigateur (Chrome, Edge, Safari ; le micro demande une page en https, par exemple GitHub Pages).
+| Étape | Contenu | État |
+| --- | --- | --- |
+| 0 | Fondation | ✅ |
+| 1 | Données et règles + tests | ✅ |
+| 2 | Moteur de l'invite (grammaire, analyse, autocomplétion) + tests | ✅ |
+| 3 | Terminal : écran, saisie, reprise v1, sauvegarde | ✅ version de base — style à venir |
+| 4 | Jarvis : enchaînements, groupes (« tous les air »), lumière | à venir |
+| 5 | Finitions : voix, accessibilité, petits écrans | à venir |
 
-## Fonctionnalités
+## Lancer les tests
 
-- Tableau de bord (NUM21, AIR, Sogetrel, total, relances en retard, sans FCI). Cliquer sur une carte filtre le tableau.
-- Tableau triable et filtrable (recherche libre, type, statut DFT), statut DFT modifiable directement dans la ligne.
-- Statuts DFT : À faire, En cours de validation, Mis à disposition, Refusé. « Mis à disposition » clôt le dossier (plus d'alerte de relance).
-- Création / modification avec validation du format GCBLO et FCI, refus des doublons.
-- Relance par email Outlook (lien `mailto`), destinataire et Cc réglables dans les paramètres.
-- Lignes en rouge si la relance est dépassée, en orange si elle tombe dans les 3 jours.
-- Historique par dossier : création, modifications, relances préparées.
-- Exports Excel, CSV (séparateur `;`) et sauvegarde / restauration JSON.
-- Habillage « donjon 2D » en pixel art (thèmes Donjon et Parchemin), purement visuel.
-- Thème **Terminal** (« hacker ») : console noire, couleurs ANSI, infos présentées comme des sorties de commandes (`gcblo stats`, `gcblo ls --type=… --dft=…` qui reflète les filtres). Jarvis y devient une lumière qui respire au milieu de la barre de commande : bleue au repos, ambre s'il y a des relances en retard, verte en frappe et après une réussite, rouge en écoute ou en cas d'erreur. Un clic dessus lance le briefing (ou le micro). Thème accessible par le bouton de thème ou en disant « mode terminal ».
-- Écran unique : sur téléphone la page ne défile pas, seule la liste des dossiers défile ; un appui sur un dossier affiche ses actions.
-- Jauges des statuts DFT (fenêtre « Stats » sur téléphone).
-- Animations pixel : à la création, trois petits bâtisseurs construisent la ligne ; à la suppression, les lignes du dessus tombent et l'écrasent. Remplacées par un simple fondu si le système demande moins d'animations.
-- Mise en page : colonne latérale à partir de 1440 px ; en dessous, compteurs en bandeau et actions en bas d'écran.
+Le code est découpé en modules JavaScript : le navigateur ne les charge que depuis une adresse web, pas en double-cliquant sur un fichier.
 
-## Dépendances
+- **En ligne** : une fois GitHub Pages activé sur la branche, ouvrir `…/tests/`.
+- **Sur un PC** : dans le dossier du projet, lancer `python -m http.server`, puis ouvrir `http://localhost:8000/tests/`.
 
-SheetJS 0.18.5 (CDN) pour l'import/export Excel, polices Pixelify Sans, VT323 et JetBrains Mono (Google Fonts).
-Sans connexion, l'app reste utilisable : seul l'Excel est désactivé (CSV et JSON fonctionnent) et les polices retombent sur une police système.
+La page affiche « ✓ tout est vert » quand toutes les règles sont respectées.
 
-## Architecture
+## Organisation
 
-Le script est découpé en couches commentées :
-
-| Couche | Rôle |
-| --- | --- |
-| `CONFIG` | Référentiels : catégories, statuts, modèles d'emails, règles, interrupteurs de fonctionnalités |
-| `DATA LAYER` | `StorageAdapter`, `Migrations`, `DossierRepository`, `SettingsStore` |
-| `BUSINESS LAYER` | `DossierService`, `MailService`, `ImportService`, `ExportService`, `CommandService` (analyse des phrases de Jarvis) |
-| `UI LAYER` | Icônes pixel, vues (compteurs, jauges, registre), animations, `Jarvis`, dialogues, contrôleur `App` |
-
-### Évolutions prévues
-
-- **Commandes simples / complexes** : ajouter une entrée dans `CATEGORIES` et ses deux couleurs CSS.
-- **Priorité** : champ `priorite` déjà présent dans le modèle, à activer via `FEATURES.priorite`.
-- **Historique des relances** : déjà enregistré dans `dossier.relances`.
-- **Templates d'emails multiples** : ajouter des entrées dans `EMAIL_TEMPLATES` ; un sélecteur apparaît dans la fiche.
-- **Export PDF** : prévoir un `ExportService.toPdf()`.
-- **Microsoft Graph** : remplacer `StorageAdapter` (SharePoint / OneDrive) et `MailService.prepareRelance` (envoi direct).
-- Changement du format des données : incrémenter `APP.schemaVersion` et ajouter l'étape dans `Migrations.run`.
-- Données enregistrées avec l'ancienne version (statuts À traiter, En cours, Relancé, Terminé, Bloqué) : converties automatiquement au premier chargement (`LEGACY_STATUS`).
+```
+index.html               la page : zone de sortie + ligne de commande
+css/terminal.css         le thème (variables de couleur uniquement)
+css/base.css             la mise en page « écran unique » et les composants
+js/main.js               le démarrage : branche les modules entre eux
+js/config.js             listes métier : types, statuts DFT, formats, délais, modèle d'email
+js/dates.js              dates « jour » sans heure ni fuseau
+js/store.js              garde et enregistre les dossiers, prévient l'écran des changements
+js/dossiers.js           les règles : seul module autorisé à modifier les dossiers
+js/reprise-v1.js         relit les dossiers et sauvegardes de la version 1
+js/jarvis/grammaire.js   les commandes, sous forme de tableau (source unique)
+js/jarvis/analyse.js     comprend la ligne tapée (ne modifie rien)
+js/jarvis/completion.js  propositions, texte grisé, aperçu (ne modifie rien)
+js/jarvis/actions.js     exécute une commande via les règles
+js/jarvis/invite.js      l'écran du terminal et le clavier
+tests/                   94 tests : règles, analyse, autocomplétion
+```

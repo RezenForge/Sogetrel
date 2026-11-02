@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tests — Registre GCBLO v2</title>
+<style>
+  :root { color-scheme: dark; --fond: #040807; --texte: #c6f7d4; --vert: #39ff88; --rouge: #ff4f5e; --gris: #3f7a55; }
+  body { margin: 0; padding: 20px 16px 40px; background: var(--fond); color: var(--texte); font: 13px/1.5 "JetBrains Mono", Consolas, monospace; }
+  h1 { font-size: 15px; color: var(--vert); margin: 0 0 12px; }
+  h1::before { content: "$ "; }
+  h2 { font-size: 13px; margin: 18px 0 4px; color: var(--gris); text-transform: uppercase; letter-spacing: .05em; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li.ok { color: var(--texte); } li.ko { color: var(--rouge); }
+  code { color: var(--rouge); opacity: .85; }
+  .bilan { font-weight: 700; font-size: 15px; } .bilan.ok { color: var(--vert); } .bilan.ko { color: var(--rouge); }
+</style>
+</head>
+<body>
+<h1>gcblo test</h1>
+<div id="resultats">Exécution…</div>
+<script type="module">
+  import { afficher } from './outil.js';
+  import './regles.test.js';
+  import './invite.test.js';
+  window.bilanTests = afficher(document.getElementById('resultats'));
+</script>
+</body>
+</html>

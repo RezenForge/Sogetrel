@@ -1,0 +1,44 @@
+/*
+ * terminal.css — le thème : UNIQUEMENT des variables.
+ *
+ * Aucun composant n'écrit de couleur en dur : base.css utilise ces variables.
+ * Un autre thème = un autre fichier qui redéfinit les mêmes variables.
+ */
+:root {
+  /* Fond et texte */
+  --fond: #040807;
+  --fond-saisie: #07100c;
+  --trait: #123b24;
+  --texte: #c6f7d4;
+  --pale: #4f8f66;          /* informations secondaires */
+  --accent: #39ff88;        /* invite, réussite */
+  --erreur: #ff4f5e;
+  --question: #ffb347;
+
+  /* Rôles des mots dans la ligne de commande */
+  --mot-verbe: #39ff88;
+  --mot-dossier: #e9fff0;
+  --mot-valeur: #3ce7ff;
+  --mot-liaison: #4f8f66;
+  --mot-texte: #ffd75f;
+  --mot-erreur: #ff4f5e;
+  --fantome: #2f5c40;
+
+  /* Types */
+  --type-NUM21: #59a8ff;
+  --type-AIR: #ffd75f;
+  --type-SOGETREL: #ff6ad5;
+
+  /* Statuts DFT */
+  --statut-A_FAIRE: #b9c7bf;
+  --statut-EN_VALIDATION: #3ce7ff;
+  --statut-MAD: #39ff88;
+  --statut-REFUSE: #ff4f5e;
+
+  /* Alertes de relance */
+  --retard: #ff4f5e;
+  --proche: #ffb347;
+
+  --police: "JetBrains Mono", "Cascadia Mono", Consolas, "Lucida Console", monospace;
+  color-scheme: dark;
+}

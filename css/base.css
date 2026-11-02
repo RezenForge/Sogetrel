@@ -1,0 +1,96 @@
+/*
+ * base.css — la mise en page et les composants, sans couleur en dur
+ * (toutes les couleurs viennent de terminal.css).
+ *
+ * Écran unique : la page ne défile jamais. Seule la zone de sortie défile ;
+ * la ligne de commande reste collée en bas, au-dessus du clavier sur téléphone.
+ */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; height: 100dvh; overflow: hidden;
+  display: flex; flex-direction: column;
+  background: var(--fond); color: var(--texte);
+  font: 14px/1.55 var(--police);
+  -webkit-text-size-adjust: 100%;
+}
+::selection { background: var(--accent); color: var(--fond); }
+:focus-visible { outline: 1px dashed var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+/* ---------------- Zone de sortie ---------------- */
+.ecran {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: max(12px, env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) 10px max(14px, env(safe-area-inset-left, 0px));
+}
+.l { white-space: pre-wrap; overflow-wrap: anywhere; }
+.l + .echo { margin-top: 10px; }
+.echo { color: var(--texte); }
+.invite-echo { color: var(--accent); font-weight: 700; }
+.titre { color: var(--accent); font-size: 15px; }
+.ok { color: var(--accent); }
+.err { color: var(--erreur); }
+.info { color: var(--texte); }
+.dim { color: var(--pale); }
+pre { margin: 0; font: inherit; white-space: pre; }
+/* Les tableaux défilent dans leur propre zone sur petit écran, jamais la page */
+.l:has(> pre) { overflow-x: auto; white-space: normal; }
+
+/* Couleurs des types, statuts et alertes (tableaux, fiches, stats) */
+.ty-NUM21 { color: var(--type-NUM21); } .ty-AIR { color: var(--type-AIR); } .ty-SOGETREL { color: var(--type-SOGETREL); }
+.st-A_FAIRE { color: var(--statut-A_FAIRE); } .st-EN_VALIDATION { color: var(--statut-EN_VALIDATION); }
+.st-MAD { color: var(--statut-MAD); } .st-REFUSE { color: var(--statut-REFUSE); }
+.retard { color: var(--retard); font-weight: 700; } .proche { color: var(--proche); }
+
+/* Rôles des mots (ligne de saisie, écho des commandes, propositions) */
+.c-verbe { color: var(--mot-verbe); font-weight: 700; }
+.c-dossier { color: var(--mot-dossier); }
+.c-valeur { color: var(--mot-valeur); }
+.c-mot { color: var(--mot-liaison); }
+.c-texte { color: var(--mot-texte); }
+.c-erreur { color: var(--mot-erreur); text-decoration: underline wavy; text-underline-offset: 3px; }
+
+/* ---------------- Zone de saisie ---------------- */
+.saisie-zone {
+  position: relative; flex: none;
+  border-top: 1px solid var(--trait); background: var(--fond-saisie);
+  padding: 8px max(14px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+}
+.ligne { display: flex; align-items: center; gap: 10px; }
+.invite { flex: none; color: var(--accent); font-weight: 700; cursor: text; max-width: 70%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.invite.question { color: var(--question); }
+
+/* Le champ : le texte réel est transparent ; on voit le « miroir » coloré derrière, avec le texte fantôme */
+.champ { position: relative; flex: 1; min-width: 0; height: 30px; overflow: hidden; }
+.champ input, .miroir {
+  position: absolute; inset: 0; margin: 0; padding: 0; border: 0;
+  font: inherit; font-size: 15px; line-height: 30px; letter-spacing: 0; white-space: pre;
+}
+.champ input { width: 100%; background: transparent; color: transparent; caret-color: var(--accent); outline: none; }
+.miroir { pointer-events: none; right: auto; }
+.fantome { color: var(--fantome); }
+
+.aide-ligne { min-height: 1.55em; padding-top: 2px; color: var(--pale); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aide-ligne.err { color: var(--erreur); }
+
+/* Propositions : au-dessus de la ligne de saisie */
+.propositions {
+  position: absolute; left: max(14px, env(safe-area-inset-left, 0px)); bottom: 100%;
+  width: min(640px, calc(100% - 28px)); max-height: min(300px, 45dvh); overflow-y: auto;
+  margin: 0 0 6px; padding: 4px 0; list-style: none;
+  background: var(--fond-saisie); box-shadow: 0 0 0 1px var(--trait), 0 -8px 24px rgba(0, 0, 0, .5);
+}
+.propositions li { display: flex; gap: 14px; align-items: baseline; padding: 5px 12px; cursor: pointer; }
+.propositions li:hover, .propositions li.choisi { background: var(--trait); }
+.propositions li.choisi { box-shadow: inset 2px 0 0 var(--accent); }
+.p-libelle { flex: none; }
+.p-detail { min-width: 0; color: var(--pale); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.propositions li.retard .p-detail { color: var(--retard); }
+
+/* Téléphone : propositions plus grandes pour le doigt, détail sous le libellé */
+@media (max-width: 640px) {
+  body { font-size: 13px; }
+  .propositions { width: calc(100% - 28px); }
+  .propositions li { flex-direction: column; gap: 0; padding: 8px 12px; }
+  .invite { max-width: 45%; }
+}
