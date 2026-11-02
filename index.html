@@ -604,9 +604,24 @@ input[type="date"].field-in { font-family: var(--font-data); font-size: 19px; }
 .jv-ref { border: 0; background: none; padding: 0; cursor: pointer; color: var(--accent); font: 18px/1 var(--font-data); text-decoration: underline dotted; text-underline-offset: 3px; }
 .jv-help { margin: 4px 0 6px; padding-left: 16px; display: grid; gap: 3px; }
 .jv-help b { font: 400 17px/1.2 var(--font-data); color: var(--fg); }
+.jv-orb { position: relative; display: inline-flex; }
+.jv-badge { position: absolute; top: -7px; right: -9px; min-width: 15px; height: 15px; padding: 0 3px; display: grid; place-items: center;
+  background: var(--st-danger); color: var(--surface); font: 700 10px/1 var(--font-display); box-shadow: 0 0 0 2px var(--surface-2); }
+.jv-prompt:has(.jv-badge:not([hidden])) { cursor: pointer; }
+.jv-note { display: block; margin-top: 2px; font: italic 11px/1.2 var(--font-display); color: var(--subtle); }
+.jv-more { font: 600 12px var(--font-display); color: var(--muted); }
+.jv-red { color: var(--st-danger); }
+.jv-msg small { color: var(--muted); }
+.jv-suggest { display: flex; gap: 8px; overflow-x: auto; padding: 8px 10px 0; scrollbar-width: none; }
+.jv-suggest::-webkit-scrollbar { display: none; }
+.jv-sg { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 0; cursor: pointer; white-space: nowrap;
+  background: var(--sunk); color: var(--fg); font: 17px/1 var(--font-data); box-shadow: inset 0 0 0 2px var(--stroke-soft); }
+.jv-sg:hover, .jv-sg:first-child { box-shadow: inset 0 0 0 2px var(--accent); }
+.jv-sg kbd { font: 600 10px var(--font-display); color: var(--subtle); }
+@media (max-width: 899px) { .jv-sg kbd { display: none; } }
 @media (max-width: 899px) {
   .jv-bar { padding: 6px 6px 6px 10px; gap: 4px; }
-  .jv-prompt span { display: none; }
+  .jv-prompt .jv-name { display: none; }
   .jv-bar .ibtn { min-width: 34px; height: 36px; }
   .jv-log { left: 6px; width: calc(100% - 12px); max-height: 46vh; }
 }
@@ -688,9 +703,10 @@ input[type="date"].field-in { font-family: var(--font-data); font-size: 19px; }
         <div class="jv-head"><span>Jarvis</span><button type="button" class="ibtn" data-jv-close aria-label="Replier la conversation"><svg class="px sm"><use href="#p-x"/></svg></button></div>
         <div class="jv-msgs" id="jvMsgs" aria-live="polite"></div>
       </div>
+      <div class="jv-suggest" id="jvSuggest" hidden></div>
       <form class="jv-bar" id="jvForm" autocomplete="off">
-        <label for="jvInput" class="jv-prompt"><svg class="px"><use href="#p-orb"/></svg><span>Jarvis</span></label>
-        <input id="jvInput" type="text" placeholder="« ajoute SBA202020-THF010 AIR » · « aide »" enterkeyhint="send" spellcheck="false" autocapitalize="off">
+        <label for="jvInput" class="jv-prompt" id="jvPrompt"><span class="jv-orb"><svg class="px"><use href="#p-orb"/></svg><b class="jv-badge" id="jvBadge" hidden></b></span><span class="jv-name">Jarvis</span></label>
+        <input id="jvInput" type="text" placeholder="« quoi de neuf » · « ajoute SBA202020-THF010 AIR » · « aide »" enterkeyhint="send" spellcheck="false" autocapitalize="off">
         <button type="button" class="ibtn" id="jvVoice" hidden aria-label="Voix de Jarvis"><svg class="px"><use href="#p-speaker"/></svg></button>
         <button type="button" class="ibtn" id="jvMic" hidden aria-label="Parler à Jarvis" title="Parler à Jarvis"><svg class="px"><use href="#p-mic"/></svg></button>
         <button type="submit" class="ibtn jv-send" aria-label="Envoyer" title="Envoyer (Entrée)"><svg class="px"><use href="#p-send"/></svg></button>
@@ -1112,6 +1128,9 @@ const DossierRepository = (() => {
       Object.assign(d, patch); commit(); return d;
     },
     remove(id) { state.dossiers = state.dossiers.filter(d => d.id !== id); commit(); },
+    /** Plusieurs modifications en une seule sauvegarde : [{ id, patch }]. */
+    updateMany(list) { list.forEach(({ id, patch }) => { const d = this.get(id); if (d) Object.assign(d, patch); }); commit(); },
+    removeMany(ids) { const set = new Set(ids); state.dossiers = state.dossiers.filter(d => !set.has(d.id)); commit(); },
     replaceAll(list) { state.dossiers = list; commit(); },
     snapshot() { return JSON.parse(JSON.stringify(state)); }
   };
@@ -1218,6 +1237,21 @@ const DossierService = {
   },
 
   remove(id) { DossierRepository.remove(id); },
+
+  /**
+   * Applique les mêmes champs (statut, catégorie, date de relance…) à plusieurs
+   * dossiers en une seule sauvegarde, avec une ligne d'historique chacun.
+   * Renvoie le nombre de dossiers réellement modifiés.
+   */
+  bulkUpdate(ids, fields) {
+    const now = new Date().toISOString();
+    const patches = ids.map(id => DossierRepository.get(id)).filter(Boolean).map(d => {
+      const changes = DossierService.diff(d, { ...d, ...fields });
+      return changes.length ? { id: d.id, patch: { ...fields, updatedAt: now, history: [...d.history, { at: now, type: 'modification', text: changes.join(' · ') + ' (via Jarvis)' }] } } : null;
+    }).filter(Boolean);
+    if (patches.length) DossierRepository.updateMany(patches);
+    return patches.length;
+  },
 
   /** Liste lisible des différences entre un dossier et une nouvelle saisie. */
   diff(a, b) {
@@ -1511,8 +1545,12 @@ const ExportService = {
  * Couche métier pure : transforme une phrase en intention { intent, … }
  * sans rien modifier. L'exécution est faite par l'UI (module Jarvis).
  *
- * Fonctionne hors ligne, sans IA externe : mots-clés tolérants (accents,
- * conjugaisons, majuscules), extraction des GCBLO / FCI / dates / statuts.
+ * Fonctionne hors ligne, sans IA externe :
+ *  - correction des fautes de frappe (distance de Damerau-Levenshtein),
+ *  - mots-clés tolérants (accents, conjugaisons, majuscules),
+ *  - extraction des GCBLO (complets, partiels ou dictés), FCI, dates, statuts,
+ *  - sélections groupées (« tous les dossiers AIR », « 501404 et 501423 »),
+ *  - enchaînement (« … puis … »).
  * Pour ajouter une commande : une regex dans VERBS + un cas dans parse().
  */
 const CommandService = {
@@ -1521,10 +1559,11 @@ const CommandService = {
     hello:  /^(bonjour|salut|hello|coucou|hey|yo|bonsoir)\b|^jarvis\s*\??$/,
     thanks: /^(merci|super|parfait|top|genial|nickel|cool)\b/,
     undo:   /^(annule\w*|undo|retabli\w*|reviens en arriere|ctrl ?z)\b/,
+    brief:  /\b(briefing|brief|quoi de neuf|programme|planning|ma journee|a relancer|dois[- ]je relancer|dois relancer|relancer aujourd ?hui|urgences?|priorites?)\b/,
     theme:  /\b(theme|mode)\b.*\b(sombre|clair|donjon|parchemin|auto|nuit|jour)\b/,
     reset:  /\b(reinitialis\w*|reset|tout afficher|affiche tout|montre tout|voir tout|enleve les filtres|efface les filtres|retire les filtres|sans filtre)\b/,
     export: /\b(export\w*|sauvegard\w*|backup)\b/,
-    count:  /\b(combien|nombre|stat\w*|resume|bilan|recap\w*)\b/,
+    count:  /\b(combien|nombre|stat\w*|bilan|recap\w*)\b/,
     del:    /\b(supprim\w*|efface\w*|retir\w*|enleve\w*|vire\w*|delete|del|detrui\w*)\b/,
     add:    /\b(ajout\w*|cree\w*|creer|nouveau|nouvel|nouvelle|add|enregistr\w*|insere\w*|rajout\w*)\b/,
     note:   /\b(note\w*|comment\w*|remarque)\b/,
@@ -1534,6 +1573,19 @@ const CommandService = {
     open:   /\b(ouvr\w*|detail\w*|fiche|consult\w*)\b/,
     find:   /\b(cherch\w*|trouv\w*|filtr\w*|montr\w*|affich\w*|list\w*|voir|vois|quels?|quelles?)\b/
   },
+  /** Mots connus : sert à corriger les fautes de frappe. */
+  VOCAB: ['supprime', 'supprimer', 'efface', 'ajoute', 'ajouter', 'rajoute', 'cree', 'creer', 'nouveau', 'relance', 'relancer', 'relances',
+    'passe', 'passer', 'mets', 'marque', 'change', 'statut', 'montre', 'affiche', 'cherche', 'trouve', 'filtre', 'liste', 'combien',
+    'stats', 'exporte', 'export', 'excel', 'sauvegarde', 'annule', 'aide', 'ouvre', 'detail', 'fiche', 'copie', 'note', 'commentaire',
+    'refuse', 'refuses', 'refusee', 'validation', 'disposition', 'sogetrel', 'dossier', 'dossiers', 'retard', 'demain', 'aujourd',
+    'semaine', 'semaines', 'jours', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche', 'theme', 'sombre',
+    'clair', 'parchemin', 'donjon', 'reinitialise', 'afficher', 'briefing', 'bonjour', 'merci', 'puis', 'ensuite', 'tous', 'toutes',
+    'derniere', 'dernier', 'janvier', 'fevrier', 'avril', 'juillet', 'septembre', 'octobre', 'novembre', 'decembre', 'planning'],
+  /** Mots courants à ne jamais « corriger ». */
+  KEEP: new Set(['cours', 'faire', 'mise', 'valider', 'traiter', 'client', 'retour', 'attente', 'email', 'mail', 'outlook', 'quel', 'quels',
+    'quelle', 'quelles', 'avec', 'sans', 'aucun', 'dans', 'depuis', 'prochain', 'prochaine', 'mois', 'jour', 'nuit', 'mode', 'voir', 'tout',
+    'fais', 'faut', 'peux', 'veux', 'plus', 'moins', 'encore', 'aussi', 'comme', 'entre', 'apres', 'avant', 'type', 'auto', 'merci',
+    'hello', 'salut', 'coucou', 'jarvis', 'quoi', 'neuf', 'mais', 'donc', 'alors', 'celui', 'celle', 'ceux', 'leur', 'leurs']),
   STOP: new Set(['le', 'la', 'les', 'un', 'une', 'des', 'de', 'du', 'd', 'l', 'au', 'aux', 'en', 'et', 'a', 'dossier', 'dossiers', 'mes', 'mon', 'ma',
     'moi', 'tous', 'toutes', 'tout', 'qui', 'sont', 'est', 'avec', 'pour', 'sur', 'dans', 'stp', 'svp', 'jarvis', 'me', 'je', 'veux', 'peux', 'tu', 'ce', 'cette']),
   NUMBERS: { un: 1, une: 1, deux: 2, trois: 3, quatre: 4, cinq: 5, six: 6, sept: 7, huit: 8, neuf: 9, dix: 10, quinze: 15 },
@@ -1543,6 +1595,61 @@ const CommandService = {
   /** Texte simplifié : minuscules, sans accents, apostrophes et guillemets en espaces. */
   simplify(text) {
     return Util.fold(text).replace(/[’'"«»“”]/g, ' ').replace(/\s+/g, ' ').trim();
+  },
+
+  /** Distance de Damerau-Levenshtein (inversion de deux lettres = 1 faute). */
+  distance(a, b) {
+    const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+    for (let j = 1; j <= b.length; j++) d[0][j] = j;
+    for (let i = 1; i <= a.length; i++) {
+      for (let j = 1; j <= b.length; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+        if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+      }
+    }
+    return d[a.length][b.length];
+  },
+
+  /** Mot connu le plus proche (ou null si aucun n'est assez proche ou s'il y a égalité). */
+  closest(word, vocab = CommandService.VOCAB) {
+    const max = word.length <= 6 ? 1 : 2;
+    let best = null, bestD = max + 1, tie = false;
+    for (const v of vocab) {
+      if (v[0] !== word[0] || Math.abs(v.length - word.length) > max) continue;   // une faute change rarement la 1re lettre
+      const dist = CommandService.distance(word, v);
+      if (dist < bestD) { best = v; bestD = dist; tie = false; } else if (dist === bestD && v !== best) tie = true;
+    }
+    return best && !tie && bestD <= max ? best : null;
+  },
+
+  /**
+   * Corrige les fautes de frappe des mots de commande. Le texte libre
+   * (entre guillemets ou après « : ») et les références ne sont pas touchés.
+   * Renvoie { text, fixes: [[faute, correction]] }.
+   */
+  correct(raw) {
+    const text = String(raw);
+    const colon = text.indexOf(':');
+    const head = colon >= 0 ? text.slice(0, colon) : text, tail = colon >= 0 ? text.slice(colon) : '';
+    const known = new Set([...CommandService.VOCAB, ...CommandService.STOP, ...CommandService.KEEP]);
+    const fixes = [];
+    let inQuote = false;
+    const fixed = head.split(/(\s+|[«»"“”])/).map(tok => {
+      if (/^[«»"“”]$/.test(tok)) { inQuote = !inQuote; return tok; }
+      if (inQuote || !/^[A-Za-zÀ-ÿ’'-]{4,}$/.test(tok)) return tok;
+      const f = Util.fold(tok).replace(/[’']/g, '');
+      if (known.has(f) || Object.values(CommandService.VERBS).some(re => re.test(f))) return tok;
+      const c = CommandService.closest(f);
+      if (c) { fixes.push([tok, c]); return c; }
+      return tok;
+    }).join('');
+    return { text: fixed + tail, fixes };
+  },
+
+  /** Découpe « A puis B ; C » en plusieurs commandes. */
+  split(text) {
+    return String(text).split(/\s+(?:et\s+)?(?:puis|ensuite|apres ca|après ça)\s+|\s*;\s*/i).map(s => s.trim()).filter(Boolean);
   },
 
   /**
@@ -1556,11 +1663,11 @@ const CommandService = {
     const full = [...new Set((compact.match(/[A-Z]{3}\d{6}-?[A-Z]{3}\d{3}/g) || [])
       .map(r => (r.includes('-') ? r : r.slice(0, 9) + '-' + r.slice(9))))];
     const fci = [...new Set(compact.match(/F\d{11}/g) || [])];
-    const partial = up.split(/[\s,;:()«»"“”']+/)
+    const partial = [...new Set(up.split(/[\s,;:()«»"“”']+/)
       .map(w => w.replace(/^[^A-Z0-9]+|[^A-Z0-9]+$/g, ''))
       .filter(w => w.length >= 4 && /\d{3}/.test(w) && /^[A-Z]{0,3}\d{3,6}(-[A-Z]{0,3}\d{0,3})?$/.test(w))
-      .filter(w => !/^F\d{11}$/.test(w) && !full.some(f => f === w || f.replace('-', '') === w));
-    return { full, partial, fci, any: full.length + partial.length > 0 };
+      .filter(w => !/^F\d{11}$/.test(w) && !full.some(f => f === w || f.replace('-', '') === w || f.includes(w))))];
+    return { full, partial, fci, any: full.length + partial.length > 0, count: full.length + partial.length };
   },
 
   detectCategory(t) {
@@ -1578,6 +1685,29 @@ const CommandService = {
     return null;
   },
 
+  detectSpecial(t) {
+    if (/\ben retard\b|\bretard\w*\b/.test(t)) return 'overdue';
+    if (/\bsans fci\b|\bpas de fci\b|\baucun fci\b/.test(t)) return 'nofci';
+    return '';
+  },
+
+  /**
+   * Sélection groupée : « tous les dossiers AIR », « toutes les refusées »…
+   * Renvoie { selection: {categorie, statut, special} | null, rest } où
+   * `rest` est la phrase sans la partie sélection (pour lire la cible).
+   */
+  extractSelection(t) {
+    const m = t.match(/\b(?:tous|toutes)\b(?: les)?(?: dossiers?)?(.*?)(?=\s(?:en|a|au|vers|pour|dans|le|du)\s|$)/);
+    if (!m) return { selection: null, rest: t };
+    const sel = m[1] || '';
+    const selection = {
+      categorie: CommandService.detectCategory(sel),
+      statut: CommandService.detectStatus(sel),
+      special: CommandService.detectSpecial(sel)
+    };
+    return { selection, rest: t.replace(m[0], ' ') };
+  },
+
   /** Dates relatives ou absolues → AAAA-MM-JJ. */
   parseDate(t) {
     const today = DateUtil.today();
@@ -1589,10 +1719,10 @@ const CommandService = {
       const n = Number(m[1]) || CommandService.NUMBERS[m[1]] || 1;
       return DateUtil.addDays(today, m[2].startsWith('sem') ? n * 7 : m[2].startsWith('mois') ? n * 30 : n);
     }
+    if (/\b(la )?semaine prochaine\b/.test(t)) return DateUtil.addDays(today, 7);
     const build = (d, mo, y) => {
       if (d < 1 || d > 31 || mo < 1 || mo > 12) return null;
-      const now = new Date();
-      let year = y ? (y < 100 ? 2000 + y : y) : now.getFullYear();
+      const year = y ? (y < 100 ? 2000 + y : y) : new Date().getFullYear();
       let iso = DateUtil.toISO(new Date(year, mo - 1, d));
       if (!y && DateUtil.daysFromToday(iso) < -30) iso = DateUtil.toISO(new Date(year + 1, mo - 1, d));
       return iso;
@@ -1604,7 +1734,7 @@ const CommandService = {
     m = t.match(new RegExp(`\\b(${CommandService.DAYS.join('|')})\\b`));
     if (m) {
       const target = CommandService.DAYS.indexOf(m[1]);
-      const d = new Date(); let delta = (target - d.getDay() + 7) % 7 || 7;
+      const delta = (target - new Date().getDay() + 7) % 7 || 7;
       return DateUtil.addDays(today, delta);
     }
     return null;
@@ -1623,24 +1753,28 @@ const CommandService = {
     return t.replace(verbRe, ' ').split(' ').filter(w => w && !CommandService.STOP.has(w) && w.length > 1).join(' ');
   },
 
-  /** Analyse une phrase et renvoie une intention. */
+  /** Analyse une phrase (déjà corrigée) et renvoie une intention. */
   parse(raw) {
     const text = String(raw ?? '').trim();
     if (!text) return null;
-    const t = CommandService.simplify(text);
+    const t0 = CommandService.simplify(text);
     const V = CommandService.VERBS;
     const refs = CommandService.extractRefs(text);
-    const cat = CommandService.detectCategory(t);
-    const statut = CommandService.detectStatus(t);
+    const { selection, rest } = CommandService.extractSelection(t0);
+    const t = t0;                                      // phrase complète (verbes)
+    const target = selection ? rest : t0;              // partie qui décrit la cible
+    const cat = CommandService.detectCategory(target);
+    const statut = CommandService.detectStatus(target);
     const date = CommandService.parseDate(t);
     const quote = CommandService.extractQuote(text);
-    const special = /\ben retard\b|\bretard\w*\b/.test(t) ? 'overdue' : /\bsans fci\b|\bpas de fci\b|\baucun fci\b/.test(t) ? 'nofci' : '';
-    const base = { refs, text, t };
+    const special = CommandService.detectSpecial(target);
+    const base = { refs, text, t, selection };
 
     if (V.help.test(t)) return { ...base, intent: 'help' };
     if (V.undo.test(t)) return { ...base, intent: 'undo' };
     if (V.hello.test(t) && t.split(' ').length <= 3) return { ...base, intent: 'hello' };
     if (V.thanks.test(t) && t.split(' ').length <= 3) return { ...base, intent: 'thanks' };
+    if (V.brief.test(t) && !refs.any && !V.add.test(t) && !V.del.test(t)) return { ...base, intent: 'briefing' };
     if (V.theme.test(t)) {
       const mode = /sombre|donjon|nuit/.test(t) ? 'dark' : /clair|parchemin|jour/.test(t) ? 'light' : 'system';
       return { ...base, intent: 'theme', mode };
@@ -1651,8 +1785,12 @@ const CommandService = {
       return { ...base, intent: 'export', kind };
     }
     if (V.count.test(t)) return { ...base, intent: 'count', categorie: cat, statut, special };
-    if (V.del.test(t)) return { ...base, intent: 'delete' };
-    if (V.add.test(t)) {
+    if (V.del.test(t)) {
+      // « supprime les refusés » sans « tous » : on le comprend comme une sélection
+      const sel = selection || (!refs.any && (cat || statut || special) ? { categorie: cat, statut, special } : null);
+      return { ...base, selection: sel, intent: 'delete' };
+    }
+    if (V.add.test(t) && !selection) {
       const existing = refs.full.length ? DossierRepository.findByGcblo(refs.full[0]) : null;
       if (refs.fci.length && (existing || (!refs.full.length && refs.partial.length) || (!refs.full.length && !refs.partial.length && /\bfci\b/.test(t)))) {
         return { ...base, intent: 'addFci', fci: refs.fci };
@@ -1666,8 +1804,8 @@ const CommandService = {
     }
     if (V.note.test(t) && quote) return { ...base, intent: 'comment', comment: quote };
     if (V.relance.test(t)) return date ? { ...base, intent: 'schedule', date } : { ...base, intent: 'relance' };
-    if (statut && (V.status.test(t) || refs.any || /\b(le|la|l)\b/.test(t))) return { ...base, intent: 'status', statut };
-    if (cat && V.status.test(t) && (refs.any || /\b(le|la|l)\b/.test(t))) return { ...base, intent: 'type', categorie: cat };
+    if (statut && (V.status.test(t) || refs.any || selection || /\b(le|la|l|les)\b/.test(t))) return { ...base, intent: 'status', statut };
+    if (cat && V.status.test(t) && (refs.any || selection || /\b(le|la|l|les)\b/.test(t))) return { ...base, intent: 'type', categorie: cat };
     if (V.copy.test(t)) return { ...base, intent: 'copy', what: /\bfci\b/.test(t) ? 'fci' : 'gcblo' };
     if (V.open.test(t) && refs.any) return { ...base, intent: 'open' };
     if (V.find.test(t) || cat || statut || special) {
@@ -1678,6 +1816,15 @@ const CommandService = {
     }
     if (refs.any) return { ...base, intent: 'open' };
     return { ...base, intent: 'unknown' };
+  },
+
+  /** Exemples proposés quand une phrase n'est pas comprise (par ressemblance). */
+  EXAMPLES: ['ajoute SBA202020-THF010 AIR', 'supprime 501404', 'passe 501404 en cours de validation', 'relance 501404 dans 3 jours',
+    'montre les dossiers en retard', 'combien de dossiers AIR', 'quoi de neuf', 'note sur 501404 : texte', 'tout afficher', 'aide'],
+  suggestFor(text) {
+    const words = CommandService.simplify(text).split(' ');
+    const score = ex => { const ew = CommandService.simplify(ex).split(' '); return words.filter(w => w.length > 2 && ew.some(e => e.startsWith(w.slice(0, 4)))).length; };
+    return CommandService.EXAMPLES.map(ex => [ex, score(ex)]).filter(([, s]) => s > 0).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([ex]) => ex);
   }
 };
 
@@ -2362,55 +2509,72 @@ const SettingsDialog = {
 
 /**
  * Jarvis : barre de commande en bas du registre.
- * Lit la phrase (CommandService.parse), exécute l'action avec les services
- * métier et répond dans une bulle, avec des boutons quand il faut choisir
- * ou confirmer. Se souvient du dernier dossier évoqué (« passe-le en refusé »).
- * Micro (reconnaissance vocale) et réponses à voix haute si le navigateur
- * les propose.
+ * Corrige les fautes, découpe les enchaînements (« … puis … »), lit chaque
+ * phrase (CommandService.parse), exécute avec les services métier et répond
+ * dans une bulle, avec des boutons pour choisir ou confirmer.
+ * Se souvient du dernier dossier évoqué (« passe-le en refusé »), propose des
+ * suggestions pendant la frappe, affiche un voyant s'il y a des relances en
+ * retard. Micro et voix si le navigateur les propose.
  */
 const Jarvis = {
   ctx: { lastId: null, pending: null, undo: null },
+  queue: [],            // commandes enchaînées en attente
   history: [],          // commandes déjà tapées (flèche ↑)
   histPos: -1,
-  handlers: [],         // actions des boutons de la bulle courante
   hideTimer: null,
+  voice: false,
   SR: window.SpeechRecognition || window.webkitSpeechRecognition || null,
+  BULK_CONFIRM: 3,      // au-delà, une action groupée demande confirmation
 
   /* ---------------- Affichage ---------------- */
 
   /** Ajoute un message dans le fil (who = 'me' | 'jv'). */
-  post(who, html, { chips = [], tone = '' } = {}) {
-    const log = $('#jvLog');
-    log.hidden = false;
+  post(who, html, { chips = [], tone = '', note = '' } = {}) {
+    $('#jvLog').hidden = false;
     const msg = document.createElement('div');
     msg.className = `jv-msg ${who}${tone ? ' ' + tone : ''}`;
-    msg.innerHTML = who === 'jv' ? `${px('orb', 'sm')}<div class="jv-txt">${html}</div>` : `<div class="jv-txt">${html}</div>`;
+    msg.innerHTML = who === 'jv'
+      ? `${px('orb', 'sm')}<div class="jv-txt">${html}</div>`
+      : `<div class="jv-txt">${html}${note ? `<span class="jv-note">${note}</span>` : ''}</div>`;
     if (chips.length) {
       const row = document.createElement('div'); row.className = 'jv-chips';
       chips.forEach(c => {
         const b = document.createElement('button');
         b.type = 'button'; b.className = 'jv-chip' + (c.primary ? ' primary' : '') + (c.danger ? ' danger' : '');
         b.innerHTML = c.label;
-        b.addEventListener('click', () => { Jarvis.post('me', Util.esc(c.echo || b.textContent)); c.run(); });
+        b.addEventListener('click', async () => {
+          row.querySelectorAll('button').forEach(x => { x.disabled = true; });
+          Jarvis.post('me', Util.esc(c.echo || b.textContent));
+          await c.run();
+          Jarvis.drain();
+        });
         row.appendChild(b);
       });
       msg.querySelector('.jv-txt').appendChild(row);
     }
     $('#jvMsgs').appendChild(msg);
-    // On ne garde que les derniers échanges
-    const all = $$('#jvMsgs .jv-msg'); all.slice(0, Math.max(0, all.length - 12)).forEach(m => m.remove());
+    const all = $$('#jvMsgs .jv-msg'); all.slice(0, Math.max(0, all.length - 14)).forEach(m => m.remove());
     $('#jvMsgs').scrollTop = $('#jvMsgs').scrollHeight;
     if (who === 'jv') { Jarvis.speak(msg.querySelector('.jv-txt').innerText); Jarvis.autoHide(); }
   },
   reply(html, opts) { Jarvis.post('jv', html, opts); },
-  /** Le fil se replie seul après un moment, sauf si une question attend. */
   autoHide() {
     clearTimeout(Jarvis.hideTimer);
-    Jarvis.hideTimer = setTimeout(() => { if (!Jarvis.ctx.pending && document.activeElement !== $('#jvInput')) $('#jvLog').hidden = true; }, 14000);
+    Jarvis.hideTimer = setTimeout(() => { if (!Jarvis.ctx.pending && document.activeElement !== $('#jvInput')) $('#jvLog').hidden = true; }, 15000);
   },
   /** Bouton cliquable vers un dossier. */
   tag(d) { return `<button type="button" class="jv-ref" data-open="${d.id}">${Util.esc(d.gcblo)}</button>`; },
+  tags(list, max = 6) { return list.slice(0, max).map(Jarvis.tag).join(' ') + (list.length > max ? ` <span class="jv-more">+${list.length - max}</span>` : ''); },
   catLabel: id => Ref.category(id)?.label || id,
+  undoChip() { return { label: 'Annuler', run: () => Jarvis.run({ intent: 'undo' }) }; },
+
+  /** Voyant sur l'orbe : relances en retard. */
+  updateBadge(stats) {
+    const b = $('#jvBadge'); if (!b) return;
+    b.hidden = !stats.overdue;
+    b.textContent = stats.overdue > 9 ? '9+' : String(stats.overdue);
+    $('#jvPrompt').title = stats.overdue ? `${Util.plural(stats.overdue, 'relance en retard', 'relances en retard')} — tapez « quoi de neuf »` : 'Jarvis';
+  },
 
   /* ---------------- Voix ---------------- */
   speak(text) {
@@ -2446,128 +2610,219 @@ const Jarvis = {
     try { rec.start(); } catch { Jarvis.rec = null; $('#jvMic').classList.remove('on'); }
   },
 
-  /* ---------------- Résolution des dossiers ---------------- */
+  /* ---------------- Ciblage des dossiers ---------------- */
+
+  /** Résout une référence (complète ou partielle). */
+  resolveRef(ref, isFull) {
+    if (isFull) { const d = DossierRepository.findByGcblo(ref); return d ? { one: d } : { none: ref }; }
+    const key = ref.replace('-', '');
+    const hits = DossierRepository.all().filter(d => d.gcblo.replace('-', '').includes(key));
+    return hits.length === 1 ? { one: hits[0] } : hits.length ? { many: hits, ref } : { none: ref };
+  },
 
   /**
-   * Trouve le dossier visé : GCBLO complet, morceau de référence,
-   * « le dernier », ou à défaut le dernier dossier évoqué.
-   * Renvoie { one } | { many } | { none: ref } | { missing: true }.
+   * Cible d'une commande :
+   *  - sélection « tous les … » → liste filtrée,
+   *  - plusieurs références → liste,
+   *  - une référence, « le dernier » ou le dossier évoqué juste avant → un dossier.
+   * Renvoie { list } | { one } | { many } | { none } | { missing }.
    */
-  resolve(cmd) {
+  target(cmd) {
     const all = DossierRepository.all();
+    if (cmd.selection) {
+      const s = cmd.selection;
+      return { list: DossierService.query(all, { categorie: s.categorie || '', statut: s.statut || '', special: s.special || '' }), selection: true };
+    }
     const { full, partial } = cmd.refs;
-    if (full.length) {
-      const d = DossierRepository.findByGcblo(full[0]);
-      return d ? { one: d } : { none: full[0] };
+    if (full.length + partial.length > 1) {
+      const found = [], missing = [], ambiguous = [];
+      full.forEach(r => { const x = Jarvis.resolveRef(r, true); x.one ? found.push(x.one) : missing.push(r); });
+      partial.forEach(r => { const x = Jarvis.resolveRef(r, false); x.one ? found.push(x.one) : x.many ? ambiguous.push(r) : missing.push(r); });
+      return { list: [...new Map(found.map(d => [d.id, d])).values()], missing, ambiguous };
     }
-    if (partial.length) {
-      const key = partial[0].replace('-', '');
-      const hits = all.filter(d => d.gcblo.replace('-', '').includes(key));
-      if (hits.length === 1) return { one: hits[0] };
-      if (hits.length > 1) return { many: hits };
-      return { none: partial[0] };
-    }
+    if (full.length) return Jarvis.resolveRef(full[0], true);
+    if (partial.length) return Jarvis.resolveRef(partial[0], false);
     if (/\b(dernier|derniere)\b/.test(cmd.t) && all.length) {
       return { one: all.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] };
     }
     const last = Jarvis.ctx.lastId && DossierRepository.get(Jarvis.ctx.lastId);
-    return last ? { one: last, implicit: true } : { missing: true };
+    return last ? { one: last } : { missing: true };
   },
 
-  /** Résout puis exécute `fn(d)`, en demandant de choisir si besoin. */
-  withDossier(cmd, verb, fn) {
-    const r = Jarvis.resolve(cmd);
-    if (r.one) { Jarvis.ctx.lastId = r.one.id; return fn(r.one); }
+  /**
+   * Exécute `one(d)` sur un dossier, ou `many(list)` sur une liste,
+   * en demandant de choisir si une référence est ambiguë.
+   */
+  withTargets(cmd, verb, one, many) {
+    const r = Jarvis.target(cmd);
+    if (r.list) {
+      const warn = [r.missing?.length && `introuvable : ${r.missing.map(Util.esc).join(', ')}`,
+        r.ambiguous?.length && `ambigu : ${r.ambiguous.map(Util.esc).join(', ')}`].filter(Boolean).join(' · ');
+      if (!r.list.length) return Jarvis.reply(`Aucun dossier à ${verb}${warn ? ` (${warn})` : ''}.`, { tone: 'warn' });
+      if (r.list.length === 1 && !r.selection) { Jarvis.ctx.lastId = r.list[0].id; return one(r.list[0]); }
+      if (!many) return Jarvis.reply(`Je ne peux ${verb} qu'un dossier à la fois.`, { tone: 'warn' });
+      return many(r.list, warn);
+    }
+    if (r.one) { Jarvis.ctx.lastId = r.one.id; return one(r.one); }
     if (r.many) {
       const list = r.many.slice(0, 6);
-      Jarvis.ctx.pending = { kind: 'pick', ids: list.map(d => d.id), fn };
-      return Jarvis.reply(`${r.many.length} dossiers correspondent. Lequel ${verb} ?${r.many.length > 6 ? ' (6 premiers)' : ''}`,
-        { chips: list.map(d => ({ label: Util.esc(d.gcblo), run: () => { Jarvis.ctx.pending = null; Jarvis.ctx.lastId = d.id; fn(d); } })) });
+      Jarvis.ctx.pending = { kind: 'pick', ids: list.map(d => d.id), fn: one };
+      return Jarvis.reply(`${r.many.length} dossiers contiennent « ${Util.esc(r.ref)} ». Lequel ${verb} ?${r.many.length > 6 ? ' (6 premiers)' : ''}`,
+        { chips: list.map(d => ({ label: Util.esc(d.gcblo), run: () => { Jarvis.ctx.pending = null; Jarvis.ctx.lastId = d.id; return one(d); } })) });
     }
     if (r.none) return Jarvis.reply(`Aucun dossier ne correspond à « ${Util.esc(r.none)} ».`, { tone: 'warn' });
     return Jarvis.reply(`Quel dossier ${verb} ? Donnez-moi son GCBLO (même partiel, ex. « 501404 »).`);
   },
 
+  /** Demande une confirmation (oui / non, par bouton ou au clavier). */
+  confirm(html, yesLabel, yes, { danger = false } = {}) {
+    Jarvis.ctx.pending = { kind: 'confirm', yes };
+    Jarvis.reply(html, {
+      chips: [{ label: yesLabel, danger, primary: !danger, run: () => { Jarvis.ctx.pending = null; return yes(); } },
+              { label: 'Non', run: () => { Jarvis.ctx.pending = null; Jarvis.reply('D\'accord, je ne touche à rien.'); } }]
+    });
+  },
+
   /** Mémorise de quoi annuler la dernière action. */
   remember(label, restore) { Jarvis.ctx.undo = { label, restore }; },
-  snapshot(d) { return JSON.parse(JSON.stringify(d)); },
-  /** Saisie complète d'un dossier existant (pour DossierService.update). */
+  snapshot(x) { return JSON.parse(JSON.stringify(x)); },
   inputOf(d, patch = {}) {
     return { categorie: d.categorie, gcblo: d.gcblo, fci: d.fci.join(', '), dateAffectation: d.dateAffectation,
       dateRelance: d.dateRelance || '', statut: d.statut, commentaire: d.commentaire, ...patch };
   },
-  /** Applique une modification et répond. */
+  /** Modifie un dossier et répond. */
   apply(d, patch, okText) {
     const before = Jarvis.snapshot(d);
     const res = DossierService.update(d.id, Jarvis.inputOf(d, patch));
     if (res.errors) return Jarvis.reply(Util.esc(Object.values(res.errors)[0]), { tone: 'warn' });
     if (res.unchanged) return Jarvis.reply(`${Jarvis.tag(d)} était déjà dans cet état.`);
     Jarvis.remember(`la modification de ${d.gcblo}`, () => DossierRepository.update(d.id, before));
-    Jarvis.reply(okText(DossierRepository.get(d.id)), { chips: [{ label: 'Annuler', run: () => Jarvis.run(CommandService.parse('annule')) }] });
+    Jarvis.reply(okText(DossierRepository.get(d.id)), { chips: [Jarvis.undoChip()] });
+  },
+  /** Modifie plusieurs dossiers (confirmation au-delà de BULK_CONFIRM). */
+  applyMany(list, fields, label, warn) {
+    const go = () => {
+      const before = list.map(Jarvis.snapshot);
+      const n = DossierService.bulkUpdate(list.map(d => d.id), fields);
+      Jarvis.remember(`la modification de ${Util.plural(before.length, 'dossier', 'dossiers')}`,
+        () => DossierRepository.updateMany(before.map(b => ({ id: b.id, patch: b }))));
+      Jarvis.reply(`${Util.plural(n, 'dossier modifié', 'dossiers modifiés')} (${label}).${n < list.length ? ` ${list.length - n} déjà à jour.` : ''}${warn ? `<br><small>${warn}</small>` : ''}`,
+        { chips: [Jarvis.undoChip()] });
+    };
+    if (list.length <= Jarvis.BULK_CONFIRM) return go();
+    Jarvis.confirm(`Modifier ${Util.plural(list.length, 'dossier', 'dossiers')} (${label}) ?<br>${Jarvis.tags(list)}`, `Oui, ${list.length} dossiers`, go);
   },
 
-  /* ---------------- Exécution ---------------- */
+  /* ---------------- Entrée ---------------- */
 
   /** Point d'entrée : texte tapé ou dicté. */
   submit(raw, { voice = false } = {}) {
     const text = String(raw).trim();
     if (!text) return;
     $('#jvInput').value = '';
+    Jarvis.hideSuggest();
     Jarvis.history = [text, ...Jarvis.history.filter(h => h !== text)].slice(0, 30);
     Jarvis.histPos = -1;
-    try { StorageAdapter.save(APP.uiKey + '.jarvis', Jarvis.history); } catch { /* ignoré */ }
-    Jarvis.post('me', Util.esc(text));
+    StorageAdapter.save(APP.uiKey + '.jarvis', Jarvis.history);
     Jarvis.voice = voice;
 
+    // Fautes de frappe corrigées, puis découpage des enchaînements
+    const { text: fixed, fixes } = CommandService.correct(text);
+    Jarvis.post('me', Util.esc(text), { note: fixes.length ? `compris : ${fixes.map(([, b]) => Util.esc(b)).join(', ')}` : '' });
+    const parts = CommandService.split(fixed);
+
     // Réponse à une question en attente (oui / non / choix tapé)
-    const p = Jarvis.ctx.pending;
-    if (p) {
-      const t = CommandService.simplify(text);
-      if (p.kind === 'confirm') {
-        if (/^(oui|ok|yes|vas[- ]y|confirme\w*|d accord|ouais|go|supprime)\b/.test(t)) { Jarvis.ctx.pending = null; return p.yes(); }
-        if (/^(non|no|annule\w*|stop|laisse)\b/.test(t)) { Jarvis.ctx.pending = null; return Jarvis.reply('D\'accord, je ne touche à rien.'); }
-      }
-      if (p.kind === 'cat') {
-        const c = CommandService.detectCategory(t);
-        if (c) { Jarvis.ctx.pending = null; return p.choose(c); }
-      }
-      if (p.kind === 'pick') {
-        const refs = CommandService.extractRefs(text);
-        const key = (refs.full[0] || refs.partial[0] || '').replace('-', '');
-        const hit = key && p.ids.map(id => DossierRepository.get(id)).find(d => d && d.gcblo.replace('-', '').includes(key));
-        if (hit) { Jarvis.ctx.pending = null; Jarvis.ctx.lastId = hit.id; return p.fn(hit); }
-      }
-      Jarvis.ctx.pending = null;    // autre phrase : on passe à la suite
-    }
-    Jarvis.run(CommandService.parse(text));
+    if (Jarvis.ctx.pending && parts.length === 1 && Jarvis.answerPending(parts[0])) return;
+    Jarvis.ctx.pending = null;
+    Jarvis.queue = parts;
+    Jarvis.drain();
   },
 
-  run(cmd) {
+  /** Exécute les commandes en file, en s'arrêtant si une question attend une réponse. */
+  async drain() {
+    if (Jarvis.draining) return;
+    Jarvis.draining = true;
+    try {
+      while (Jarvis.queue.length && !Jarvis.ctx.pending) {
+        await Jarvis.run(CommandService.parse(Jarvis.queue.shift()));
+      }
+    } finally { Jarvis.draining = false; }
+  },
+
+  /** Traite une réponse tapée à une question. Renvoie true si c'en était une. */
+  answerPending(text) {
+    const p = Jarvis.ctx.pending, t = CommandService.simplify(text);
+    const done = async fn => { Jarvis.ctx.pending = null; await fn(); Jarvis.drain(); return true; };
+    if (p.kind === 'confirm') {
+      if (/^(oui|ok|yes|vas[- ]y|confirme\w*|d accord|ouais|go|supprime\w*|valide\w*)\b/.test(t)) return done(p.yes);
+      if (/^(non|no|annule\w*|stop|laisse)\b/.test(t)) { Jarvis.queue = []; return done(() => Jarvis.reply('D\'accord, je ne touche à rien.')); }
+    }
+    if (p.kind === 'cat') { const c = CommandService.detectCategory(t); if (c) return done(() => p.choose(c)); }
+    if (p.kind === 'pick') {
+      const refs = CommandService.extractRefs(text);
+      const key = (refs.full[0] || refs.partial[0] || '').replace('-', '');
+      const hit = key && p.ids.map(id => DossierRepository.get(id)).find(d => d && d.gcblo.replace('-', '').includes(key));
+      if (hit) { Jarvis.ctx.lastId = hit.id; return done(() => p.fn(hit)); }
+    }
+    return false;
+  },
+
+  async run(cmd) {
     if (!cmd) return;
     const A = Jarvis.actions[cmd.intent] || Jarvis.actions.unknown;
-    try { A(cmd); } catch (e) { console.error(e); Jarvis.reply('Une erreur m\'a empêché de terminer. Réessayez autrement.', { tone: 'warn' }); }
+    try { await A(cmd); } catch (e) { console.error(e); Jarvis.reply('Une erreur m\'a empêché de terminer. Réessayez autrement.', { tone: 'warn' }); }
   },
 
+  /* ---------------- Actions ---------------- */
   actions: {
     help() {
       Jarvis.reply(`Voici ce que je sais faire :
         <ul class="jv-help">
+          <li><b>quoi de neuf</b> : retards, relances du jour, refus</li>
           <li><b>ajoute SBA202020-THF010 AIR</b> (+ fci F…, statut, « commentaire »)</li>
-          <li><b>supprime SBA501404</b> · <b>annule</b></li>
-          <li><b>passe 501404 en cours de validation</b> · <b>mis à disposition</b> · <b>refusé</b></li>
-          <li><b>passe 501404 en AIR</b> (change le type)</li>
+          <li><b>supprime 501404</b> · <b>supprime tous les refusés</b> · <b>annule</b></li>
+          <li><b>passe 501404 et 501423 en refusé</b> · <b>passe tous les AIR en cours de validation</b></li>
+          <li><b>passe 501404 en Sogetrel</b> (change le type)</li>
           <li><b>relance 501404</b> (email) · <b>relance 501404 lundi</b> / <b>dans 3 jours</b></li>
           <li><b>ajoute le fci F12345678901 à 501404</b> · <b>note sur 501404 : texte</b></li>
-          <li><b>montre les dossiers air</b> · <b>en retard</b> · <b>sans fci</b> · <b>cherche 5014</b> · <b>tout afficher</b></li>
+          <li><b>montre les dossiers air</b> · <b>en retard</b> · <b>sans fci</b> · <b>tout afficher</b></li>
           <li><b>combien de refusés ?</b> · <b>stats</b> · <b>exporte en excel</b> · <b>mode sombre</b></li>
-        </ul>Après une action, « le » désigne le même dossier : « passe-le en refusé ».`);
+        </ul>Enchaînez avec « puis » : « ajoute … AIR puis relance-le demain ».
+        Après une action, « le » désigne le même dossier. Les fautes de frappe sont corrigées.`);
     },
-    hello() { Jarvis.reply(`Bonjour. ${DossierRepository.all().length} dossiers au registre. Que puis-je faire ?`); },
+    hello() { Jarvis.actions.briefing({}, 'Bonjour. '); },
     thanks() { Jarvis.reply('À votre service.'); },
     unknown(cmd) {
-      Jarvis.reply(`Je n'ai pas compris « ${Util.esc(cmd.text)} ».`, {
-        tone: 'warn', chips: [{ label: 'Voir les commandes', run: () => Jarvis.run({ intent: 'help' }) }]
+      const ideas = CommandService.suggestFor(cmd.text);
+      Jarvis.reply(`Je n'ai pas compris « ${Util.esc(cmd.text)} ».${ideas.length ? ' Vouliez-vous dire :' : ''}`, {
+        tone: 'warn',
+        chips: [...ideas.map(ex => ({ label: Util.esc(ex), run: () => { $('#jvInput').value = ex; $('#jvInput').focus(); } })),
+                { label: 'Aide', run: () => Jarvis.run({ intent: 'help' }) }]
       });
+    },
+
+    /** Point de la journée. */
+    briefing(cmd, prefix = '') {
+      const all = DossierRepository.all();
+      const open = all.filter(d => !Ref.status(d.statut).closed);
+      const overdue = open.filter(d => DossierService.relanceState(d) === 'overdue');
+      const today = open.filter(d => d.dateRelance && DateUtil.daysFromToday(d.dateRelance) === 0);
+      const soon = open.filter(d => { const n = d.dateRelance && DateUtil.daysFromToday(d.dateRelance); return n > 0 && n <= RULES.relanceSoonDays; });
+      const refused = all.filter(d => d.statut === 'REFUSE');
+      const noFci = open.filter(d => !d.fci.length);
+      if (!all.length) return Jarvis.reply(`${prefix}Le registre est vide. Importez votre Excel ou dites « ajoute SBA… AIR ».`);
+      const lines = [
+        overdue.length && `<b class="jv-red">${Util.plural(overdue.length, 'relance en retard', 'relances en retard')}</b> : ${Jarvis.tags(overdue, 5)}`,
+        today.length && `<b>${Util.plural(today.length, 'relance', 'relances')} aujourd'hui</b> : ${Jarvis.tags(today, 5)}`,
+        soon.length && `${Util.plural(soon.length, 'relance', 'relances')} dans les ${RULES.relanceSoonDays} jours : ${Jarvis.tags(soon, 5)}`,
+        refused.length && `${Util.plural(refused.length, 'dossier refusé', 'dossiers refusés')} à reprendre`,
+        noFci.length && `${Util.plural(noFci.length, 'dossier ouvert', 'dossiers ouverts')} sans FCI`
+      ].filter(Boolean);
+      const chips = [];
+      if (overdue.length) chips.push({ label: 'Voir les retards', run: () => Jarvis.run({ intent: 'filter', special: 'overdue' }) });
+      if (overdue.length) chips.push({ label: `Relancer ${overdue.length > 1 ? 'le premier' : ''}`.trim(), primary: true, run: () => { App.relance(overdue[0].id); Jarvis.reply(`Email de relance pour ${Jarvis.tag(overdue[0])} préparé.`); } });
+      if (refused.length) chips.push({ label: 'Voir les refusés', run: () => Jarvis.run({ intent: 'filter', statut: 'REFUSE' }) });
+      Jarvis.reply(`${prefix}${lines.length ? lines.join('<br>') : `Rien d'urgent : ${Util.plural(open.length, 'dossier ouvert', 'dossiers ouverts')}, aucune relance en retard.`}`, { chips });
     },
 
     undo() {
@@ -2587,7 +2842,7 @@ const Jarvis = {
     count(cmd) {
       const all = DossierRepository.all(), st = DossierService.stats(all);
       if (cmd.special === 'overdue') return Jarvis.reply(`${Util.plural(st.overdue, 'relance en retard', 'relances en retard')}${st.soon ? `, et ${st.soon} dans les ${RULES.relanceSoonDays} jours` : ''}.`,
-        st.overdue ? { chips: [{ label: 'Les afficher', run: () => Jarvis.run({ intent: 'filter', special: 'overdue', refs: { any: false } }) }] } : {});
+        st.overdue ? { chips: [{ label: 'Les afficher', run: () => Jarvis.run({ intent: 'filter', special: 'overdue' }) }] } : {});
       if (cmd.special === 'nofci') return Jarvis.reply(`${Util.plural(st.noFci, 'dossier', 'dossiers')} sans FCI.`);
       if (cmd.categorie && cmd.statut) {
         const n = all.filter(d => d.categorie === cmd.categorie && d.statut === cmd.statut).length;
@@ -2610,15 +2865,19 @@ const Jarvis = {
       Jarvis.reply(`${Util.plural(n, 'dossier', 'dossiers')}${what ? ' ' + what : ''}.`, { chips: [{ label: 'Tout afficher', run: () => Jarvis.run({ intent: 'reset' }) }] });
     },
 
-    open(cmd) { Jarvis.withDossier(cmd, 'ouvrir', d => { DetailDialog.open(d.id); Jarvis.reply(`Fiche de ${Jarvis.tag(d)} ouverte.`); }); },
+    open(cmd) { Jarvis.withTargets(cmd, 'ouvrir', d => { DetailDialog.open(d.id); Jarvis.reply(`Fiche de ${Jarvis.tag(d)} ouverte.`); }); },
 
     copy(cmd) {
-      Jarvis.withDossier(cmd, 'copier', d => {
+      Jarvis.withTargets(cmd, 'copier', d => {
         if (cmd.what === 'fci') {
           if (!d.fci.length) return Jarvis.reply(`${Jarvis.tag(d)} n'a pas de FCI.`, { tone: 'warn' });
           Clipboard.copy(d.fci.join(', '), 'FCI');
         } else Clipboard.copy(d.gcblo, 'GCBLO');
         Jarvis.reply(`${cmd.what === 'fci' ? 'FCI' : 'GCBLO'} de ${Jarvis.tag(d)} copié.`);
+      }, list => {
+        const vals = cmd.what === 'fci' ? list.flatMap(d => d.fci) : list.map(d => d.gcblo);
+        Clipboard.copy(vals.join('\n'), cmd.what === 'fci' ? 'FCI' : 'GCBLO');
+        Jarvis.reply(`${vals.length} ${cmd.what === 'fci' ? 'FCI' : 'GCBLO'} copiés (un par ligne).`);
       });
     },
 
@@ -2644,10 +2903,10 @@ const Jarvis = {
         Jarvis.ctx.lastId = d.id;
         Jarvis.remember(`la création de ${d.gcblo}`, () => DossierService.remove(d.id));
         const hidden = !DossierService.query([d], ViewState).length;
-        if (hidden) { App.resetFilters(); }
+        if (hidden) App.resetFilters();
         BuildFx.build(d.id);
         Jarvis.reply(`Dossier ${Jarvis.tag(d)} créé en ${Jarvis.catLabel(categorie)}${d.fci.length ? `, FCI ${d.fci.join(', ')}` : ', sans FCI'}${d.dateRelance ? `, relance le ${DateUtil.fmt(d.dateRelance)}` : ''}.${hidden ? ' J\'ai retiré les filtres pour l\'afficher.' : ''}`,
-          { chips: [{ label: 'Annuler', run: () => Jarvis.run({ intent: 'undo' }) }] });
+          { chips: [Jarvis.undoChip()] });
       };
       if (cmd.categorie) return doCreate(cmd.categorie);
       Jarvis.ctx.pending = { kind: 'cat', choose: doCreate };
@@ -2656,74 +2915,135 @@ const Jarvis = {
       });
     },
 
-    /** Suppression, toujours confirmée. */
+    /** Suppression, toujours confirmée (un ou plusieurs dossiers). */
     delete(cmd) {
-      Jarvis.withDossier(cmd, 'supprimer', d => {
-        const yes = async () => {
+      Jarvis.withTargets(cmd, 'supprimer', d => {
+        Jarvis.confirm(`Supprimer ${Jarvis.tag(d)} (${Jarvis.catLabel(d.categorie)}, ${Ref.status(d.statut).label}) ?`, 'Oui, supprimer', async () => {
           const backup = Jarvis.snapshot(d);
           await App.removeNow(d.id, { silent: true });
           Jarvis.ctx.lastId = null;
           Jarvis.remember(`la suppression de ${d.gcblo}`, () => DossierRepository.insert(backup));
-          Jarvis.reply(`${Util.esc(d.gcblo)} supprimé.`, { chips: [{ label: 'Annuler', run: () => Jarvis.run({ intent: 'undo' }) }] });
-        };
-        Jarvis.ctx.pending = { kind: 'confirm', yes };
-        Jarvis.reply(`Supprimer ${Jarvis.tag(d)} (${Jarvis.catLabel(d.categorie)}, ${Ref.status(d.statut).label}) ?`, {
-          chips: [{ label: 'Oui, supprimer', danger: true, run: () => { Jarvis.ctx.pending = null; yes(); } },
-                  { label: 'Non', run: () => { Jarvis.ctx.pending = null; Jarvis.reply('D\'accord, je ne touche à rien.'); } }]
-        });
+          Jarvis.reply(`${Util.esc(d.gcblo)} supprimé.`, { chips: [Jarvis.undoChip()] });
+        }, { danger: true });
+      }, (list, warn) => {
+        Jarvis.confirm(`Supprimer ${Util.plural(list.length, 'dossier', 'dossiers')} ?<br>${Jarvis.tags(list)}${warn ? `<br><small>${warn}</small>` : ''}`,
+          `Oui, supprimer les ${list.length}`, async () => {
+            const backups = list.map(Jarvis.snapshot);
+            if (list.length <= 3) { for (const d of list) await App.removeNow(d.id, { silent: true }); }
+            else DossierRepository.removeMany(list.map(d => d.id));
+            Jarvis.ctx.lastId = null;
+            Jarvis.remember(`la suppression de ${Util.plural(backups.length, 'dossier', 'dossiers')}`, () => DossierRepository.insertMany(backups));
+            Jarvis.reply(`${Util.plural(backups.length, 'dossier supprimé', 'dossiers supprimés')}.`, { chips: [Jarvis.undoChip()] });
+          }, { danger: true });
       });
     },
 
     status(cmd) {
-      Jarvis.withDossier(cmd, 'modifier', d => Jarvis.apply(d, { statut: cmd.statut },
-        nd => `${Jarvis.tag(nd)} → <span class="pill tone-${Ref.status(nd.statut).tone}">${Ref.status(nd.statut).label}</span>`));
+      const st = Ref.status(cmd.statut);
+      Jarvis.withTargets(cmd, 'modifier',
+        d => Jarvis.apply(d, { statut: cmd.statut }, nd => `${Jarvis.tag(nd)} → <span class="pill tone-${st.tone}">${st.label}</span>`),
+        (list, warn) => Jarvis.applyMany(list, { statut: cmd.statut }, `statut DFT : ${st.label}`, warn));
     },
     type(cmd) {
-      Jarvis.withDossier(cmd, 'modifier', d => Jarvis.apply(d, { categorie: cmd.categorie },
-        nd => `${Jarvis.tag(nd)} passe en ${Jarvis.catLabel(nd.categorie)}.`));
+      Jarvis.withTargets(cmd, 'modifier',
+        d => Jarvis.apply(d, { categorie: cmd.categorie }, nd => `${Jarvis.tag(nd)} passe en ${Jarvis.catLabel(nd.categorie)}.`),
+        (list, warn) => Jarvis.applyMany(list, { categorie: cmd.categorie }, `type : ${Jarvis.catLabel(cmd.categorie)}`, warn));
     },
     addFci(cmd) {
-      Jarvis.withDossier(cmd, 'compléter', d => Jarvis.apply(d, { fci: [...new Set([...d.fci, ...cmd.fci])].join(', ') },
+      Jarvis.withTargets(cmd, 'compléter', d => Jarvis.apply(d, { fci: [...new Set([...d.fci, ...cmd.fci])].join(', ') },
         nd => `FCI de ${Jarvis.tag(nd)} : ${nd.fci.join(', ')}.`));
     },
     comment(cmd) {
-      Jarvis.withDossier(cmd, 'annoter', d => Jarvis.apply(d, { commentaire: d.commentaire ? `${d.commentaire}\n${cmd.comment}` : cmd.comment },
+      Jarvis.withTargets(cmd, 'annoter', d => Jarvis.apply(d, { commentaire: d.commentaire ? `${d.commentaire}\n${cmd.comment}` : cmd.comment },
         nd => `Note ajoutée à ${Jarvis.tag(nd)}.`));
     },
     schedule(cmd) {
-      Jarvis.withDossier(cmd, 'planifier', d => Jarvis.apply(d, { dateRelance: cmd.date },
-        nd => `Relance de ${Jarvis.tag(nd)} prévue le ${DateUtil.fmt(nd.dateRelance)}.`));
+      Jarvis.withTargets(cmd, 'planifier',
+        d => Jarvis.apply(d, { dateRelance: cmd.date }, nd => `Relance de ${Jarvis.tag(nd)} prévue le ${DateUtil.fmt(nd.dateRelance)}.`),
+        (list, warn) => Jarvis.applyMany(list, { dateRelance: cmd.date }, `relance : ${DateUtil.fmt(cmd.date)}`, warn));
     },
     /** Prépare l'email. Après une commande vocale, un appui est nécessaire pour ouvrir Outlook. */
     relance(cmd) {
-      Jarvis.withDossier(cmd, 'relancer', d => {
+      Jarvis.withTargets(cmd, 'relancer', d => {
         const go = () => { App.relance(d.id); Jarvis.reply(`Email de relance pour ${Jarvis.tag(d)} préparé dans Outlook.`); };
         if (Jarvis.voice) return Jarvis.reply(`Email de relance prêt pour ${Jarvis.tag(d)}.`, { chips: [{ label: `${px('mail', 'sm')}Ouvrir dans Outlook`, echo: 'Ouvrir', primary: true, run: go }] });
         go();
+      }, list => {
+        // Un email par dossier : un bouton chacun (le navigateur n'ouvre qu'un email par clic)
+        Jarvis.reply(`${list.length} relances à préparer, un email par dossier :`, {
+          chips: list.slice(0, 8).map(d => ({ label: `${px('mail', 'sm')}${Util.esc(d.gcblo)}`, echo: d.gcblo, run: () => { App.relance(d.id); } }))
+        });
       });
     }
   },
 
+  /* ---------------- Suggestions pendant la frappe ---------------- */
+  TEMPLATES: ['quoi de neuf', 'ajoute ', 'supprime ', 'passe  en cours de validation', 'passe  en mis à disposition', 'passe  en refusé',
+    'relance ', 'relance  dans 3 jours', 'note sur  : ', 'montre les dossiers en retard', 'montre les dossiers sans fci',
+    'combien de dossiers ', 'tout afficher', 'exporte en excel', 'annule', 'aide'],
+
+  /** Calcule jusqu'à 5 suggestions pour le texte en cours. */
+  suggestions(value) {
+    const v = value.replace(/\s+$/, ' ');
+    if (!v.trim()) return ['quoi de neuf', 'ajoute ', 'montre les dossiers en retard', 'aide'];
+    // Dernier mot avec des chiffres → compléter la référence
+    const m = v.match(/(\S*\d{2,}\S*)$/);
+    if (m && !/^F\d/i.test(m[1])) {
+      const key = m[1].toUpperCase().replace('-', '');
+      const hits = DossierRepository.all().filter(d => d.gcblo.replace('-', '').includes(key) && d.gcblo !== m[1].toUpperCase())
+        .sort((a, b) => a.gcblo.replace('-', '').indexOf(key) - b.gcblo.replace('-', '').indexOf(key) || a.gcblo.localeCompare(b.gcblo)).slice(0, 5);
+      return hits.map(d => v.slice(0, v.length - m[1].length) + d.gcblo + ' ');
+    }
+    const t = CommandService.simplify(v);
+    if (t.split(' ').length <= 2) {
+      return Jarvis.TEMPLATES.filter(x => CommandService.simplify(x).startsWith(t) && CommandService.simplify(x) !== t).slice(0, 5);
+    }
+    return [];
+  },
+  showSuggest() {
+    const box = $('#jvSuggest');
+    const list = Jarvis.suggestions($('#jvInput').value);
+    Jarvis.suggest = list;
+    box.hidden = !list.length;
+    box.innerHTML = list.map((s, i) => `<button type="button" class="jv-sg" data-sg="${i}">${Util.esc(s.trim()) || '…'}${i === 0 ? '<kbd>Tab</kbd>' : ''}</button>`).join('');
+  },
+  hideSuggest() { $('#jvSuggest').hidden = true; Jarvis.suggest = []; },
+  /** Applique une suggestion ; le curseur va là où il reste à écrire (double espace). */
+  acceptSuggest(i) {
+    const s = Jarvis.suggest?.[i]; if (s == null) return;
+    const input = $('#jvInput');
+    input.value = s;
+    const gap = s.indexOf('  ');
+    const pos = gap >= 0 ? gap + 1 : s.length;
+    input.focus(); input.setSelectionRange(pos, pos);
+    Jarvis.showSuggest();
+  },
+
   /* ---------------- Initialisation ---------------- */
   init() {
-    try { Jarvis.history = StorageAdapter.load(APP.uiKey + '.jarvis', []) || []; } catch { Jarvis.history = []; }
-    $('#jvForm').addEventListener('submit', e => { e.preventDefault(); Jarvis.submit($('#jvInput').value); });
-    $('#jvInput').addEventListener('keydown', e => {
-      if (e.key === 'ArrowUp' && Jarvis.history.length) {
+    Jarvis.history = StorageAdapter.load(APP.uiKey + '.jarvis', []) || [];
+    const input = $('#jvInput');
+    $('#jvForm').addEventListener('submit', e => { e.preventDefault(); Jarvis.submit(input.value); });
+    input.addEventListener('input', () => { Jarvis.histPos = -1; Jarvis.showSuggest(); });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Tab' && Jarvis.suggest?.length) { e.preventDefault(); Jarvis.acceptSuggest(0); }
+      else if (e.key === 'ArrowUp' && Jarvis.history.length) {
         e.preventDefault(); Jarvis.histPos = Math.min(Jarvis.histPos + 1, Jarvis.history.length - 1);
-        $('#jvInput').value = Jarvis.history[Jarvis.histPos];
+        input.value = Jarvis.history[Jarvis.histPos]; Jarvis.hideSuggest();
       } else if (e.key === 'ArrowDown') {
         e.preventDefault(); Jarvis.histPos = Math.max(Jarvis.histPos - 1, -1);
-        $('#jvInput').value = Jarvis.histPos >= 0 ? Jarvis.history[Jarvis.histPos] : '';
-      } else if (e.key === 'Escape') { $('#jvInput').blur(); $('#jvLog').hidden = true; }
+        input.value = Jarvis.histPos >= 0 ? Jarvis.history[Jarvis.histPos] : '';
+      } else if (e.key === 'Escape') { input.blur(); $('#jvLog').hidden = true; Jarvis.hideSuggest(); }
     });
-    $('#jvInput').addEventListener('focus', () => { if ($('#jvMsgs').children.length) $('#jvLog').hidden = false; clearTimeout(Jarvis.hideTimer); });
-    $('#jvInput').addEventListener('blur', () => Jarvis.autoHide());
+    input.addEventListener('focus', () => { if ($('#jvMsgs').children.length) $('#jvLog').hidden = false; clearTimeout(Jarvis.hideTimer); Jarvis.showSuggest(); });
+    input.addEventListener('blur', () => { Jarvis.autoHide(); setTimeout(() => { if (document.activeElement !== input) Jarvis.hideSuggest(); }, 150); });
+    $('#jvSuggest').addEventListener('mousedown', e => e.preventDefault());       // garde le focus dans le champ
+    $('#jvSuggest').addEventListener('click', e => { const b = e.target.closest('[data-sg]'); if (b) Jarvis.acceptSuggest(+b.dataset.sg); });
     $('#jvLog').addEventListener('click', e => {
       const ref = e.target.closest('[data-open]'); if (ref) DetailDialog.open(ref.dataset.open);
       if (e.target.closest('[data-jv-close]')) $('#jvLog').hidden = true;
     });
-    // Micro et voix : seulement si le navigateur les propose
+    $('#jvPrompt').addEventListener('click', () => { if (!$('#jvBadge').hidden && !input.value) Jarvis.submit('quoi de neuf'); });
     if (Jarvis.SR) { $('#jvMic').hidden = false; $('#jvMic').addEventListener('click', Jarvis.listen); }
     if ('speechSynthesis' in window) {
       const btn = $('#jvVoice'); btn.hidden = false;
@@ -2743,6 +3063,7 @@ const App = {
     const stats = DossierService.stats(all);
     DashboardView.render(stats);
     GaugesView.render(stats);
+    Jarvis.updateBadge(stats);
     FilterView.sync();
     ListView.render(DossierService.query(all, ViewState), all.length);
   },

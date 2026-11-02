@@ -22,14 +22,18 @@ Ligne de commande en bas du registre : on écrit (ou on dicte avec le micro) ce 
 
 | Exemple | Effet |
 | --- | --- |
+| `quoi de neuf` | retards, relances du jour, refus (aussi au clic sur le voyant rouge de Jarvis) |
 | `ajoute SBA202020-THF010 AIR fci F12345678901` | crée le dossier (demande le type s'il manque) |
-| `supprime 501404` | demande confirmation puis supprime |
+| `supprime 501404` · `supprime tous les refusés` | demande confirmation puis supprime |
 | `passe 501404 en cours de validation` · `passe-le en refusé` | change le statut DFT |
+| `passe 501404 et 501423 en refusé` · `passe tous les AIR en cours de validation` | action groupée (confirmation au-delà de 3 dossiers) |
 | `passe 501404 en Sogetrel` | change le type |
 | `relance 501404` · `relance 501404 lundi` / `dans 3 jours` | prépare l'email · planifie la relance |
 | `ajoute le fci F… à 501404` · `note sur 501404 : texte` | complète le dossier |
 | `montre les dossiers air` · `en retard` · `sans fci` · `tout afficher` | filtre le registre |
 | `combien de refusés ?` · `stats` · `exporte en excel` · `mode sombre` · `annule` · `aide` | divers |
+
+Enchaîner avec « puis » : `ajoute SBA202020-THF010 AIR puis relance-le dans 3 jours`. Les fautes de frappe sont corrigées (« suprime le dosiser »), des suggestions s'affichent pendant la frappe (`Tab` pour accepter, références complétées automatiquement), `↑` rappelle les commandes précédentes et chaque action propose « Annuler ».
 
 C'est un interpréteur de mots-clés intégré (pas d'IA en ligne) : il fonctionne hors connexion et rien ne quitte le navigateur. Le micro et la voix dépendent du navigateur (Chrome, Edge, Safari ; le micro demande une page en https, par exemple GitHub Pages).
 
