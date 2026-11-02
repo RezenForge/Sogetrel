@@ -1,0 +1,2018 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Affectations GCBLO</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!--
+  ============================================================================
+  AFFECTATIONS GCBLO — Sogetrel
+  ----------------------------------------------------------------------------
+  Application mono-fichier qui remplace le classeur Excel/VBA
+  « ROBOT_AFFECTATION_NUMERUS21_ET_AIR ».
+
+  - Aucun serveur, aucune base : les données vivent dans le localStorage
+    du navigateur (clé « gcblo.affectations.v1 »).
+  - Bibliothèques externes (CDN) : SheetJS (import/export Excel) et Chart.js
+    (graphiques). Si le poste est hors ligne, l'app reste utilisable :
+    seuls l'import/export Excel et les graphiques sont désactivés.
+
+  Organisation du script (voir plus bas) :
+    0. CONFIG          → référentiels extensibles (catégories, statuts,
+                          modèles d'email, règles métier)
+    1. UTILS           → dates, chaînes, identifiants
+    2. DATA LAYER      → stockage + dépôt de dossiers + paramètres
+    3. BUSINESS LAYER  → règles métier, import, export, emails
+    4. UI LAYER        → rendu, dialogues, événements
+    5. BOOTSTRAP       → démarrage
+  ============================================================================
+-->
+
+<!-- Bibliothèques (chargées avant le script applicatif, versions figées) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+
+<style>
+/* ==========================================================================
+   DESIGN TOKENS
+   Concept : interface « Microsoft 365 / Fluent » — barre d'application bleue,
+   surfaces blanches arrondies sur fond neutre chaud, données en police mono
+   pour lire les références GCBLO/FCI sans ambiguïté.
+   ========================================================================== */
+:root {
+  /* Couleurs de base */
+  --bg: #f5f5f4;
+  --surface: #ffffff;
+  --surface-2: #fafafa;
+  --surface-hover: #f3f6fa;
+  --fg: #242424;
+  --fg-muted: #616161;
+  --fg-subtle: #8a8a8a;
+  --stroke: #e1e1e1;
+  --stroke-strong: #c7c7c7;
+  --brand: #0f6cbd;
+  --brand-hover: #115ea3;
+  --brand-fg: #ffffff;
+  --brand-soft: #ebf3fc;
+  --appbar: #0f6cbd;
+  --appbar-fg: #ffffff;
+  --focus: #0f6cbd;
+  --shadow: 0 1px 2px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.05);
+  --shadow-pop: 0 8px 32px rgba(0,0,0,.18);
+
+  /* Catégories */
+  --cat-num21: #0f6cbd;
+  --cat-num21-soft: #ebf3fc;
+  --cat-air: #00727a;
+  --cat-air-soft: #e3f4f4;
+
+  /* Statuts (sémantique, distincte de la couleur de marque) */
+  --st-neutral: #5c5c5c;      --st-neutral-soft: #f0f0f0;
+  --st-info: #0f6cbd;         --st-info-soft: #ebf3fc;
+  --st-warning: #bc4b09;      --st-warning-soft: #fdefe4;
+  --st-success: #0e700e;      --st-success-soft: #e7f4e4;
+  --st-danger: #b10e1c;       --st-danger-soft: #fbe9ea;
+
+  /* Alertes de relance sur les lignes */
+  --row-overdue: #fdf0f1;
+  --row-overdue-edge: #d13438;
+  --row-soon: #fff4e8;
+  --row-soon-edge: #e8730f;
+
+  /* Typographie */
+  --font-ui: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Cascadia Mono", "Cascadia Code", Consolas, "SFMono-Regular", Menlo, monospace;
+
+  /* Formes */
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1b1b1b; --surface: #262626; --surface-2: #2c2c2c; --surface-hover: #2f3338;
+    --fg: #f2f2f2; --fg-muted: #b8b8b8; --fg-subtle: #8f8f8f;
+    --stroke: #3a3a3a; --stroke-strong: #525252;
+    --brand: #479ef5; --brand-hover: #62abf5; --brand-fg: #0b1a2b; --brand-soft: #0e2a47;
+    --appbar: #1f2a38; --appbar-fg: #ffffff; --focus: #62abf5;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.3);
+    --shadow-pop: 0 8px 32px rgba(0,0,0,.6);
+    --cat-num21: #62abf5; --cat-num21-soft: #0e2a47;
+    --cat-air: #4cc2c4; --cat-air-soft: #0d3335;
+    --st-neutral: #c4c4c4; --st-neutral-soft: #353535;
+    --st-info: #62abf5;    --st-info-soft: #0e2a47;
+    --st-warning: #f7a35c; --st-warning-soft: #3d2614;
+    --st-success: #6ccb5f; --st-success-soft: #19331a;
+    --st-danger: #f1707b;  --st-danger-soft: #3f1a1e;
+    --row-overdue: #3a1d21; --row-overdue-edge: #f1707b;
+    --row-soon: #3a2816;    --row-soon-edge: #f7a35c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1b1b1b; --surface: #262626; --surface-2: #2c2c2c; --surface-hover: #2f3338;
+  --fg: #f2f2f2; --fg-muted: #b8b8b8; --fg-subtle: #8f8f8f;
+  --stroke: #3a3a3a; --stroke-strong: #525252;
+  --brand: #479ef5; --brand-hover: #62abf5; --brand-fg: #0b1a2b; --brand-soft: #0e2a47;
+  --appbar: #1f2a38; --appbar-fg: #ffffff; --focus: #62abf5;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.3);
+  --shadow-pop: 0 8px 32px rgba(0,0,0,.6);
+  --cat-num21: #62abf5; --cat-num21-soft: #0e2a47;
+  --cat-air: #4cc2c4; --cat-air-soft: #0d3335;
+  --st-neutral: #c4c4c4; --st-neutral-soft: #353535;
+  --st-info: #62abf5;    --st-info-soft: #0e2a47;
+  --st-warning: #f7a35c; --st-warning-soft: #3d2614;
+  --st-success: #6ccb5f; --st-success-soft: #19331a;
+  --st-danger: #f1707b;  --st-danger-soft: #3f1a1e;
+  --row-overdue: #3a1d21; --row-overdue-edge: #f1707b;
+  --row-soon: #3a2816;    --row-soon-edge: #f7a35c;
+  color-scheme: dark;
+}
+
+/* ==========================================================================
+   BASE
+   ========================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.45 var(--font-ui);
+  min-height: 100vh;
+}
+[hidden] { display: none !important; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.mono { font-family: var(--font-mono); font-size: 13px; letter-spacing: -.01em; }
+.num { font-variant-numeric: tabular-nums; }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.icon { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Bande supérieure (encoche des téléphones) */
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+  z-index: 30; background: var(--appbar);
+}
+
+/* ==========================================================================
+   BARRE D'APPLICATION
+   ========================================================================== */
+.appbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: var(--appbar); color: var(--appbar-fg);
+}
+.appbar-inner {
+  display: flex; align-items: center; gap: 12px;
+  height: 48px; max-width: 1600px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.brand-mark {
+  width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center;
+  background: rgba(255,255,255,.16); font-weight: 700; font-size: 13px; letter-spacing: .02em;
+}
+.appbar h1 { font: 600 16px/1 var(--font-display); margin: 0; white-space: nowrap; }
+.appbar .sub { opacity: .78; font-size: 13px; white-space: nowrap; }
+.appbar .spacer { flex: 1; }
+.appbar-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 32px; min-width: 32px; padding: 0 8px; border: 0; border-radius: 6px;
+  background: transparent; color: inherit; cursor: pointer;
+}
+.appbar-btn:hover { background: rgba(255,255,255,.14); }
+.appbar-btn .label { font-size: 13px; }
+.save-indicator { font-size: 12px; opacity: .78; white-space: nowrap; }
+@media (max-width: 640px) { .appbar .sub, .save-indicator, .appbar-btn .label, .btn kbd, .search kbd { display: none; } }
+
+/* ==========================================================================
+   MISE EN PAGE
+   ========================================================================== */
+.wrap {
+  max-width: 1600px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+  display: grid; gap: 16px;
+}
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.toolbar .grow { flex: 1; }
+.page-title { font: 600 20px/1.2 var(--font-display); margin: 0; text-wrap: balance; }
+.page-hint { color: var(--fg-muted); font-size: 13px; margin: 2px 0 0; }
+
+.main-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) 340px; align-items: start; }
+@media (max-width: 1500px) { .main-grid { grid-template-columns: minmax(0, 1fr); } }
+.side { display: grid; gap: 16px; }
+@media (max-width: 1500px) and (min-width: 700px) { .side { grid-template-columns: 1fr 1fr; } .side .offline-note { grid-column: 1 / -1; } }
+
+/* ==========================================================================
+   BOUTONS
+   ========================================================================== */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px;
+  border-radius: 6px; border: 1px solid var(--stroke-strong); background: var(--surface);
+  color: var(--fg); font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap;
+}
+.btn:hover { background: var(--surface-hover); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-fg); }
+.btn.primary:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
+.btn.danger { color: var(--st-danger); border-color: var(--st-danger); }
+.btn.danger.solid { background: var(--st-danger); color: var(--surface); }
+.btn.ghost { border-color: transparent; background: transparent; }
+.btn.ghost:hover { background: var(--surface-hover); }
+.btn kbd { font: 11px var(--font-mono); opacity: .7; border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; }
+
+/* Menus déroulants (Exporter / Plus) */
+.menu { position: relative; }
+.menu-pop {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 15; min-width: 220px;
+  background: var(--surface); border: 1px solid var(--stroke); border-radius: var(--radius);
+  box-shadow: var(--shadow-pop); padding: 4px; display: grid;
+}
+.menu-pop button {
+  display: flex; align-items: center; gap: 10px; text-align: left; border: 0; background: none;
+  padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+.menu-pop button:hover { background: var(--surface-hover); }
+.menu-pop hr { border: 0; border-top: 1px solid var(--stroke); margin: 4px 0; }
+.menu-pop .danger-item { color: var(--st-danger); }
+
+/* ==========================================================================
+   INDICATEURS (DASHBOARD)
+   ========================================================================== */
+.kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 980px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kpi {
+  display: grid; gap: 6px; text-align: left; padding: 14px 16px;
+  background: var(--surface); border: 1px solid var(--stroke); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow); cursor: pointer; position: relative;
+}
+.kpi:hover { border-color: var(--stroke-strong); }
+.kpi[aria-pressed="true"] { border-color: var(--kpi-color, var(--brand)); box-shadow: 0 0 0 1px var(--kpi-color, var(--brand)), var(--shadow); }
+.kpi-label { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--fg-muted); }
+.kpi-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--kpi-color, var(--fg-subtle)); }
+.kpi-value { font: 600 30px/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.kpi-foot { font-size: 12px; color: var(--fg-muted); }
+.kpi.alert .kpi-value { color: var(--kpi-color); }
+@media (max-width: 560px) { .kpi:last-child:nth-child(odd) { grid-column: span 2; } }
+
+/* ==========================================================================
+   PANNEAUX
+   ========================================================================== */
+.panel { background: var(--surface); border: 1px solid var(--stroke); border-radius: var(--radius-lg); box-shadow: var(--shadow); min-width: 0; }
+.panel-head { display: flex; align-items: center; gap: 8px; padding: 14px 16px 0; }
+.panel-head h2 { font: 600 14px/1.2 var(--font-display); margin: 0; }
+.panel-head .meta { margin-left: auto; color: var(--fg-muted); font-size: 12px; }
+.panel-body { padding: 12px 16px 16px; }
+
+/* Filtres */
+.filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--stroke); }
+.search { position: relative; flex: 1 1 260px; min-width: 0; }
+.search .icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--fg-subtle); }
+.search kbd { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font: 11px var(--font-mono); color: var(--fg-subtle); border: 1px solid var(--stroke-strong); border-radius: 4px; padding: 0 5px; }
+.input, .select, .textarea {
+  width: 100%; height: 32px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--stroke-strong);
+  border-bottom-color: var(--fg-subtle); background: var(--surface); color: var(--fg);
+}
+.textarea { height: auto; min-height: 72px; padding: 8px 10px; resize: vertical; }
+.input:focus, .select:focus, .textarea:focus { outline: none; border-bottom: 2px solid var(--brand); }
+.search .input { padding-left: 32px; padding-right: 32px; }
+.filters .select { width: auto; min-width: 150px; }
+@media (max-width: 560px) { .filters .select { flex: 1 1 140px; min-width: 0; } }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 6px 0 10px;
+  border-radius: var(--radius-pill); background: var(--brand-soft); color: var(--brand);
+  font-size: 12px; font-weight: 600; border: 0; cursor: pointer;
+}
+.chip .icon { width: 14px; height: 14px; }
+.result-count { color: var(--fg-muted); font-size: 12px; margin-left: auto; white-space: nowrap; }
+
+/* ==========================================================================
+   TABLEAU
+   ========================================================================== */
+.table-scroll { overflow-x: auto; }
+table.dossiers { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+.dossiers th {
+  position: sticky; top: 0; background: var(--surface-2); text-align: left; font-weight: 600;
+  color: var(--fg-muted); font-size: 12px; padding: 0; border-bottom: 1px solid var(--stroke); white-space: nowrap;
+}
+.dossiers th button {
+  display: flex; align-items: center; gap: 4px; width: 100%; padding: 10px 12px; border: 0;
+  background: none; color: inherit; font: inherit; cursor: pointer; text-align: left;
+}
+.dossiers th button:hover { color: var(--fg); }
+.dossiers th .sort-ind { opacity: 0; font-size: 10px; }
+.dossiers th[aria-sort] .sort-ind { opacity: 1; color: var(--brand); }
+.dossiers th.th-static { padding: 10px 12px; }
+.dossiers td { padding: 8px 10px; border-bottom: 1px solid var(--stroke); vertical-align: middle; }
+.dossiers tbody tr { cursor: default; }
+.dossiers tbody tr:hover td { background: var(--surface-hover); }
+.dossiers tr.row-overdue td { background: var(--row-overdue); }
+.dossiers tr.row-soon td { background: var(--row-soon); }
+.dossiers tr.row-overdue td:first-child { box-shadow: inset 3px 0 0 var(--row-overdue-edge); }
+.dossiers tr.row-soon td:first-child { box-shadow: inset 3px 0 0 var(--row-soon-edge); }
+.dossiers tr.row-done td { color: var(--fg-muted); }
+.td-gcblo { font-weight: 600; white-space: nowrap; }
+.td-fci { white-space: nowrap; }
+.td-date { white-space: nowrap; }
+.td-comment { max-width: 240px; color: var(--fg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.no-fci { color: var(--fg-subtle); font-style: italic; font-family: var(--font-ui); }
+.fci-more { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--st-neutral-soft); color: var(--fg-muted); font-size: 11px; font-family: var(--font-ui); }
+.rel-hint { display: block; font-size: 11px; color: var(--fg-muted); }
+.row-overdue .rel-hint { color: var(--row-overdue-edge); font-weight: 600; }
+.row-soon .rel-hint { color: var(--row-soon-edge); font-weight: 600; }
+
+/* Badges catégorie */
+.cat { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: .04em; }
+.cat-NUM21 { background: var(--cat-num21-soft); color: var(--cat-num21); }
+.cat-AIR { background: var(--cat-air-soft); color: var(--cat-air); }
+
+/* Statut : sélecteur en forme de pastille, couleur automatique */
+.status-select {
+  appearance: none; -webkit-appearance: none; height: 24px; padding: 0 22px 0 10px; border-radius: var(--radius-pill);
+  border: 0; font-size: 12px; font-weight: 600; cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 12px) 10px, calc(100% - 8px) 10px; background-size: 4px 4px; background-repeat: no-repeat;
+}
+.pill { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: var(--radius-pill); font-size: 12px; font-weight: 600; }
+.tone-neutral { background-color: var(--st-neutral-soft); color: var(--st-neutral); }
+.tone-info { background-color: var(--st-info-soft); color: var(--st-info); }
+.tone-warning { background-color: var(--st-warning-soft); color: var(--st-warning); }
+.tone-success { background-color: var(--st-success-soft); color: var(--st-success); }
+.tone-danger { background-color: var(--st-danger-soft); color: var(--st-danger); }
+.status-select option { background: var(--surface); color: var(--fg); }
+
+/* Actions de ligne */
+.actions { display: flex; gap: 2px; justify-content: flex-end; }
+.icon-btn {
+  display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 6px;
+  border: 0; background: transparent; color: var(--fg-muted); cursor: pointer;
+}
+.icon-btn:hover { background: var(--brand-soft); color: var(--brand); }
+.icon-btn.del:hover { background: var(--st-danger-soft); color: var(--st-danger); }
+.icon-btn .icon { width: 17px; height: 17px; }
+.icon-btn .tag { font: 700 9px/1 var(--font-ui); letter-spacing: .02em; }
+.icon-btn.copy { width: auto; padding: 0 6px; gap: 3px; display: inline-flex; align-items: center; }
+
+/* États vides */
+.empty { padding: 48px 16px; text-align: center; display: grid; justify-items: center; gap: 10px; }
+.empty h3 { margin: 0; font: 600 16px var(--font-display); }
+.empty p { margin: 0; color: var(--fg-muted); max-width: 46ch; }
+.empty .row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; }
+
+/* Tableau → cartes sur téléphone */
+@media (max-width: 760px) {
+  table.dossiers, .dossiers tbody, .dossiers tr, .dossiers td { display: block; width: 100%; }
+  .dossiers thead { display: none; }
+  .dossiers tbody tr { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; padding: 12px 14px; border-bottom: 1px solid var(--stroke); }
+  .dossiers tbody tr td { padding: 0; border: 0; background: none !important; box-shadow: none !important; }
+  .dossiers tr.row-overdue { background: var(--row-overdue); box-shadow: inset 3px 0 0 var(--row-overdue-edge); }
+  .dossiers tr.row-soon { background: var(--row-soon); box-shadow: inset 3px 0 0 var(--row-soon-edge); }
+  .dossiers td.td-cat { grid-column: 1; }
+  .dossiers td.td-gcblo { grid-column: 2; align-self: center; }
+  .dossiers td.td-status { grid-column: 3; }
+  .dossiers td.td-fci, .dossiers td.td-date, .dossiers td.td-comment, .dossiers td.td-actions { grid-column: 1 / -1; }
+  .dossiers td[data-label]::before { content: attr(data-label) " · "; color: var(--fg-subtle); font-size: 12px; font-family: var(--font-ui); }
+  .td-comment { max-width: none; white-space: normal; }
+  .actions { justify-content: flex-start; margin-top: 4px; flex-wrap: wrap; }
+  .empty td { display: block; }
+}
+
+/* ==========================================================================
+   GRAPHIQUES
+   ========================================================================== */
+.chart-box { position: relative; height: 200px; }
+.chart-legend { display: grid; gap: 6px; margin-top: 12px; }
+.legend-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.legend-row .sw { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.legend-row .v { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 600; }
+.legend-row .p { width: 42px; text-align: right; color: var(--fg-muted); font-variant-numeric: tabular-nums; font-size: 12px; }
+.chart-off { color: var(--fg-muted); font-size: 13px; padding: 24px 0; text-align: center; }
+
+/* ==========================================================================
+   DIALOGUES
+   ========================================================================== */
+dialog {
+  width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0;
+  border: 1px solid var(--stroke); border-radius: var(--radius-lg); background: var(--surface); color: var(--fg);
+  box-shadow: var(--shadow-pop);
+}
+dialog.wide { width: min(760px, calc(100vw - 32px)); }
+dialog::backdrop { background: rgba(0,0,0,.4); }
+.dlg { display: flex; flex-direction: column; max-height: calc(100vh - 48px); }
+.dlg-head { display: flex; align-items: flex-start; gap: 12px; padding: 18px 20px 6px; }
+.dlg-head h2 { margin: 0; font: 600 18px/1.3 var(--font-display); text-wrap: balance; }
+.dlg-head .sub { color: var(--fg-muted); font-size: 13px; margin-top: 2px; }
+.dlg-head .icon-btn { margin-left: auto; }
+.dlg-body { padding: 10px 20px 16px; overflow-y: auto; display: grid; gap: 14px; }
+.dlg-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 12px 20px 18px; border-top: 1px solid var(--stroke); }
+.dlg-foot .left { margin-right: auto; }
+
+/* Formulaire */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 520px) { .form-grid { grid-template-columns: 1fr; } }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field.full { grid-column: 1 / -1; }
+.field label, .field .lbl { font-size: 13px; font-weight: 600; }
+.field .req { color: var(--st-danger); }
+.field .help { font-size: 12px; color: var(--fg-muted); }
+.field .err { font-size: 12px; color: var(--st-danger); font-weight: 600; }
+.field.invalid .input, .field.invalid .textarea { border-color: var(--st-danger); }
+.segmented { display: inline-flex; border: 1px solid var(--stroke-strong); border-radius: 6px; overflow: hidden; width: fit-content; }
+.segmented label { position: relative; }
+.segmented input { position: absolute; opacity: 0; inset: 0; }
+.segmented span { display: block; padding: 5px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.segmented input:checked + span { background: var(--brand); color: var(--brand-fg); }
+.segmented input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: -2px; }
+
+/* Fiche détail */
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.kv div { display: grid; gap: 2px; min-width: 0; }
+.kv dt { font-size: 12px; color: var(--fg-muted); }
+.kv dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.section-title { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--fg-muted); margin: 4px 0 -4px; }
+.mail-preview { border: 1px solid var(--stroke); border-radius: var(--radius); background: var(--surface-2); }
+.mail-preview .mail-subject { padding: 10px 12px; border-bottom: 1px solid var(--stroke); font-weight: 600; overflow-wrap: anywhere; }
+.mail-preview pre { margin: 0; padding: 12px; white-space: pre-wrap; font: 13px/1.5 var(--font-ui); }
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.timeline li { display: grid; grid-template-columns: 12px 1fr; gap: 10px; }
+.timeline .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--stroke-strong); margin-top: 6px; }
+.timeline li:first-child .dot { background: var(--brand); }
+.timeline .when { font-size: 12px; color: var(--fg-muted); }
+.note-block { white-space: pre-wrap; background: var(--surface-2); border-radius: var(--radius); padding: 10px 12px; }
+
+/* Rapport d'import */
+.report-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+.report-stats div { border: 1px solid var(--stroke); border-radius: var(--radius); padding: 10px 12px; }
+.report-stats b { display: block; font: 600 22px var(--font-display); font-variant-numeric: tabular-nums; }
+.report-stats span { font-size: 12px; color: var(--fg-muted); }
+.report-list { margin: 0; padding-left: 18px; display: grid; gap: 2px; font-size: 13px; max-height: 180px; overflow: auto; }
+
+/* ==========================================================================
+   NOTIFICATIONS (TOASTS)
+   ========================================================================== */
+.toasts {
+  position: fixed; z-index: 50; display: grid; gap: 8px; justify-items: end;
+  right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  left: calc(16px + env(safe-area-inset-left, 0px)); pointer-events: none;
+}
+.toast {
+  pointer-events: auto; display: flex; align-items: center; gap: 12px; max-width: 460px;
+  background: var(--fg); color: var(--bg); border-radius: var(--radius); padding: 10px 12px 10px 14px;
+  box-shadow: var(--shadow-pop); font-size: 13px; animation: toast-in .18s ease-out;
+}
+.toast button { border: 0; background: none; color: inherit; font-weight: 700; cursor: pointer; padding: 4px 6px; border-radius: 4px; text-decoration: underline; }
+.toast.error { background: var(--st-danger); color: #fff; }
+@keyframes toast-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+
+.offline-note { font-size: 12px; color: var(--fg-muted); }
+</style>
+</head>
+<body>
+
+<!-- ======================================================================
+     ICÔNES (sprite SVG réutilisé via <use>)
+     ====================================================================== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+  <symbol id="i-open" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-auto" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v16" /><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></symbol>
+  <symbol id="i-restore" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></symbol>
+</svg>
+
+<!-- ======================================================================
+     BARRE D'APPLICATION
+     ====================================================================== -->
+<header class="appbar">
+  <div class="appbar-inner">
+    <div class="brand-mark" aria-hidden="true">GC</div>
+    <h1>Affectations GCBLO</h1>
+    <span class="sub">NUM21 · AIR</span>
+    <span class="spacer"></span>
+    <span class="save-indicator" id="saveIndicator" aria-live="polite"></span>
+    <button class="appbar-btn" id="btnTheme" type="button" title="Changer de thème">
+      <svg class="icon"><use href="#i-auto"/></svg><span class="label" id="themeLabel">Système</span>
+    </button>
+    <button class="appbar-btn" id="btnSettings" type="button" title="Paramètres" aria-label="Paramètres">
+      <svg class="icon"><use href="#i-gear"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- Barre d'outils -->
+  <section class="toolbar" aria-label="Actions principales">
+    <div class="grow">
+      <h2 class="page-title">Suivi des affectations</h2>
+      <p class="page-hint">Double-cliquez sur un dossier pour préparer sa relance.</p>
+    </div>
+    <button class="btn primary" id="btnNew" type="button"><svg class="icon"><use href="#i-plus"/></svg>Nouveau dossier <kbd>N</kbd></button>
+    <button class="btn" id="btnImport" type="button"><svg class="icon"><use href="#i-upload"/></svg>Importer Excel</button>
+    <div class="menu" id="menuExport">
+      <button class="btn" type="button" data-menu-toggle aria-haspopup="true" aria-expanded="false"><svg class="icon"><use href="#i-download"/></svg>Exporter<svg class="icon" style="width:14px;height:14px"><use href="#i-chev"/></svg></button>
+      <div class="menu-pop" role="menu" hidden>
+        <button type="button" role="menuitem" data-export="xlsx"><svg class="icon"><use href="#i-download"/></svg>Export Excel (.xlsx)</button>
+        <button type="button" role="menuitem" data-export="csv"><svg class="icon"><use href="#i-download"/></svg>Export CSV</button>
+        <hr>
+        <button type="button" role="menuitem" data-export="json"><svg class="icon"><use href="#i-download"/></svg>Sauvegarde JSON</button>
+        <button type="button" role="menuitem" data-export="restore"><svg class="icon"><use href="#i-restore"/></svg>Restaurer une sauvegarde…</button>
+      </div>
+    </div>
+    <input type="file" id="fileExcel" accept=".xlsx,.xls,.xlsm" hidden>
+    <input type="file" id="fileJson" accept=".json,application/json" hidden>
+  </section>
+
+  <!-- Indicateurs -->
+  <section class="kpis" aria-label="Tableau de bord" id="kpis"></section>
+
+  <div class="main-grid">
+    <!-- Tableau des dossiers -->
+    <section class="panel" aria-label="Dossiers">
+      <div class="filters">
+        <div class="search">
+          <svg class="icon"><use href="#i-search"/></svg>
+          <label for="fSearch" class="visually-hidden">Rechercher</label>
+          <input class="input" id="fSearch" type="search" placeholder="Rechercher un GCBLO, un FCI, un commentaire…" autocomplete="off">
+          <kbd aria-hidden="true">/</kbd>
+        </div>
+        <label for="fCategorie" class="visually-hidden">Catégorie</label>
+        <select class="select" id="fCategorie"></select>
+        <label for="fStatut" class="visually-hidden">Statut</label>
+        <select class="select" id="fStatut"></select>
+        <span id="specialChip"></span>
+        <span class="result-count num" id="resultCount"></span>
+      </div>
+      <div class="table-scroll">
+        <table class="dossiers" id="table">
+          <thead><tr id="theadRow"></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Statistiques -->
+    <aside class="side" aria-label="Statistiques">
+      <section class="panel">
+        <div class="panel-head"><h2>Répartition NUM21 / AIR</h2></div>
+        <div class="panel-body">
+          <div class="chart-box"><canvas id="chartCat" aria-label="Répartition par catégorie" role="img"></canvas></div>
+          <div class="chart-legend" id="legendCat"></div>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h2>Statut des dossiers</h2></div>
+        <div class="panel-body">
+          <div class="chart-box"><canvas id="chartStatus" aria-label="Dossiers par statut" role="img"></canvas></div>
+          <div class="chart-legend" id="legendStatus"></div>
+        </div>
+      </section>
+      <p class="offline-note" id="libNote" hidden></p>
+    </aside>
+  </div>
+</main>
+
+<!-- ======================================================================
+     DIALOGUES
+     ====================================================================== -->
+
+<!-- Création / modification -->
+<dialog id="dlgForm">
+  <form class="dlg" id="dossierForm" novalidate>
+    <div class="dlg-head">
+      <div><h2 id="formTitle">Nouveau dossier</h2><div class="sub" id="formSub">Les champs marqués * sont obligatoires.</div></div>
+      <button class="icon-btn" type="button" data-close aria-label="Fermer"><svg class="icon"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="dlg-body">
+      <div class="form-grid">
+        <div class="field full" data-field="categorie">
+          <span class="lbl">Type <span class="req">*</span></span>
+          <div class="segmented" id="catSegmented" role="radiogroup" aria-label="Type"></div>
+          <span class="err" hidden></span>
+        </div>
+        <div class="field" data-field="gcblo">
+          <label for="inGcblo">GCBLO <span class="req">*</span></label>
+          <input class="input mono" id="inGcblo" name="gcblo" autocomplete="off" placeholder="SBA501404-THF010" spellcheck="false">
+          <span class="help">Format : 3 lettres, 6 chiffres, tiret, 3 lettres, 3 chiffres.</span>
+          <span class="err" hidden></span>
+        </div>
+        <div class="field" data-field="fci">
+          <label for="inFci">FCI</label>
+          <input class="input mono" id="inFci" name="fci" autocomplete="off" placeholder="F26154200726" spellcheck="false">
+          <span class="help">Plusieurs FCI : séparez-les par une virgule ou un espace. Vide si aucun.</span>
+          <span class="err" hidden></span>
+        </div>
+        <div class="field" data-field="dateAffectation">
+          <label for="inDateAff">Date d'affectation <span class="req">*</span></label>
+          <input class="input num" id="inDateAff" name="dateAffectation" type="date">
+          <span class="err" hidden></span>
+        </div>
+        <div class="field" data-field="dateRelance">
+          <label for="inDateRel">Date de relance</label>
+          <input class="input num" id="inDateRel" name="dateRelance" type="date">
+          <span class="err" hidden></span>
+        </div>
+        <div class="field" data-field="statut">
+          <label for="inStatut">Statut <span class="req">*</span></label>
+          <select class="select" id="inStatut" name="statut"></select>
+          <span class="err" hidden></span>
+        </div>
+        <div class="field full" data-field="commentaire">
+          <label for="inComment">Commentaire</label>
+          <textarea class="textarea" id="inComment" name="commentaire" rows="3"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn" type="button" data-close>Annuler</button>
+      <button class="btn primary" type="submit" id="formSubmit">Créer le dossier</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Fiche détail -->
+<dialog id="dlgDetail" class="wide">
+  <div class="dlg">
+    <div class="dlg-head">
+      <div><h2 class="mono" id="detTitle"></h2><div class="sub" id="detSub"></div></div>
+      <button class="icon-btn" type="button" data-close aria-label="Fermer"><svg class="icon"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="dlg-body" id="detBody"></div>
+    <div class="dlg-foot">
+      <button class="btn danger left" type="button" id="detDelete"><svg class="icon"><use href="#i-trash"/></svg>Supprimer</button>
+      <button class="btn" type="button" id="detEdit"><svg class="icon"><use href="#i-edit"/></svg>Modifier</button>
+      <button class="btn primary" type="button" id="detRelance"><svg class="icon"><use href="#i-mail"/></svg>Préparer relance</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Confirmation générique (remplace window.confirm) -->
+<dialog id="dlgConfirm">
+  <div class="dlg">
+    <div class="dlg-head"><div><h2 id="cfTitle"></h2></div></div>
+    <div class="dlg-body"><p id="cfText" style="margin:0"></p></div>
+    <div class="dlg-foot">
+      <button class="btn" type="button" id="cfCancel">Annuler</button>
+      <button class="btn danger solid" type="button" id="cfOk">Confirmer</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Rapport d'import -->
+<dialog id="dlgImport" class="wide">
+  <div class="dlg">
+    <div class="dlg-head">
+      <div><h2>Import terminé</h2><div class="sub" id="impSub"></div></div>
+      <button class="icon-btn" type="button" data-close aria-label="Fermer"><svg class="icon"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="dlg-body" id="impBody"></div>
+    <div class="dlg-foot"><button class="btn primary" type="button" data-close>Fermer</button></div>
+  </div>
+</dialog>
+
+<!-- Paramètres -->
+<dialog id="dlgSettings">
+  <form class="dlg" id="settingsForm" novalidate>
+    <div class="dlg-head">
+      <div><h2>Paramètres</h2><div class="sub">Enregistrés dans ce navigateur.</div></div>
+      <button class="icon-btn" type="button" data-close aria-label="Fermer"><svg class="icon"><use href="#i-x"/></svg></button>
+    </div>
+    <div class="dlg-body">
+      <div class="field">
+        <label for="setTo">Destinataire des relances</label>
+        <input class="input" id="setTo" type="text" placeholder="prenom.nom@exemple.fr" autocomplete="off">
+        <span class="help">Pré-rempli dans Outlook. Plusieurs adresses : séparez-les par « ; ».</span>
+      </div>
+      <div class="field">
+        <label for="setCc">Copie (Cc)</label>
+        <input class="input" id="setCc" type="text" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="setDelay">Prochaine relance après (jours)</label>
+        <input class="input num" id="setDelay" type="number" min="1" max="60" step="1" style="max-width:120px">
+        <span class="help">Utilisé quand vous marquez un dossier comme « Relancé ».</span>
+      </div>
+      <div class="field">
+        <span class="lbl">Données</span>
+        <span class="help" id="setStats"></span>
+        <div><button class="btn danger" type="button" id="btnWipe"><svg class="icon"><use href="#i-trash"/></svg>Effacer tous les dossiers</button></div>
+      </div>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn" type="button" data-close>Annuler</button>
+      <button class="btn primary" type="submit">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+'use strict';
+
+/* ############################################################################
+   0. CONFIG — RÉFÉRENTIELS EXTENSIBLES
+   ----------------------------------------------------------------------------
+   Tout ce qui décrit le métier est déclaré ici, pas dans le code.
+   Pour les évolutions prévues :
+     • Commandes simples / complexes / DFT → ajouter une entrée dans CATEGORIES
+       (+ deux couleurs --cat-XXX / --cat-XXX-soft dans le CSS).
+     • Priorité → activer FEATURES.priorite et compléter PRIORITIES.
+     • Templates d'emails multiples → ajouter des entrées dans EMAIL_TEMPLATES ;
+       le choix s'affiche automatiquement dès qu'il y en a plus d'un.
+   ############################################################################ */
+const APP = Object.freeze({
+  name: 'Affectations GCBLO',
+  version: '1.0.0',
+  storageKey: 'gcblo.affectations.v1',   // données métier
+  settingsKey: 'gcblo.settings.v1',      // paramètres utilisateur
+  uiKey: 'gcblo.ui.v1',                  // préférences d'affichage (thème, tri)
+  schemaVersion: 1                       // à incrémenter si le format change (voir Migrations)
+});
+
+/** Catégories de dossiers. L'ordre définit l'ordre d'affichage. */
+const CATEGORIES = [
+  { id: 'NUM21', label: 'NUM21', cssVar: '--cat-num21', aliases: ['NUM21', 'NUMERUS21', 'NUMERUS 21', 'NUM 21'] },
+  { id: 'AIR',   label: 'AIR',   cssVar: '--cat-air',   aliases: ['AIR'] }
+  // { id: 'CMD_S', label: 'Commande simple',   cssVar: '--cat-cmds', aliases: ['COMMANDE SIMPLE'] },
+  // { id: 'CMD_C', label: 'Commande complexe', cssVar: '--cat-cmdc', aliases: ['COMMANDE COMPLEXE'] },
+  // { id: 'DFT',   label: 'DFT',               cssVar: '--cat-dft',  aliases: ['DFT'] },
+];
+
+/** Statuts. `tone` pilote la couleur ; `closed` exclut le dossier des alertes de relance. */
+const STATUSES = [
+  { id: 'A_TRAITER', label: 'À traiter', tone: 'neutral', cssVar: '--st-neutral' },
+  { id: 'EN_COURS',  label: 'En cours',  tone: 'info',    cssVar: '--st-info' },
+  { id: 'RELANCE',   label: 'Relancé',   tone: 'warning', cssVar: '--st-warning' },
+  { id: 'TERMINE',   label: 'Terminé',   tone: 'success', cssVar: '--st-success', closed: true },
+  { id: 'BLOQUE',    label: 'Bloqué',    tone: 'danger',  cssVar: '--st-danger' }
+];
+const DEFAULT_STATUS = 'A_TRAITER';
+
+/** Priorités (évolution prévue, désactivée pour l'instant). */
+const PRIORITIES = [
+  { id: 'NORMALE', label: 'Normale' },
+  { id: 'HAUTE',   label: 'Haute' },
+  { id: 'URGENTE', label: 'Urgente' }
+];
+
+/** Interrupteurs de fonctionnalités futures. */
+const FEATURES = Object.freeze({
+  priorite: false,
+  exportPdf: false,
+  microsoftGraph: false   // future connexion Outlook/Graph : voir MailService.send()
+});
+
+/**
+ * Modèles d'emails. Chaque modèle reçoit le dossier et renvoie objet + corps.
+ * Ajouter un modèle suffit à le rendre disponible dans la fiche détail.
+ */
+const EMAIL_TEMPLATES = [
+  {
+    id: 'relance',
+    label: 'Relance standard',
+    subject: d => `Relance dossier ${d.gcblo}`,
+    body: d => [
+      'Bonjour,',
+      '',
+      `Je reviens vers vous concernant le dossier ${d.gcblo}.`,
+      '',
+      `FCI : ${d.fci.length ? d.fci.join(', ') : 'aucun'}`,
+      '',
+      'Merci pour votre retour.',
+      '',
+      'Cordialement'
+    ].join('\n')
+  }
+];
+
+/** Règles métier paramétrables. */
+const RULES = Object.freeze({
+  gcbloPattern: /^[A-Z]{3}\d{6}-[A-Z]{3}\d{3}$/,   // ex. SBA501404-THF010
+  fciPattern: /^F\d{11}$/,                          // ex. F26154200726
+  fciExtract: /F\d{11}/gi,                          // repérage dans un texte libre
+  relanceSoonDays: 3,                               // « relance prévue dans moins de 3 jours »
+  defaultRelanceDelay: 7                            // délai par défaut avant la relance suivante
+});
+
+/* ############################################################################
+   1. UTILS
+   ############################################################################ */
+const Util = {
+  /** Identifiant unique (crypto si dispo). */
+  uid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  },
+  /** Échappe une valeur avant insertion dans du HTML. */
+  esc(v) {
+    return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  },
+  /** Supprime accents + met en minuscules (recherche tolérante). */
+  fold(v) {
+    return String(v ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  },
+  plural(n, one, many) { return `${n} ${n > 1 ? many : one}`; },
+  debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+};
+
+/** Dates : stockées en « AAAA-MM-JJ » (heure locale) pour éviter les décalages UTC. */
+const DateUtil = {
+  toISO(d) {
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  },
+  today() { return DateUtil.toISO(new Date()); },
+  parse(iso) {
+    if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  },
+  addDays(iso, n) { const d = DateUtil.parse(iso) || new Date(); d.setDate(d.getDate() + n); return DateUtil.toISO(d); },
+  /** Nombre de jours entre aujourd'hui et `iso` (négatif = passé). */
+  daysFromToday(iso) {
+    const d = DateUtil.parse(iso); if (!d) return null;
+    const t = DateUtil.parse(DateUtil.today());
+    return Math.round((d - t) / 86400000);
+  },
+  fmt(iso) { const d = DateUtil.parse(iso); return d ? d.toLocaleDateString('fr-FR') : ''; },
+  fmtDateTime(isoDT) {
+    if (!isoDT) return '';
+    const d = new Date(isoDT);
+    return isNaN(d) ? '' : d.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+  },
+  /** Convertit une valeur de cellule Excel (Date, nombre série, texte FR) en ISO. */
+  fromExcel(v) {
+    if (v == null || v === '') return null;
+    if (v instanceof Date && !isNaN(v)) return DateUtil.toISO(v);
+    if (typeof v === 'number') { const d = new Date(Math.round((v - 25569) * 86400000)); return DateUtil.toISO(new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())); }
+    const s = String(v).trim();
+    let m = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$/);
+    if (m) { const y = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]); return DateUtil.toISO(new Date(y, m[2] - 1, m[1])); }
+    m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
+  }
+};
+
+/** Accès rapide aux référentiels. */
+const Ref = {
+  category: id => CATEGORIES.find(c => c.id === id),
+  status: id => STATUSES.find(s => s.id === id) || STATUSES[0],
+  /** Reconnaît une catégorie à partir d'un texte libre (« GCBLO NUM21 », « air »…). */
+  matchCategory(text) {
+    const t = ' ' + String(text ?? '').toUpperCase().replace(/[^A-Z0-9]+/g, ' ') + ' ';
+    return CATEGORIES.find(c => c.aliases.some(a => t.includes(' ' + a.replace(/[^A-Z0-9]+/g, ' ') + ' ')))?.id || null;
+  },
+  /** Reconnaît un statut à partir de son libellé ou de son identifiant. */
+  matchStatus(text) {
+    const t = Util.fold(text).replace(/[^a-z]/g, '');
+    return STATUSES.find(s => Util.fold(s.label).replace(/[^a-z]/g, '') === t || Util.fold(s.id).replace(/[^a-z]/g, '') === t)?.id || null;
+  }
+};
+
+/* ############################################################################
+   2. DATA LAYER
+   ----------------------------------------------------------------------------
+   StorageAdapter : abstraction du support de stockage. Aujourd'hui
+   localStorage ; demain un adaptateur Microsoft Graph / SharePoint pourra
+   exposer la même interface (load/save) sans toucher au reste de l'app.
+   ############################################################################ */
+const StorageAdapter = (() => {
+  const memory = {};          // repli si le localStorage est indisponible
+  let available = true;
+  try { const k = '__gcblo_test__'; localStorage.setItem(k, '1'); localStorage.removeItem(k); }
+  catch { available = false; }
+
+  return {
+    get persistent() { return available; },
+    load(key, fallback) {
+      try {
+        const raw = available ? localStorage.getItem(key) : memory[key];
+        return raw ? JSON.parse(raw) : fallback;
+      } catch { return fallback; }
+    },
+    save(key, value) {
+      const raw = JSON.stringify(value);
+      try { if (available) localStorage.setItem(key, raw); else memory[key] = raw; return true; }
+      catch (e) { console.error('Sauvegarde impossible', e); memory[key] = raw; return false; }
+    }
+  };
+})();
+
+/**
+ * Modèle d'un dossier (schéma v1)
+ * {
+ *   id, categorie, gcblo, fci: string[], dateAffectation, dateRelance|null,
+ *   statut, commentaire, priorite|null,
+ *   createdAt, updatedAt,                 // horodatages ISO
+ *   relances: [{ at, template, to }],     // historique des relances préparées
+ *   history:  [{ at, type, text }]        // journal des modifications
+ * }
+ */
+const Migrations = {
+  /** Met à niveau un état stocké vers APP.schemaVersion. */
+  run(state) {
+    if (!state || typeof state !== 'object' || !Array.isArray(state.dossiers)) return { schemaVersion: APP.schemaVersion, dossiers: [] };
+    // Exemple pour une future v2 :
+    // if (state.schemaVersion < 2) { state.dossiers.forEach(d => d.priorite ??= 'NORMALE'); state.schemaVersion = 2; }
+    state.dossiers = state.dossiers.map(Migrations.sanitize).filter(Boolean);
+    state.schemaVersion = APP.schemaVersion;
+    return state;
+  },
+  /** Garantit qu'un dossier a tous ses champs (données importées ou anciennes). */
+  sanitize(d) {
+    if (!d || !d.gcblo) return null;
+    const now = new Date().toISOString();
+    return {
+      id: d.id || Util.uid(),
+      categorie: Ref.category(d.categorie) ? d.categorie : (Ref.matchCategory(d.categorie) || CATEGORIES[0].id),
+      gcblo: String(d.gcblo).trim().toUpperCase(),
+      fci: Array.isArray(d.fci) ? d.fci.map(String) : (d.fci ? String(d.fci).match(RULES.fciExtract) || [] : []),
+      dateAffectation: d.dateAffectation || DateUtil.today(),
+      dateRelance: d.dateRelance || null,
+      statut: STATUSES.some(s => s.id === d.statut) ? d.statut : (Ref.matchStatus(d.statut) || DEFAULT_STATUS),
+      commentaire: d.commentaire || '',
+      priorite: d.priorite ?? null,
+      createdAt: d.createdAt || now,
+      updatedAt: d.updatedAt || d.createdAt || now,
+      relances: Array.isArray(d.relances) ? d.relances : [],
+      history: Array.isArray(d.history) ? d.history : []
+    };
+  }
+};
+
+/** Dépôt des dossiers : seule porte d'accès aux données métier. */
+const DossierRepository = (() => {
+  let state = Migrations.run(StorageAdapter.load(APP.storageKey, null));
+  const listeners = new Set();
+
+  function commit() {
+    const ok = StorageAdapter.save(APP.storageKey, state);
+    listeners.forEach(fn => fn({ saved: ok && StorageAdapter.persistent }));
+  }
+  return {
+    subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+    all() { return state.dossiers; },
+    get(id) { return state.dossiers.find(d => d.id === id) || null; },
+    findByGcblo(gcblo) {
+      const g = String(gcblo).trim().toUpperCase();
+      return state.dossiers.find(d => d.gcblo === g) || null;
+    },
+    insert(d) { state.dossiers.push(d); commit(); return d; },
+    insertMany(list) { state.dossiers.push(...list); commit(); },
+    update(id, patch) {
+      const d = this.get(id); if (!d) return null;
+      Object.assign(d, patch); commit(); return d;
+    },
+    remove(id) { state.dossiers = state.dossiers.filter(d => d.id !== id); commit(); },
+    replaceAll(list) { state.dossiers = list; commit(); },
+    snapshot() { return JSON.parse(JSON.stringify(state)); }
+  };
+})();
+
+/** Paramètres utilisateur (destinataires, délai de relance). */
+const SettingsStore = (() => {
+  const defaults = { to: '', cc: '', relanceDelay: RULES.defaultRelanceDelay, templateId: EMAIL_TEMPLATES[0].id };
+  let settings = { ...defaults, ...StorageAdapter.load(APP.settingsKey, {}) };
+  return {
+    get() { return { ...settings }; },
+    set(patch) { settings = { ...settings, ...patch }; StorageAdapter.save(APP.settingsKey, settings); }
+  };
+})();
+
+/** Préférences d'affichage (thème, tri) — pur confort, jamais critique. */
+const UiPrefs = (() => {
+  let prefs = { theme: 'system', sortKey: 'dateAffectation', sortDir: 'desc', ...StorageAdapter.load(APP.uiKey, {}) };
+  return { get: () => ({ ...prefs }), set(p) { prefs = { ...prefs, ...p }; StorageAdapter.save(APP.uiKey, prefs); } };
+})();
+
+/* ############################################################################
+   3. BUSINESS LAYER
+   ############################################################################ */
+
+/** Règles métier sur les dossiers. */
+const DossierService = {
+  normalizeGcblo(v) { return String(v ?? '').trim().toUpperCase().replace(/\s+/g, ''); },
+
+  /**
+   * Analyse une saisie de FCI. Accepte « F1, F2 », « F1 F2 », « F1 et F2 »,
+   * et considère « aucun », « -», « ? », « pas de … » comme absence de FCI.
+   */
+  parseFci(input) {
+    const raw = Array.isArray(input) ? input.join(' ') : String(input ?? '');
+    const cleaned = raw.trim();
+    if (!cleaned || /^(aucun|aucune|néant|neant|-+|\?+|pas de .*|n\/a)$/i.test(cleaned)) return { list: [], invalid: [] };
+    const tokens = cleaned.toUpperCase().split(/[\s,;/|+]+|\bET\b/).map(t => t.trim()).filter(Boolean);
+    const list = [], invalid = [];
+    tokens.forEach(t => (RULES.fciPattern.test(t) ? (list.includes(t) || list.push(t)) : invalid.push(t)));
+    return { list, invalid };
+  },
+
+  /** Valide une saisie de formulaire. Renvoie { errors, value }. */
+  validate(input, { excludeId = null } = {}) {
+    const errors = {};
+    const gcblo = DossierService.normalizeGcblo(input.gcblo);
+    const fci = DossierService.parseFci(input.fci);
+
+    if (!Ref.category(input.categorie)) errors.categorie = 'Choisissez NUM21 ou AIR.';
+    if (!gcblo) errors.gcblo = 'Le GCBLO est obligatoire.';
+    else if (!RULES.gcbloPattern.test(gcblo)) errors.gcblo = 'Format attendu : SBA501404-THF010.';
+    else {
+      const dup = DossierRepository.findByGcblo(gcblo);
+      if (dup && dup.id !== excludeId) errors.gcblo = `Ce GCBLO existe déjà (${Ref.category(dup.categorie)?.label}, affecté le ${DateUtil.fmt(dup.dateAffectation)}).`;
+    }
+    if (fci.invalid.length) errors.fci = `FCI non reconnu : ${fci.invalid.join(', ')}. Format attendu : F suivi de 11 chiffres.`;
+    if (!DateUtil.parse(input.dateAffectation)) errors.dateAffectation = 'La date d\'affectation est obligatoire.';
+    if (input.dateRelance && !DateUtil.parse(input.dateRelance)) errors.dateRelance = 'Date invalide.';
+    if (!STATUSES.some(s => s.id === input.statut)) errors.statut = 'Statut inconnu.';
+
+    return {
+      errors,
+      value: {
+        categorie: input.categorie, gcblo, fci: fci.list,
+        dateAffectation: input.dateAffectation,
+        dateRelance: input.dateRelance || null,
+        statut: input.statut || DEFAULT_STATUS,
+        commentaire: String(input.commentaire ?? '').trim()
+      }
+    };
+  },
+
+  create(input) {
+    const { errors, value } = DossierService.validate(input);
+    if (Object.keys(errors).length) return { errors };
+    const now = new Date().toISOString();
+    const d = { id: Util.uid(), ...value, priorite: null, createdAt: now, updatedAt: now, relances: [],
+      history: [{ at: now, type: 'creation', text: 'Dossier créé' }] };
+    return { dossier: DossierRepository.insert(d) };
+  },
+
+  update(id, input) {
+    const before = DossierRepository.get(id);
+    if (!before) return { errors: { gcblo: 'Dossier introuvable.' } };
+    const { errors, value } = DossierService.validate(input, { excludeId: id });
+    if (Object.keys(errors).length) return { errors };
+    const changes = DossierService.diff(before, value);
+    if (!changes.length) return { dossier: before, unchanged: true };
+    const now = new Date().toISOString();
+    const history = [...before.history, { at: now, type: 'modification', text: changes.join(' · ') }];
+    return { dossier: DossierRepository.update(id, { ...value, updatedAt: now, history }) };
+  },
+
+  /** Changement rapide de statut depuis le tableau. */
+  setStatus(id, statut, extra = {}) {
+    const d = DossierRepository.get(id); if (!d || d.statut === statut && !extra.dateRelance) return d;
+    const now = new Date().toISOString();
+    const parts = [];
+    if (d.statut !== statut) parts.push(`Statut : ${Ref.status(d.statut).label} → ${Ref.status(statut).label}`);
+    if (extra.dateRelance && extra.dateRelance !== d.dateRelance) parts.push(`Relance prévue le ${DateUtil.fmt(extra.dateRelance)}`);
+    return DossierRepository.update(id, { statut, ...extra, updatedAt: now,
+      history: [...d.history, { at: now, type: 'statut', text: parts.join(' · ') }] });
+  },
+
+  remove(id) { DossierRepository.remove(id); },
+
+  /** Liste lisible des différences entre un dossier et une nouvelle saisie. */
+  diff(a, b) {
+    const out = [];
+    const lab = {
+      categorie: v => Ref.category(v)?.label, statut: v => Ref.status(v).label,
+      fci: v => (v.length ? v.join(', ') : 'aucun'), dateAffectation: DateUtil.fmt,
+      dateRelance: v => (v ? DateUtil.fmt(v) : 'aucune'), commentaire: v => (v ? '« ' + (v.length > 40 ? v.slice(0, 40) + '…' : v) + ' »' : 'vide'),
+      gcblo: v => v
+    };
+    const names = { categorie: 'Type', gcblo: 'GCBLO', fci: 'FCI', dateAffectation: 'Affectation', dateRelance: 'Relance', statut: 'Statut', commentaire: 'Commentaire' };
+    Object.keys(names).forEach(k => {
+      const x = JSON.stringify(a[k] ?? null), y = JSON.stringify(b[k] ?? null);
+      if (x !== y) out.push(`${names[k]} : ${lab[k](a[k] ?? (k === 'fci' ? [] : null))} → ${lab[k](b[k] ?? (k === 'fci' ? [] : null))}`);
+    });
+    return out;
+  },
+
+  /** État d'alerte de relance : 'overdue' (dépassée), 'soon' (≤ 3 jours) ou null. */
+  relanceState(d) {
+    if (!d.dateRelance || Ref.status(d.statut).closed) return null;
+    const n = DateUtil.daysFromToday(d.dateRelance);
+    if (n === null) return null;
+    if (n < 0) return 'overdue';
+    if (n <= RULES.relanceSoonDays) return 'soon';
+    return null;
+  },
+
+  /** Indicateurs du tableau de bord. */
+  stats(list) {
+    const byCat = Object.fromEntries(CATEGORIES.map(c => [c.id, 0]));
+    const byStatus = Object.fromEntries(STATUSES.map(s => [s.id, 0]));
+    let overdue = 0, soon = 0, noFci = 0;
+    list.forEach(d => {
+      byCat[d.categorie] = (byCat[d.categorie] || 0) + 1;
+      byStatus[d.statut] = (byStatus[d.statut] || 0) + 1;
+      const r = DossierService.relanceState(d);
+      if (r === 'overdue') overdue++; else if (r === 'soon') soon++;
+      if (!d.fci.length) noFci++;
+    });
+    return { total: list.length, byCat, byStatus, overdue, soon, noFci };
+  },
+
+  /** Filtrage + tri, appliqués au tableau. */
+  query(list, { q = '', categorie = '', statut = '', special = '', sortKey = 'dateAffectation', sortDir = 'desc' }) {
+    const terms = Util.fold(q).split(/\s+/).filter(Boolean);
+    let rows = list.filter(d => {
+      if (categorie && d.categorie !== categorie) return false;
+      if (statut && d.statut !== statut) return false;
+      if (special === 'overdue' && DossierService.relanceState(d) !== 'overdue') return false;
+      if (special === 'nofci' && d.fci.length) return false;
+      if (terms.length) {
+        const hay = Util.fold([d.gcblo, d.fci.join(' '), d.commentaire, Ref.status(d.statut).label, Ref.category(d.categorie)?.label, DateUtil.fmt(d.dateAffectation), DateUtil.fmt(d.dateRelance)].join(' '));
+        if (!terms.every(t => hay.includes(t))) return false;
+      }
+      return true;
+    });
+    const dir = sortDir === 'asc' ? 1 : -1;
+    const key = {
+      categorie: d => CATEGORIES.findIndex(c => c.id === d.categorie),
+      gcblo: d => d.gcblo,
+      fci: d => d.fci[0] || '￿',                       // sans FCI en dernier
+      dateAffectation: d => d.dateAffectation || '',
+      dateRelance: d => d.dateRelance || (dir === 1 ? '￿' : ''),
+      statut: d => STATUSES.findIndex(s => s.id === d.statut),
+      commentaire: d => Util.fold(d.commentaire)
+    }[sortKey] || (d => d.dateAffectation);
+    rows = rows.slice().sort((a, b) => {
+      const x = key(a), y = key(b);
+      const c = typeof x === 'number' ? x - y : String(x).localeCompare(String(y), 'fr', { numeric: true });
+      return c * dir || a.gcblo.localeCompare(b.gcblo);
+    });
+    return rows;
+  }
+};
+
+/**
+ * Emails. Aujourd'hui : lien mailto (ouvre Outlook / le client par défaut).
+ * Demain : MailService.send() pourra passer par Microsoft Graph
+ * (POST /me/messages) quand FEATURES.microsoftGraph sera activé.
+ */
+const MailService = {
+  template(id) { return EMAIL_TEMPLATES.find(t => t.id === id) || EMAIL_TEMPLATES[0]; },
+  build(d, templateId = SettingsStore.get().templateId) {
+    const t = MailService.template(templateId);
+    return { subject: t.subject(d), body: t.body(d), template: t.id };
+  },
+  mailtoUrl(d, templateId) {
+    const s = SettingsStore.get();
+    const { subject, body } = MailService.build(d, templateId);
+    const params = [`subject=${encodeURIComponent(subject)}`, `body=${encodeURIComponent(body.replace(/\n/g, '\r\n'))}`];
+    if (s.cc) params.push(`cc=${encodeURIComponent(s.cc)}`);
+    return `mailto:${encodeURIComponent(s.to || '').replace(/%40/g, '@').replace(/%3B/gi, ';')}?${params.join('&')}`;
+  },
+  /** Ouvre l'email et journalise la relance dans le dossier. */
+  prepareRelance(id, templateId) {
+    const d = DossierRepository.get(id); if (!d) return null;
+    const url = MailService.mailtoUrl(d, templateId);
+    const a = document.createElement('a');
+    a.href = url; a.rel = 'noopener'; document.body.appendChild(a); a.click(); a.remove();
+    const now = new Date().toISOString();
+    DossierRepository.update(id, {
+      relances: [...d.relances, { at: now, template: MailService.build(d, templateId).template, to: SettingsStore.get().to || '' }],
+      history: [...d.history, { at: now, type: 'relance', text: 'Email de relance préparé' }]
+    });
+    return url;
+  },
+  /** Marque le dossier « Relancé » et planifie la relance suivante. */
+  markRelanced(id) {
+    const delay = Number(SettingsStore.get().relanceDelay) || RULES.defaultRelanceDelay;
+    return DossierService.setStatus(id, 'RELANCE', { dateRelance: DateUtil.addDays(DateUtil.today(), delay) });
+  }
+};
+
+/**
+ * Import Excel (SheetJS).
+ * Reconnaît deux dispositions :
+ *  1. Le classeur « robot » historique : colonnes côte à côte
+ *     « GCBLO NUM21 | FCI » et « GCBLO AIR | FCI » (+ cellules d'affectation).
+ *  2. Un tableau classique avec des colonnes GCBLO / FCI / Catégorie
+ *     (+ optionnellement Date affectation, Date relance, Statut, Commentaire).
+ */
+const ImportService = {
+  get available() { return typeof window.XLSX !== 'undefined'; },
+
+  async readWorkbook(file) {
+    const buf = await file.arrayBuffer();
+    return XLSX.read(buf, { type: 'array', cellDates: true });
+  },
+
+  /** Extrait des lignes brutes { gcblo, fciRaw, categorie, … } de toutes les feuilles. */
+  extractRows(wb) {
+    const rows = [];
+    wb.SheetNames.forEach(name => {
+      const grid = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, defval: null, raw: true, blankrows: false });
+      // Ligne d'en-tête = première ligne (parmi les 15 premières) qui mentionne « GCBLO »
+      const h = grid.slice(0, 15).findIndex(r => r && r.some(c => /gcblo/i.test(String(c ?? ''))));
+      if (h < 0) return;
+      const header = grid[h].map(c => String(c ?? '').trim());
+      const find = re => header.findIndex(c => re.test(c));
+      // Colonnes GCBLO : les listes d'abord, les cellules de saisie « AFFECTATION GCBLO … » du robot en dernier
+      // (elles répètent en général le dernier dossier déjà ajouté à la liste).
+      const isInput = i => /affectation/i.test(header[i]);
+      const gcbloCols = header.map((c, i) => (/gcblo/i.test(c) ? i : -1)).filter(i => i >= 0)
+        .sort((a, b) => Number(isInput(a)) - Number(isInput(b)) || a - b);
+      const fciCols = header.map((c, i) => (/^\s*fci/i.test(c) ? i : -1)).filter(i => i >= 0);
+      const col = {
+        cat: find(/cat[ée]gorie|^type$/i),
+        dateAff: find(/date.*affect|affect.*date/i),
+        dateRel: find(/relance/i),
+        statut: find(/statut|état|etat/i),
+        comment: find(/comment|note|remarque/i)
+      };
+      gcbloCols.forEach(gc => {
+        // FCI : colonne juste à droite si c'est une colonne FCI, sinon l'unique colonne FCI du tableau.
+        const fc = fciCols.includes(gc + 1) ? gc + 1 : (gcbloCols.length === 1 && fciCols.length === 1 ? fciCols[0] : -1);
+        const headerCat = Ref.matchCategory(header[gc]);
+        for (let r = h + 1; r < grid.length; r++) {
+          const line = grid[r] || [];
+          const g = line[gc];
+          if (g == null || String(g).trim() === '') continue;
+          rows.push({
+            sheet: name, line: r + 1, isInput: isInput(gc),
+            gcblo: String(g),
+            fciRaw: fc >= 0 ? line[fc] : null,
+            categorie: headerCat || (col.cat >= 0 ? Ref.matchCategory(line[col.cat]) : null),
+            dateAffectation: col.dateAff >= 0 ? DateUtil.fromExcel(line[col.dateAff]) : null,
+            dateRelance: col.dateRel >= 0 ? DateUtil.fromExcel(line[col.dateRel]) : null,
+            statut: col.statut >= 0 ? Ref.matchStatus(line[col.statut]) : null,
+            commentaire: col.comment >= 0 && line[col.comment] != null ? String(line[col.comment]) : ''
+          });
+        }
+      });
+    });
+    return rows;
+  },
+
+  /** Valide, dédoublonne et enregistre. Renvoie un rapport détaillé. */
+  commit(rows, fileName) {
+    const report = { file: fileName, read: rows.length, added: [], duplicates: [], errors: [], fciNotes: [] };
+    const seen = new Map();          // GCBLO → ligne déjà retenue dans ce fichier
+    const now = new Date().toISOString();
+    const toInsert = [];
+
+    rows.forEach(r => {
+      const where = `${r.sheet} · ligne ${r.line}`;
+      const gcblo = DossierService.normalizeGcblo(r.gcblo);
+      if (!RULES.gcbloPattern.test(gcblo)) { report.errors.push(`${where} : « ${r.gcblo} » n'est pas un GCBLO valide`); return; }
+      if (!r.categorie) { report.errors.push(`${where} : ${gcblo} sans catégorie (NUM21 ou AIR)`); return; }
+      const existing = DossierRepository.findByGcblo(gcblo);
+      if (existing) { report.duplicates.push(`${gcblo} : déjà présent dans l'application (${Ref.category(existing.categorie)?.label})`); return; }
+      if (seen.has(gcblo)) {
+        const first = seen.get(gcblo);
+        // Cellule de saisie du robot répétant un dossier déjà listé : rien de plus à signaler.
+        if (r.isInput) return;
+        const lab = c => Ref.category(c)?.label;
+        report.duplicates.push(first.categorie !== r.categorie
+          ? `${gcblo} : présent en ${lab(first.categorie)} (ligne ${first.line}) et en ${lab(r.categorie)} (ligne ${r.line}). Gardé en ${lab(first.categorie)}, à vérifier.`
+          : `${gcblo} : présent deux fois en ${lab(r.categorie)} (lignes ${first.line} et ${r.line}). Gardé une seule fois.`);
+        return;
+      }
+      // FCI : on extrait tout ce qui ressemble à un FCI ; le reste est conservé en commentaire.
+      const rawText = r.fciRaw == null ? '' : String(r.fciRaw).trim();
+      const fci = [...new Set((rawText.match(RULES.fciExtract) || []).map(f => f.toUpperCase()))];
+      let commentaire = r.commentaire.trim();
+      if (rawText && !fci.length) {
+        commentaire = [commentaire, `FCI d'origine : « ${rawText} »`].filter(Boolean).join(' — ');
+        report.fciNotes.push(`${gcblo} : « ${rawText} » → aucun FCI`);
+      }
+      seen.set(gcblo, r);
+      toInsert.push({
+        id: Util.uid(), categorie: r.categorie, gcblo, fci,
+        dateAffectation: r.dateAffectation || DateUtil.today(),
+        dateRelance: r.dateRelance || null,
+        statut: r.statut || DEFAULT_STATUS,
+        commentaire, priorite: null, createdAt: now, updatedAt: now, relances: [],
+        history: [{ at: now, type: 'import', text: `Importé depuis ${fileName} (${where})` }]
+      });
+    });
+    if (toInsert.length) DossierRepository.insertMany(toInsert);
+    report.added = toInsert;
+    return report;
+  },
+
+  async importFile(file) {
+    if (!ImportService.available) throw new Error('La bibliothèque Excel n\'a pas pu être chargée (connexion internet requise au premier chargement).');
+    const wb = await ImportService.readWorkbook(file);
+    const rows = ImportService.extractRows(wb);
+    if (!rows.length) throw new Error('Aucune colonne « GCBLO » trouvée dans ce fichier.');
+    return ImportService.commit(rows, file.name);
+  }
+};
+
+/** Exports et sauvegardes. */
+const ExportService = {
+  stamp() { const d = new Date(); return DateUtil.toISO(d) + '_' + String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0'); },
+  /** Lignes « à plat » pour Excel / CSV. */
+  flatRows(list) {
+    return list.map(d => ({
+      'Catégorie': Ref.category(d.categorie)?.label || d.categorie,
+      'GCBLO': d.gcblo,
+      'FCI': d.fci.join(', '),
+      'Date affectation': DateUtil.fmt(d.dateAffectation),
+      'Date relance': DateUtil.fmt(d.dateRelance),
+      'Statut': Ref.status(d.statut).label,
+      'Commentaire': d.commentaire,
+      'Nb relances': d.relances.length,
+      'Créé le': DateUtil.fmtDateTime(d.createdAt),
+      'Modifié le': DateUtil.fmtDateTime(d.updatedAt)
+    }));
+  },
+  download(blob, name) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  },
+  toExcel(list) {
+    if (!ImportService.available) throw new Error('Export Excel indisponible hors ligne. Utilisez l\'export CSV.');
+    const ws = XLSX.utils.json_to_sheet(ExportService.flatRows(list));
+    ws['!cols'] = [{ wch: 10 }, { wch: 20 }, { wch: 28 }, { wch: 15 }, { wch: 13 }, { wch: 11 }, { wch: 40 }, { wch: 11 }, { wch: 16 }, { wch: 16 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Affectations');
+    XLSX.writeFile(wb, `affectations-gcblo_${ExportService.stamp()}.xlsx`);
+  },
+  toCsv(list) {
+    const rows = ExportService.flatRows(list);
+    const head = Object.keys(rows[0] || ExportService.flatRows([{ fci: [], relances: [], statut: DEFAULT_STATUS }])[0]);
+    const cell = v => { const s = String(v ?? ''); return /[";\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const csv = [head.join(';'), ...rows.map(r => head.map(h => cell(r[h])).join(';'))].join('\r\n');
+    // BOM UTF-8 + séparateur « ; » : s'ouvre directement dans Excel en français.
+    ExportService.download(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }), `affectations-gcblo_${ExportService.stamp()}.csv`);
+  },
+  toJson() {
+    const payload = { app: APP.name, version: APP.version, exportedAt: new Date().toISOString(), ...DossierRepository.snapshot() };
+    ExportService.download(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }), `sauvegarde-gcblo_${ExportService.stamp()}.json`);
+  },
+  /** Lit un fichier de sauvegarde et renvoie les dossiers validés (sans les écrire). */
+  async readBackup(file) {
+    let data;
+    try { data = JSON.parse(await file.text()); } catch { throw new Error('Ce fichier n\'est pas une sauvegarde JSON valide.'); }
+    const list = Array.isArray(data) ? data : data.dossiers;
+    if (!Array.isArray(list)) throw new Error('Aucun dossier trouvé dans cette sauvegarde.');
+    return Migrations.run({ schemaVersion: data.schemaVersion || 1, dossiers: list }).dossiers;
+  }
+};
+
+/* ############################################################################
+   4. UI LAYER
+   ############################################################################ */
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+const icon = id => `<svg class="icon"><use href="#${id}"/></svg>`;
+
+/** État d'affichage (filtres, tri) — distinct des données. */
+const ViewState = {
+  q: '', categorie: '', statut: '', special: '',
+  sortKey: UiPrefs.get().sortKey, sortDir: UiPrefs.get().sortDir
+};
+
+/** Notifications éphémères, avec action optionnelle. */
+const Toast = {
+  show(message, { action, onAction, error = false, duration = 4000 } = {}) {
+    const el = document.createElement('div');
+    el.className = 'toast' + (error ? ' error' : '');
+    el.setAttribute('role', error ? 'alert' : 'status');
+    el.innerHTML = `<span>${Util.esc(message)}</span>`;
+    if (action) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = action;
+      b.addEventListener('click', () => { onAction?.(); el.remove(); });
+      el.appendChild(b);
+    }
+    $('#toasts').appendChild(el);
+    setTimeout(() => el.remove(), action ? Math.max(duration, 9000) : duration);
+  },
+  error(message) { Toast.show(message, { error: true, duration: 6000 }); }
+};
+
+/** Presse-papiers avec repli pour les navigateurs restrictifs. */
+const Clipboard = {
+  async copy(text, label) {
+    try { await navigator.clipboard.writeText(text); }
+    catch {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch { /* ignoré */ }
+      ta.remove();
+    }
+    Toast.show(`${label} copié : ${text}`);
+  }
+};
+
+/** Thème clair / sombre / système. */
+const Theme = {
+  order: ['system', 'light', 'dark'],
+  labels: { system: 'Système', light: 'Clair', dark: 'Sombre' },
+  icons: { system: 'i-auto', light: 'i-sun', dark: 'i-moon' },
+  apply(mode) {
+    if (mode === 'system') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', mode);
+    $('#btnTheme').innerHTML = `${icon(Theme.icons[mode])}<span class="label">${Theme.labels[mode]}</span>`;
+    $('#btnTheme').title = `Thème : ${Theme.labels[mode]} (cliquer pour changer)`;
+    UiPrefs.set({ theme: mode });
+    Charts.refresh();
+  },
+  next() { const m = UiPrefs.get().theme; Theme.apply(Theme.order[(Theme.order.indexOf(m) + 1) % Theme.order.length]); },
+  init() {
+    Theme.apply(UiPrefs.get().theme);
+    matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => Charts.refresh());
+  }
+};
+
+/** Lit une variable CSS (pour colorer les graphiques selon le thème). */
+const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+/** Tableau de bord : cartes indicateurs. Un clic filtre le tableau. */
+const DashboardView = {
+  render(stats) {
+    const cards = [
+      ...CATEGORIES.map(c => ({ key: 'cat:' + c.id, label: c.label, value: stats.byCat[c.id] || 0, color: `var(${c.cssVar})`,
+        foot: stats.total ? `${Math.round((stats.byCat[c.id] || 0) / stats.total * 100)} % du total` : '—' })),
+      { key: 'all', label: 'Total', value: stats.total, color: 'var(--fg-subtle)', foot: `${stats.byStatus.TERMINE || 0} terminé${(stats.byStatus.TERMINE || 0) > 1 ? 's' : ''}` },
+      { key: 'special:overdue', label: 'Relances en retard', value: stats.overdue, color: 'var(--st-danger)', alert: stats.overdue > 0,
+        foot: stats.soon ? `+ ${stats.soon} dans les ${RULES.relanceSoonDays} jours` : 'Aucune relance imminente' },
+      { key: 'special:nofci', label: 'Sans FCI', value: stats.noFci, color: 'var(--st-warning)', alert: stats.noFci > 0,
+        foot: stats.total ? `${Math.round(stats.noFci / stats.total * 100)} % des dossiers` : '—' }
+    ];
+    const active = ViewState.special ? 'special:' + ViewState.special : (ViewState.categorie ? 'cat:' + ViewState.categorie : '');
+    $('#kpis').innerHTML = cards.map(c => `
+      <button type="button" class="kpi${c.alert ? ' alert' : ''}" data-kpi="${c.key}" aria-pressed="${active === c.key}" style="--kpi-color:${c.color}">
+        <span class="kpi-label"><span class="kpi-dot"></span>${Util.esc(c.label)}</span>
+        <span class="kpi-value">${c.value}</span>
+        <span class="kpi-foot">${Util.esc(c.foot)}</span>
+      </button>`).join('');
+  },
+  onClick(key) {
+    if (key === 'all') { ViewState.categorie = ''; ViewState.special = ''; ViewState.statut = ''; }
+    else if (key.startsWith('cat:')) { const c = key.slice(4); ViewState.categorie = ViewState.categorie === c ? '' : c; ViewState.special = ''; }
+    else if (key.startsWith('special:')) { const s = key.slice(8); ViewState.special = ViewState.special === s ? '' : s; }
+    $('#fCategorie').value = ViewState.categorie; $('#fStatut').value = ViewState.statut;
+    App.render();
+  }
+};
+
+/** Tableau principal. */
+const TableView = {
+  columns: [
+    { key: 'categorie', label: 'Catégorie' },
+    { key: 'gcblo', label: 'GCBLO' },
+    { key: 'fci', label: 'FCI' },
+    { key: 'dateAffectation', label: 'Date affectation' },
+    { key: 'dateRelance', label: 'Date relance' },
+    { key: 'statut', label: 'Statut' },
+    { key: 'commentaire', label: 'Commentaire' }
+  ],
+  renderHead() {
+    $('#theadRow').innerHTML = TableView.columns.map(c => {
+      const sorted = ViewState.sortKey === c.key;
+      const aria = sorted ? ` aria-sort="${ViewState.sortDir === 'asc' ? 'ascending' : 'descending'}"` : '';
+      return `<th scope="col"${aria}><button type="button" data-sort="${c.key}">${c.label}<span class="sort-ind">${sorted && ViewState.sortDir === 'asc' ? '▲' : '▼'}</span></button></th>`;
+    }).join('') + '<th scope="col" class="th-static" style="text-align:right">Actions</th>';
+  },
+  relanceCell(d) {
+    if (!d.dateRelance) return '<span class="no-fci">—</span>';
+    const n = DateUtil.daysFromToday(d.dateRelance);
+    let hint = '';
+    if (!Ref.status(d.statut).closed) {
+      if (n < 0) hint = `en retard de ${Util.plural(-n, 'jour', 'jours')}`;
+      else if (n === 0) hint = 'aujourd\'hui';
+      else if (n === 1) hint = 'demain';
+      else if (n <= RULES.relanceSoonDays) hint = `dans ${n} jours`;
+    }
+    return `<span class="num">${DateUtil.fmt(d.dateRelance)}</span>${hint ? `<span class="rel-hint">${hint}</span>` : ''}`;
+  },
+  statusSelect(d) {
+    const st = Ref.status(d.statut);
+    return `<label class="visually-hidden" for="st-${d.id}">Statut de ${Util.esc(d.gcblo)}</label>
+      <select id="st-${d.id}" class="status-select tone-${st.tone}" data-status-for="${d.id}">
+        ${STATUSES.map(s => `<option value="${s.id}"${s.id === d.statut ? ' selected' : ''}>${s.label}</option>`).join('')}
+      </select>`;
+  },
+  row(d) {
+    const rs = DossierService.relanceState(d);
+    const cls = [rs === 'overdue' ? 'row-overdue' : rs === 'soon' ? 'row-soon' : '', Ref.status(d.statut).closed ? 'row-done' : ''].join(' ').trim();
+    const fci = d.fci.length
+      ? `<span class="mono">${Util.esc(d.fci[0])}</span>${d.fci.length > 1 ? `<span class="fci-more" title="${Util.esc(d.fci.slice(1).join(', '))}">+${d.fci.length - 1}</span>` : ''}`
+      : '<span class="no-fci">aucun</span>';
+    const g = Util.esc(d.gcblo);
+    return `<tr data-id="${d.id}" class="${cls}" title="Double-clic : préparer la relance">
+      <td class="td-cat"><span class="cat cat-${Util.esc(d.categorie)}">${Util.esc(Ref.category(d.categorie)?.label || d.categorie)}</span></td>
+      <td class="td-gcblo mono">${g}</td>
+      <td class="td-fci" data-label="FCI">${fci}</td>
+      <td class="td-date num" data-label="Affecté le">${DateUtil.fmt(d.dateAffectation)}</td>
+      <td class="td-date" data-label="Relance">${TableView.relanceCell(d)}</td>
+      <td class="td-status">${TableView.statusSelect(d)}</td>
+      <td class="td-comment" data-label="Commentaire" title="${Util.esc(d.commentaire)}">${Util.esc(d.commentaire) || '<span class="no-fci">—</span>'}</td>
+      <td class="td-actions"><div class="actions">
+        <button type="button" class="icon-btn copy" data-action="copy-gcblo" title="Copier GCBLO" aria-label="Copier le GCBLO ${g}">${icon('i-copy')}<span class="tag">GC</span></button>
+        <button type="button" class="icon-btn copy" data-action="copy-fci" title="Copier FCI" aria-label="Copier le FCI de ${g}" ${d.fci.length ? '' : 'disabled style="opacity:.35;cursor:not-allowed"'}>${icon('i-copy')}<span class="tag">FCI</span></button>
+        <button type="button" class="icon-btn" data-action="open" title="Ouvrir le dossier" aria-label="Ouvrir ${g}">${icon('i-open')}</button>
+        <button type="button" class="icon-btn" data-action="relance" title="Préparer relance" aria-label="Préparer la relance de ${g}">${icon('i-mail')}</button>
+        <button type="button" class="icon-btn" data-action="edit" title="Modifier" aria-label="Modifier ${g}">${icon('i-edit')}</button>
+        <button type="button" class="icon-btn del" data-action="delete" title="Supprimer" aria-label="Supprimer ${g}">${icon('i-trash')}</button>
+      </div></td>
+    </tr>`;
+  },
+  render(rows, total) {
+    TableView.renderHead();
+    const tbody = $('#tbody');
+    if (!total) {
+      tbody.innerHTML = `<tr class="empty"><td colspan="8"><div class="empty">
+        <h3>Aucun dossier pour l'instant</h3>
+        <p>Importez votre classeur Excel « Robot affectation » : les colonnes GCBLO NUM21, GCBLO AIR et leurs FCI sont reconnues automatiquement.</p>
+        <div class="row">
+          <button class="btn primary" type="button" data-empty="import">${icon('i-upload')}Importer Excel</button>
+          <button class="btn" type="button" data-empty="new">${icon('i-plus')}Nouveau dossier</button>
+          <button class="btn ghost" type="button" data-empty="demo">Charger 3 exemples</button>
+        </div></div></td></tr>`;
+    } else if (!rows.length) {
+      tbody.innerHTML = `<tr class="empty"><td colspan="8"><div class="empty">
+        <h3>Aucun dossier ne correspond</h3><p>Modifiez la recherche ou les filtres.</p>
+        <div class="row"><button class="btn" type="button" data-empty="reset">Réinitialiser les filtres</button></div></div></td></tr>`;
+    } else {
+      tbody.innerHTML = rows.map(TableView.row).join('');
+    }
+    $('#resultCount').textContent = total ? `${rows.length} / ${Util.plural(total, 'dossier', 'dossiers')}` : '';
+    const sp = { overdue: 'Relances en retard', nofci: 'Sans FCI' }[ViewState.special];
+    $('#specialChip').innerHTML = sp ? `<button type="button" class="chip" data-clear-special>${sp}${icon('i-x')}</button>` : '';
+  }
+};
+
+/** Graphiques Chart.js (désactivés proprement si la bibliothèque manque). */
+const Charts = {
+  cat: null, status: null,
+  get available() { return typeof window.Chart !== 'undefined'; },
+  legend(el, items, total) {
+    el.innerHTML = items.map(i => `<div class="legend-row"><span class="sw" style="background:${i.color}"></span>${Util.esc(i.label)}
+      <span class="v">${i.value}</span><span class="p">${total ? Math.round(i.value / total * 100) : 0} %</span></div>`).join('');
+  },
+  render(stats) {
+    const catItems = CATEGORIES.map(c => ({ label: c.label, value: stats.byCat[c.id] || 0, color: cssVar(c.cssVar) }));
+    const stItems = STATUSES.map(s => ({ label: s.label, value: stats.byStatus[s.id] || 0, color: cssVar(s.cssVar) }));
+    Charts.legend($('#legendCat'), catItems, stats.total);
+    Charts.legend($('#legendStatus'), stItems, stats.total);
+    if (!Charts.available) {
+      $$('.chart-box').forEach(b => { b.innerHTML = '<div class="chart-off">Graphique indisponible hors ligne.</div>'; b.style.height = 'auto'; });
+      return;
+    }
+    const fg = cssVar('--fg-muted'), grid = cssVar('--stroke'), surface = cssVar('--surface');
+    Chart.defaults.font.family = cssVar('--font-ui');
+    Chart.defaults.color = fg;
+    const empty = !stats.total;
+
+    const catData = {
+      labels: catItems.map(i => i.label),
+      datasets: [{ data: empty ? [1] : catItems.map(i => i.value), backgroundColor: empty ? [grid] : catItems.map(i => i.color), borderColor: surface, borderWidth: 2 }]
+    };
+    if (empty) catData.labels = ['Aucun dossier'];
+    if (Charts.cat) { Charts.cat.data = catData; Charts.cat.options.plugins.tooltip.enabled = !empty; Charts.cat.update(); }
+    else Charts.cat = new Chart($('#chartCat'), {
+      type: 'doughnut', data: catData,
+      options: { responsive: true, maintainAspectRatio: false, cutout: '68%', animation: { duration: 250 },
+        plugins: { legend: { display: false }, tooltip: { enabled: !empty } } }
+    });
+
+    const stData = {
+      labels: stItems.map(i => i.label),
+      datasets: [{ data: stItems.map(i => i.value), backgroundColor: stItems.map(i => i.color), borderRadius: 4, barThickness: 16 }]
+    };
+    if (Charts.status) {
+      Charts.status.data = stData;
+      Object.assign(Charts.status.options.scales.x.grid, { color: grid });
+      Charts.status.options.scales.x.ticks.color = fg; Charts.status.options.scales.y.ticks.color = fg;
+      Charts.status.update();
+    } else Charts.status = new Chart($('#chartStatus'), {
+      type: 'bar', data: stData,
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: { duration: 250 },
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true, ticks: { precision: 0, color: fg }, grid: { color: grid }, border: { display: false } },
+          y: { ticks: { color: fg }, grid: { display: false }, border: { display: false } }
+        }
+      }
+    });
+  },
+  /** Recolore après un changement de thème. */
+  refresh() {
+    if (!Charts.available || !Charts.cat) return;
+    Charts.cat.destroy(); Charts.status.destroy(); Charts.cat = Charts.status = null;
+    App.render();
+  }
+};
+
+/** Dialogue de confirmation (window.confirm n'est pas utilisé). */
+const ConfirmDialog = {
+  ask({ title, text, ok = 'Supprimer' }) {
+    return new Promise(resolve => {
+      const dlg = $('#dlgConfirm');
+      $('#cfTitle').textContent = title; $('#cfText').textContent = text; $('#cfOk').textContent = ok;
+      const done = v => { dlg.close(); cleanup(); resolve(v); };
+      const onOk = () => done(true), onCancel = () => done(false), onClose = () => { cleanup(); resolve(false); };
+      const cleanup = () => { $('#cfOk').removeEventListener('click', onOk); $('#cfCancel').removeEventListener('click', onCancel); dlg.removeEventListener('cancel', onClose); };
+      $('#cfOk').addEventListener('click', onOk); $('#cfCancel').addEventListener('click', onCancel); dlg.addEventListener('cancel', onClose);
+      dlg.showModal(); $('#cfCancel').focus();
+    });
+  }
+};
+
+/** Formulaire de création / modification. */
+const FormDialog = {
+  editingId: null,
+  init() {
+    $('#catSegmented').innerHTML = CATEGORIES.map((c, i) =>
+      `<label><input type="radio" name="categorie" value="${c.id}"${i === 0 ? ' checked' : ''}><span>${c.label}</span></label>`).join('');
+    $('#inStatut').innerHTML = STATUSES.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
+    $('#inGcblo').addEventListener('input', e => {
+      const pos = e.target.selectionStart; e.target.value = e.target.value.toUpperCase(); e.target.setSelectionRange(pos, pos);
+      FormDialog.clearError('gcblo');
+    });
+    $('#inFci').addEventListener('input', e => {
+      const pos = e.target.selectionStart; e.target.value = e.target.value.toUpperCase(); e.target.setSelectionRange(pos, pos);
+      FormDialog.clearError('fci');
+    });
+    $('#dossierForm').addEventListener('submit', e => { e.preventDefault(); FormDialog.submit(); });
+  },
+  open(id = null, preset = {}) {
+    FormDialog.editingId = id;
+    const d = id ? DossierRepository.get(id) : null;
+    const f = $('#dossierForm');
+    f.reset(); $$('#dossierForm .field').forEach(el => FormDialog.clearError(el.dataset.field));
+    const v = d || { categorie: preset.categorie || ViewState.categorie || CATEGORIES[0].id, gcblo: '', fci: [], dateAffectation: DateUtil.today(), dateRelance: '', statut: DEFAULT_STATUS, commentaire: '' };
+    f.querySelector(`input[name="categorie"][value="${v.categorie}"]`).checked = true;
+    $('#inGcblo').value = v.gcblo; $('#inFci').value = v.fci.join(', ');
+    $('#inDateAff').value = v.dateAffectation; $('#inDateRel').value = v.dateRelance || '';
+    $('#inStatut').value = v.statut; $('#inComment').value = v.commentaire;
+    $('#formTitle').textContent = d ? `Modifier ${d.gcblo}` : 'Nouveau dossier';
+    $('#formSub').textContent = d ? `Créé le ${DateUtil.fmtDateTime(d.createdAt)}` : 'Les champs marqués * sont obligatoires.';
+    $('#formSubmit').textContent = d ? 'Enregistrer' : 'Créer le dossier';
+    $('#dlgForm').showModal();
+    (d ? $('#inStatut') : $('#inGcblo')).focus();
+  },
+  read() {
+    const f = $('#dossierForm');
+    return {
+      categorie: f.querySelector('input[name="categorie"]:checked')?.value,
+      gcblo: $('#inGcblo').value, fci: $('#inFci').value,
+      dateAffectation: $('#inDateAff').value, dateRelance: $('#inDateRel').value,
+      statut: $('#inStatut').value, commentaire: $('#inComment').value
+    };
+  },
+  showError(field, msg) {
+    const el = $(`#dossierForm .field[data-field="${field}"]`); if (!el) return;
+    el.classList.add('invalid'); const e = el.querySelector('.err'); e.textContent = msg; e.hidden = false;
+  },
+  clearError(field) {
+    const el = $(`#dossierForm .field[data-field="${field}"]`); if (!el) return;
+    el.classList.remove('invalid'); const e = el.querySelector('.err'); if (e) { e.hidden = true; e.textContent = ''; }
+  },
+  submit() {
+    const input = FormDialog.read();
+    const res = FormDialog.editingId ? DossierService.update(FormDialog.editingId, input) : DossierService.create(input);
+    $$('#dossierForm .field').forEach(el => FormDialog.clearError(el.dataset.field));
+    if (res.errors) {
+      Object.entries(res.errors).forEach(([k, m]) => FormDialog.showError(k, m));
+      const first = Object.keys(res.errors)[0];
+      ({ gcblo: $('#inGcblo'), fci: $('#inFci'), dateAffectation: $('#inDateAff'), dateRelance: $('#inDateRel'), statut: $('#inStatut') })[first]?.focus();
+      return;
+    }
+    $('#dlgForm').close();
+    Toast.show(FormDialog.editingId ? (res.unchanged ? 'Aucune modification.' : `${res.dossier.gcblo} mis à jour.`) : `${res.dossier.gcblo} créé.`);
+  }
+};
+
+/** Fiche détail : informations, email de relance, historique. */
+const DetailDialog = {
+  currentId: null,
+  open(id) {
+    const d = DossierRepository.get(id); if (!d) return;
+    DetailDialog.currentId = id;
+    DetailDialog.render(d);
+    if (!$('#dlgDetail').open) $('#dlgDetail').showModal();
+  },
+  render(d) {
+    const st = Ref.status(d.statut);
+    const rs = DossierService.relanceState(d);
+    $('#detTitle').textContent = d.gcblo;
+    $('#detSub').innerHTML = `<span class="cat cat-${Util.esc(d.categorie)}">${Util.esc(Ref.category(d.categorie)?.label)}</span>
+      <span class="pill tone-${st.tone}" style="margin-left:6px">${st.label}</span>
+      ${rs ? `<span class="pill tone-${rs === 'overdue' ? 'danger' : 'warning'}" style="margin-left:6px">${rs === 'overdue' ? 'Relance en retard' : 'Relance imminente'}</span>` : ''}`;
+    const mail = MailService.build(d);
+    const s = SettingsStore.get();
+    const tplPicker = EMAIL_TEMPLATES.length > 1
+      ? `<select class="select" id="detTpl" style="max-width:260px">${EMAIL_TEMPLATES.map(t => `<option value="${t.id}"${t.id === s.templateId ? ' selected' : ''}>${Util.esc(t.label)}</option>`).join('')}</select>` : '';
+    const history = [...d.history].reverse();
+    $('#detBody').innerHTML = `
+      <dl class="kv">
+        <div><dt>FCI</dt><dd class="mono">${d.fci.length ? d.fci.map(Util.esc).join('<br>') : '<span class="no-fci">aucun</span>'}</dd></div>
+        <div><dt>Date d'affectation</dt><dd class="num">${DateUtil.fmt(d.dateAffectation)}</dd></div>
+        <div><dt>Date de relance</dt><dd class="num">${d.dateRelance ? DateUtil.fmt(d.dateRelance) : '—'}</dd></div>
+        <div><dt>Relances envoyées</dt><dd class="num">${d.relances.length}${d.relances.length ? ` (dernière le ${DateUtil.fmtDateTime(d.relances[d.relances.length - 1].at)})` : ''}</dd></div>
+        <div><dt>Créé le</dt><dd class="num">${DateUtil.fmtDateTime(d.createdAt)}</dd></div>
+        <div><dt>Modifié le</dt><dd class="num">${DateUtil.fmtDateTime(d.updatedAt)}</dd></div>
+      </dl>
+      ${d.commentaire ? `<p class="section-title">Commentaire</p><div class="note-block">${Util.esc(d.commentaire)}</div>` : ''}
+      <p class="section-title">Email de relance</p>
+      ${tplPicker}
+      <div class="mail-preview">
+        <div class="mail-subject">${s.to ? `<span style="font-weight:400;color:var(--fg-muted)">À : ${Util.esc(s.to)}</span><br>` : ''}${Util.esc(mail.subject)}</div>
+        <pre>${Util.esc(mail.body)}</pre>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <button class="btn" type="button" data-det="copy-subject">${icon('i-copy')}Copier l'objet</button>
+        <button class="btn" type="button" data-det="copy-body">${icon('i-copy')}Copier le texte</button>
+        ${d.statut !== 'RELANCE' || rs ? `<button class="btn" type="button" data-det="mark">Marquer relancé (+${Number(s.relanceDelay) || RULES.defaultRelanceDelay} j)</button>` : ''}
+      </div>
+      <p class="section-title">Historique</p>
+      <ul class="timeline">${history.map(h => `<li><span class="dot"></span><div><div>${Util.esc(h.text)}</div><div class="when">${DateUtil.fmtDateTime(h.at)}</div></div></li>`).join('')}</ul>`;
+  },
+  refreshIfOpen() {
+    if ($('#dlgDetail').open && DetailDialog.currentId) {
+      const d = DossierRepository.get(DetailDialog.currentId);
+      if (d) DetailDialog.render(d); else $('#dlgDetail').close();
+    }
+  }
+};
+
+/** Rapport affiché après un import Excel. */
+const ImportReportDialog = {
+  open(r) {
+    $('#impSub').textContent = `${r.file} · ${Util.plural(r.read, 'ligne lue', 'lignes lues')}`;
+    const list = (title, items) => items.length ? `<p class="section-title">${title} (${items.length})</p><ul class="report-list">${items.map(i => `<li>${Util.esc(i)}</li>`).join('')}</ul>` : '';
+    const byCat = CATEGORIES.map(c => `${r.added.filter(d => d.categorie === c.id).length} ${c.label}`).join(' · ');
+    $('#impBody').innerHTML = `
+      <div class="report-stats">
+        <div><b>${r.added.length}</b><span>ajoutés (${byCat})</span></div>
+        <div><b>${r.duplicates.length}</b><span>doublons ignorés</span></div>
+        <div><b>${r.added.filter(d => !d.fci.length).length}</b><span>sans FCI</span></div>
+        <div><b>${r.errors.length}</b><span>lignes rejetées</span></div>
+      </div>
+      ${list('Doublons ignorés', r.duplicates)}
+      ${list('FCI non reconnus (conservés en commentaire)', r.fciNotes)}
+      ${list('Lignes rejetées', r.errors)}`;
+    $('#dlgImport').showModal();
+  }
+};
+
+/** Paramètres. */
+const SettingsDialog = {
+  open() {
+    const s = SettingsStore.get();
+    $('#setTo').value = s.to; $('#setCc').value = s.cc; $('#setDelay').value = s.relanceDelay;
+    const n = DossierRepository.all().length;
+    $('#setStats').textContent = `${Util.plural(n, 'dossier enregistré', 'dossiers enregistrés')} dans ce navigateur.` +
+      (StorageAdapter.persistent ? '' : ' Attention : le stockage local est bloqué, les données seront perdues à la fermeture.');
+    $('#dlgSettings').showModal();
+  },
+  save() {
+    const delay = Math.min(60, Math.max(1, parseInt($('#setDelay').value, 10) || RULES.defaultRelanceDelay));
+    SettingsStore.set({ to: $('#setTo').value.trim(), cc: $('#setCc').value.trim(), relanceDelay: delay });
+    $('#dlgSettings').close();
+    Toast.show('Paramètres enregistrés.');
+    DetailDialog.refreshIfOpen();
+  }
+};
+
+/* ----------------------------------------------------------------------------
+   Contrôleur : relie les événements de l'interface aux services métier.
+   ---------------------------------------------------------------------------- */
+const App = {
+  render() {
+    const all = DossierRepository.all();
+    const stats = DossierService.stats(all);
+    DashboardView.render(stats);
+    TableView.render(DossierService.query(all, ViewState), all.length);
+    Charts.render(stats);
+  },
+
+  /** Actions communes (tableau + fiche détail). */
+  actions: {
+    'copy-gcblo': d => Clipboard.copy(d.gcblo, 'GCBLO'),
+    'copy-fci': d => d.fci.length ? Clipboard.copy(d.fci.join(', '), d.fci.length > 1 ? 'FCI' : 'FCI') : Toast.show('Ce dossier n\'a pas de FCI.'),
+    open: d => DetailDialog.open(d.id),
+    relance: d => App.relance(d.id),
+    edit: d => FormDialog.open(d.id),
+    delete: d => App.remove(d.id)
+  },
+
+  relance(id, templateId) {
+    const d = DossierRepository.get(id); if (!d) return;
+    MailService.prepareRelance(id, templateId);
+    Toast.show(`Email de relance préparé pour ${d.gcblo}.`, {
+      action: 'Marquer relancé',
+      onAction: () => { MailService.markRelanced(id); Toast.show(`${d.gcblo} : statut « Relancé », prochaine relance le ${DateUtil.fmt(DossierRepository.get(id).dateRelance)}.`); }
+    });
+  },
+
+  async remove(id) {
+    const d = DossierRepository.get(id); if (!d) return;
+    const ok = await ConfirmDialog.ask({ title: `Supprimer ${d.gcblo} ?`, text: 'Le dossier et son historique seront définitivement supprimés de ce navigateur.' });
+    if (!ok) return;
+    const backup = JSON.parse(JSON.stringify(d));
+    DossierService.remove(id);
+    if (DetailDialog.currentId === id && $('#dlgDetail').open) $('#dlgDetail').close();
+    Toast.show(`${d.gcblo} supprimé.`, { action: 'Annuler', onAction: () => DossierRepository.insert(backup) });
+  },
+
+  async handleExcel(file) {
+    try {
+      const report = await ImportService.importFile(file);
+      ImportReportDialog.open(report);
+    } catch (e) { Toast.error(e.message || 'Import impossible.'); }
+  },
+
+  async handleRestore(file) {
+    try {
+      const list = await ExportService.readBackup(file);
+      const ok = await ConfirmDialog.ask({
+        title: 'Restaurer la sauvegarde ?',
+        text: `${Util.plural(list.length, 'dossier', 'dossiers')} dans la sauvegarde. Les ${DossierRepository.all().length} dossiers actuels seront remplacés.`,
+        ok: 'Restaurer'
+      });
+      if (!ok) return;
+      DossierRepository.replaceAll(list);
+      Toast.show(`Sauvegarde restaurée : ${Util.plural(list.length, 'dossier', 'dossiers')}.`);
+    } catch (e) { Toast.error(e.message); }
+  },
+
+  loadDemo() {
+    const today = DateUtil.today();
+    [
+      { categorie: 'AIR', gcblo: 'SBA501404-THF010', fci: 'F26154200726', dateAffectation: DateUtil.addDays(today, -12), dateRelance: DateUtil.addDays(today, -2), statut: 'RELANCE', commentaire: 'Exemple' },
+      { categorie: 'NUM21', gcblo: 'LRO500767-THF010', fci: 'F09075260926', dateAffectation: DateUtil.addDays(today, -5), dateRelance: DateUtil.addDays(today, 2), statut: 'EN_COURS', commentaire: 'Exemple' },
+      { categorie: 'NUM21', gcblo: 'EST501479-THF011', fci: '', dateAffectation: today, dateRelance: '', statut: 'A_TRAITER', commentaire: 'Exemple' }
+    ].forEach(x => DossierService.create(x));
+    Toast.show('3 dossiers d\'exemple ajoutés (commentaire « Exemple »).');
+  },
+
+  closeMenus(except) {
+    $$('.menu').forEach(m => { if (m !== except) { m.querySelector('.menu-pop').hidden = true; m.querySelector('[data-menu-toggle]').setAttribute('aria-expanded', 'false'); } });
+  },
+
+  bind() {
+    // Filtres
+    $('#fCategorie').innerHTML = '<option value="">Toutes catégories</option>' + CATEGORIES.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+    $('#fStatut').innerHTML = '<option value="">Tous statuts</option>' + STATUSES.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
+    $('#fSearch').addEventListener('input', Util.debounce(e => { ViewState.q = e.target.value; App.render(); }, 80));
+    $('#fCategorie').addEventListener('change', e => { ViewState.categorie = e.target.value; App.render(); });
+    $('#fStatut').addEventListener('change', e => { ViewState.statut = e.target.value; App.render(); });
+    $('#specialChip').addEventListener('click', e => { if (e.target.closest('[data-clear-special]')) { ViewState.special = ''; App.render(); } });
+    $('#kpis').addEventListener('click', e => { const k = e.target.closest('[data-kpi]'); if (k) DashboardView.onClick(k.dataset.kpi); });
+
+    // Tri
+    $('#theadRow').addEventListener('click', e => {
+      const b = e.target.closest('[data-sort]'); if (!b) return;
+      const k = b.dataset.sort;
+      if (ViewState.sortKey === k) ViewState.sortDir = ViewState.sortDir === 'asc' ? 'desc' : 'asc';
+      else { ViewState.sortKey = k; ViewState.sortDir = /date/.test(k) ? 'desc' : 'asc'; }
+      UiPrefs.set({ sortKey: ViewState.sortKey, sortDir: ViewState.sortDir });
+      App.render();
+    });
+
+    // Tableau : actions, statut, double-clic
+    const tbody = $('#tbody');
+    tbody.addEventListener('click', e => {
+      const empty = e.target.closest('[data-empty]');
+      if (empty) {
+        const a = empty.dataset.empty;
+        if (a === 'import') $('#fileExcel').click();
+        else if (a === 'new') FormDialog.open();
+        else if (a === 'demo') App.loadDemo();
+        else if (a === 'reset') { Object.assign(ViewState, { q: '', categorie: '', statut: '', special: '' }); $('#fSearch').value = ''; $('#fCategorie').value = ''; $('#fStatut').value = ''; App.render(); }
+        return;
+      }
+      const btn = e.target.closest('[data-action]'); if (!btn || btn.disabled) return;
+      const d = DossierRepository.get(btn.closest('tr').dataset.id);
+      if (d) App.actions[btn.dataset.action]?.(d);
+    });
+    tbody.addEventListener('change', e => {
+      const sel = e.target.closest('[data-status-for]'); if (!sel) return;
+      const d = DossierService.setStatus(sel.dataset.statusFor, sel.value);
+      if (d) Toast.show(`${d.gcblo} : ${Ref.status(d.statut).label}`);
+    });
+    tbody.addEventListener('dblclick', e => {
+      if (e.target.closest('button, select, a, input')) return;
+      const tr = e.target.closest('tr[data-id]'); if (tr) App.relance(tr.dataset.id);
+    });
+
+    // Barre d'outils
+    $('#btnNew').addEventListener('click', () => FormDialog.open());
+    $('#btnImport').addEventListener('click', () => $('#fileExcel').click());
+    $('#fileExcel').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) App.handleExcel(f); });
+    $('#fileJson').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) App.handleRestore(f); });
+    $$('.menu').forEach(m => m.querySelector('[data-menu-toggle]').addEventListener('click', e => {
+      e.stopPropagation(); const pop = m.querySelector('.menu-pop'); const open = pop.hidden;
+      App.closeMenus(m); pop.hidden = !open; e.currentTarget.setAttribute('aria-expanded', String(open));
+    }));
+    document.addEventListener('click', () => App.closeMenus());
+    $('#menuExport .menu-pop').addEventListener('click', e => {
+      const b = e.target.closest('[data-export]'); if (!b) return;
+      App.closeMenus();
+      const visible = DossierService.query(DossierRepository.all(), ViewState);
+      try {
+        if (b.dataset.export === 'restore') return $('#fileJson').click();
+        if (b.dataset.export === 'json') { ExportService.toJson(); return Toast.show('Sauvegarde téléchargée.'); }
+        if (!visible.length) return Toast.show('Aucun dossier à exporter.');
+        if (b.dataset.export === 'xlsx') ExportService.toExcel(visible);
+        if (b.dataset.export === 'csv') ExportService.toCsv(visible);
+        Toast.show(`${Util.plural(visible.length, 'dossier exporté', 'dossiers exportés')}${visible.length < DossierRepository.all().length ? ' (filtres appliqués)' : ''}.`);
+      } catch (err) { Toast.error(err.message); }
+    });
+
+    // Appbar
+    $('#btnTheme').addEventListener('click', Theme.next);
+    $('#btnSettings').addEventListener('click', SettingsDialog.open);
+    $('#settingsForm').addEventListener('submit', e => { e.preventDefault(); SettingsDialog.save(); });
+    $('#btnWipe').addEventListener('click', async () => {
+      const n = DossierRepository.all().length;
+      if (!n) return Toast.show('Aucun dossier à effacer.');
+      const ok = await ConfirmDialog.ask({ title: `Effacer les ${n} dossiers ?`, text: 'Pensez à faire une sauvegarde JSON avant. Cette action est définitive.', ok: 'Tout effacer' });
+      if (!ok) return;
+      DossierRepository.replaceAll([]); $('#dlgSettings').close(); Toast.show('Tous les dossiers ont été effacés.');
+    });
+
+    // Fiche détail
+    $('#detEdit').addEventListener('click', () => { const id = DetailDialog.currentId; $('#dlgDetail').close(); FormDialog.open(id); });
+    $('#detDelete').addEventListener('click', () => App.remove(DetailDialog.currentId));
+    $('#detRelance').addEventListener('click', () => App.relance(DetailDialog.currentId, $('#detTpl')?.value));
+    $('#detBody').addEventListener('click', e => {
+      const b = e.target.closest('[data-det]'); if (!b) return;
+      const d = DossierRepository.get(DetailDialog.currentId); if (!d) return;
+      const mail = MailService.build(d, $('#detTpl')?.value);
+      if (b.dataset.det === 'copy-subject') Clipboard.copy(mail.subject, 'Objet');
+      if (b.dataset.det === 'copy-body') Clipboard.copy(mail.body, 'Texte de l\'email');
+      if (b.dataset.det === 'mark') { MailService.markRelanced(d.id); Toast.show(`${d.gcblo} marqué « Relancé ».`); }
+    });
+    $('#detBody').addEventListener('change', e => { if (e.target.id === 'detTpl') { SettingsStore.set({ templateId: e.target.value }); DetailDialog.refreshIfOpen(); } });
+
+    // Fermeture des dialogues (boutons [data-close] + clic sur le fond)
+    $$('dialog').forEach(dlg => {
+      dlg.addEventListener('click', e => { if (e.target.closest('[data-close]') || e.target === dlg) dlg.close(); });
+    });
+
+    // Raccourcis clavier : N = nouveau, / = recherche
+    document.addEventListener('keydown', e => {
+      if (document.querySelector('dialog[open]')) return;
+      const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName);
+      if (e.key === '/' && !typing) { e.preventDefault(); $('#fSearch').focus(); }
+      else if ((e.key === 'n' || e.key === 'N') && !typing && !e.ctrlKey && !e.metaKey) { e.preventDefault(); FormDialog.open(); }
+      else if (e.key === 'Escape' && document.activeElement === $('#fSearch')) { $('#fSearch').value = ''; ViewState.q = ''; App.render(); }
+    });
+
+    // Re-rendu à chaque modification des données + indicateur de sauvegarde
+    DossierRepository.subscribe(({ saved }) => {
+      App.render(); DetailDialog.refreshIfOpen();
+      $('#saveIndicator').textContent = saved ? `Enregistré à ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : 'Non enregistré (stockage bloqué)';
+    });
+
+    // Rafraîchit les alertes de relance au changement de jour
+    setInterval(App.render, 60 * 60 * 1000);
+  },
+
+  /** Signale les bibliothèques manquantes (poste hors ligne). */
+  checkLibs() {
+    const missing = [];
+    if (!ImportService.available) { missing.push('import/export Excel'); }
+    if (!Charts.available) missing.push('graphiques');
+    if (missing.length) { const n = $('#libNote'); n.hidden = false; n.textContent = `Hors ligne : ${missing.join(' et ')} indisponible${missing.length > 1 ? 's' : ''}. Le reste fonctionne normalement.`; }
+  }
+};
+
+/* ############################################################################
+   5. BOOTSTRAP
+   ############################################################################ */
+document.addEventListener('DOMContentLoaded', () => {
+  FormDialog.init();
+  App.bind();
+  Theme.init();      // déclenche un premier rendu
+  App.render();
+  App.checkLibs();
+  if (!StorageAdapter.persistent) Toast.error('Stockage local indisponible : les données ne seront pas conservées.');
+});
+</script>
+</body>
+</html>
