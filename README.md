@@ -1,4 +1,4 @@
-# Affectations GCBLO
+# Registre GCBLO
 
 Application web mono-fichier (`index.html`) qui remplace le classeur Excel/VBA
 « ROBOT_AFFECTATION_NUMERUS21_ET_AIR » pour le suivi des affectations GCBLO
@@ -25,12 +25,14 @@ Raccourcis : `N` nouveau dossier · `/` recherche · double-clic sur une ligne =
 - Lignes en rouge si la relance est dépassée, en orange si elle tombe dans les 3 jours.
 - Historique par dossier : création, modifications, relances préparées.
 - Exports Excel, CSV (séparateur `;`) et sauvegarde / restauration JSON.
-- Graphiques de répartition (Chart.js), mode sombre, affichage mobile.
+- Habillage « donjon 2D » en pixel art (thèmes Donjon et Parchemin), purement visuel.
+- Écran unique : sur téléphone la page ne défile pas, seule la liste des dossiers défile ; un appui sur un dossier affiche ses actions.
+- Jauges de répartition NUM21 / AIR et des statuts (fenêtre « Stats » sur téléphone).
 
 ## Dépendances
 
-Chargées depuis un CDN au démarrage : SheetJS 0.18.5 et Chart.js 4.4.1.
-Sans connexion, l'app reste utilisable ; seuls l'import/export Excel et les graphiques sont désactivés.
+SheetJS 0.18.5 (CDN) pour l'import/export Excel, polices Pixelify Sans et VT323 (Google Fonts).
+Sans connexion, l'app reste utilisable : seul l'Excel est désactivé (CSV et JSON fonctionnent) et les polices retombent sur une police système.
 
 ## Architecture
 
@@ -41,7 +43,7 @@ Le script est découpé en couches commentées :
 | `CONFIG` | Référentiels : catégories, statuts, modèles d'emails, règles, interrupteurs de fonctionnalités |
 | `DATA LAYER` | `StorageAdapter`, `Migrations`, `DossierRepository`, `SettingsStore` |
 | `BUSINESS LAYER` | `DossierService`, `MailService`, `ImportService`, `ExportService` |
-| `UI LAYER` | Vues (tableau de bord, tableau, graphiques), dialogues, contrôleur `App` |
+| `UI LAYER` | Icônes pixel, vues (compteurs, jauges, registre), dialogues, contrôleur `App` |
 
 ### Évolutions prévues
 

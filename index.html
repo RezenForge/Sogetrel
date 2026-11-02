@@ -3,20 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Affectations GCBLO</title>
+<title>Registre GCBLO</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#141019">
 <!--
   ============================================================================
-  AFFECTATIONS GCBLO — Sogetrel
+  REGISTRE GCBLO — Sogetrel
   ----------------------------------------------------------------------------
   Application mono-fichier qui remplace le classeur Excel/VBA
   « ROBOT_AFFECTATION_NUMERUS21_ET_AIR ».
 
   - Aucun serveur, aucune base : les données vivent dans le localStorage
     du navigateur (clé « gcblo.affectations.v1 »).
-  - Bibliothèques externes (CDN) : SheetJS (import/export Excel) et Chart.js
-    (graphiques). Si le poste est hors ligne, l'app reste utilisable :
-    seuls l'import/export Excel et les graphiques sont désactivés.
+  - Habillage « donjon 2D » (pixel art) : purement visuel, l'outil reste un
+    outil de travail. Deux thèmes : Donjon (sombre) et Parchemin (clair).
+  - Écran unique : sur téléphone, la page ne défile jamais ; seule la liste
+    des dossiers défile dans son cadre.
+  - Dépendance externe : SheetJS (import/export Excel). Les polices pixel
+    viennent de Google Fonts. Hors ligne, tout fonctionne sauf l'Excel
+    (CSV et JSON restent disponibles) et les polices retombent sur une
+    police système.
 
   Organisation du script (voir plus bas) :
     0. CONFIG          → référentiels extensibles (catégories, statuts,
@@ -24,705 +30,727 @@
     1. UTILS           → dates, chaînes, identifiants
     2. DATA LAYER      → stockage + dépôt de dossiers + paramètres
     3. BUSINESS LAYER  → règles métier, import, export, emails
-    4. UI LAYER        → rendu, dialogues, événements
+    4. UI LAYER        → icônes pixel, rendu, dialogues, événements
     5. BOOTSTRAP       → démarrage
   ============================================================================
 -->
-
-<!-- Bibliothèques (chargées avant le script applicatif, versions figées) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=VT323&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 
 <style>
 /* ==========================================================================
    DESIGN TOKENS
-   Concept : interface « Microsoft 365 / Fluent » — barre d'application bleue,
-   surfaces blanches arrondies sur fond neutre chaud, données en police mono
-   pour lire les références GCBLO/FCI sans ambiguïté.
+   Concept : un registre de garnison dans un donjon 2D. Murs de pierre,
+   cadres « pixel » à coins crantés, torche comme couleur d'accent, gemmes
+   de couleur pour les statuts. Thème clair = parchemin, sombre = donjon.
    ========================================================================== */
 :root {
-  /* Couleurs de base */
-  --bg: #f5f5f4;
-  --surface: #ffffff;
-  --surface-2: #fafafa;
-  --surface-hover: #f3f6fa;
-  --fg: #242424;
-  --fg-muted: #616161;
-  --fg-subtle: #8a8a8a;
-  --stroke: #e1e1e1;
-  --stroke-strong: #c7c7c7;
-  --brand: #0f6cbd;
-  --brand-hover: #115ea3;
-  --brand-fg: #ffffff;
-  --brand-soft: #ebf3fc;
-  --appbar: #0f6cbd;
-  --appbar-fg: #ffffff;
-  --focus: #0f6cbd;
-  --shadow: 0 1px 2px rgba(0,0,0,.06), 0 2px 8px rgba(0,0,0,.05);
-  --shadow-pop: 0 8px 32px rgba(0,0,0,.18);
+  /* Parchemin (clair) */
+  --bg: #e4d3ac;
+  --wall: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24'%3E%3Cpath d='M0 0h48v2H0zM0 2h2v10H0zM0 12h48v2H0zM24 14h2v10h-2z' fill='%237a5a2c' fill-opacity='.10'/%3E%3C/svg%3E");
+  --surface: #f3e7c9;
+  --surface-2: #ead9b3;
+  --sunk: #dcc697;
+  --stroke: #7d6038;
+  --stroke-soft: #c3a877;
+  --fg: #2a1f14;
+  --muted: #6a5438;
+  --subtle: #927d5c;
+  --accent: #a9581a;
+  --accent-hi: #c46a22;
+  --accent-fg: #fff6e6;
+  --hilite: rgba(255, 255, 255, .5);
+  --shade: rgba(90, 60, 20, .18);
+  --overlay: rgba(42, 31, 20, .45);
+  --focus: #a9581a;
 
-  /* Catégories */
-  --cat-num21: #0f6cbd;
-  --cat-num21-soft: #ebf3fc;
-  --cat-air: #00727a;
-  --cat-air-soft: #e3f4f4;
+  --cat-num21: #2b62a3;  --cat-num21-soft: #d6e0ec;
+  --cat-air: #13786a;    --cat-air-soft: #d0e6de;
 
-  /* Statuts (sémantique, distincte de la couleur de marque) */
-  --st-neutral: #5c5c5c;      --st-neutral-soft: #f0f0f0;
-  --st-info: #0f6cbd;         --st-info-soft: #ebf3fc;
-  --st-warning: #bc4b09;      --st-warning-soft: #fdefe4;
-  --st-success: #0e700e;      --st-success-soft: #e7f4e4;
-  --st-danger: #b10e1c;       --st-danger-soft: #fbe9ea;
+  --st-neutral: #6b5e4b; --st-neutral-soft: #e2d5ba;
+  --st-info: #2b62a3;    --st-info-soft: #d6e0ec;
+  --st-warning: #9c540c; --st-warning-soft: #f0d9ae;
+  --st-success: #3a7427; --st-success-soft: #d8e6c4;
+  --st-danger: #a3232a;  --st-danger-soft: #efcdc4;
 
-  /* Alertes de relance sur les lignes */
-  --row-overdue: #fdf0f1;
-  --row-overdue-edge: #d13438;
-  --row-soon: #fff4e8;
-  --row-soon-edge: #e8730f;
+  --row-overdue: #efcfc2; --row-overdue-edge: #a3232a;
+  --row-soon: #f1deb0;    --row-soon-edge: #a9581a;
 
   /* Typographie */
-  --font-ui: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "Cascadia Mono", "Cascadia Code", Consolas, "SFMono-Regular", Menlo, monospace;
+  --font-display: "Pixelify Sans", "Trebuchet MS", system-ui, sans-serif;
+  --font-data: "VT323", "Lucida Console", Consolas, monospace;
+  --font-text: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
-  /* Formes */
-  --radius: 8px;
-  --radius-lg: 12px;
-  --radius-pill: 999px;
+  /* Cadres pixel : bordure dessinée par ombres (coins crantés automatiques) */
+  --px: 3px;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #1b1b1b; --surface: #262626; --surface-2: #2c2c2c; --surface-hover: #2f3338;
-    --fg: #f2f2f2; --fg-muted: #b8b8b8; --fg-subtle: #8f8f8f;
-    --stroke: #3a3a3a; --stroke-strong: #525252;
-    --brand: #479ef5; --brand-hover: #62abf5; --brand-fg: #0b1a2b; --brand-soft: #0e2a47;
-    --appbar: #1f2a38; --appbar-fg: #ffffff; --focus: #62abf5;
-    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.3);
-    --shadow-pop: 0 8px 32px rgba(0,0,0,.6);
-    --cat-num21: #62abf5; --cat-num21-soft: #0e2a47;
-    --cat-air: #4cc2c4; --cat-air-soft: #0d3335;
-    --st-neutral: #c4c4c4; --st-neutral-soft: #353535;
-    --st-info: #62abf5;    --st-info-soft: #0e2a47;
-    --st-warning: #f7a35c; --st-warning-soft: #3d2614;
-    --st-success: #6ccb5f; --st-success-soft: #19331a;
-    --st-danger: #f1707b;  --st-danger-soft: #3f1a1e;
-    --row-overdue: #3a1d21; --row-overdue-edge: #f1707b;
-    --row-soon: #3a2816;    --row-soon-edge: #f7a35c;
+    --bg: #141019;
+    --wall: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24'%3E%3Cpath d='M0 0h48v2H0zM0 2h2v10H0zM0 12h48v2H0zM24 14h2v10h-2z' fill='%23000' fill-opacity='.45'/%3E%3Cpath d='M2 2h22v1H2zM26 14h22v1H26zM2 14h22v1H2zM26 2h22v1H26z' fill='%23fff' fill-opacity='.025'/%3E%3C/svg%3E");
+    --surface: #211b28; --surface-2: #2a2332; --sunk: #18131e;
+    --stroke: #4b405a; --stroke-soft: #352d40;
+    --fg: #efe4cc; --muted: #a99a80; --subtle: #7e715f;
+    --accent: #f2a33a; --accent-hi: #ffbb5c; --accent-fg: #1c1206;
+    --hilite: rgba(255, 255, 255, .06); --shade: rgba(0, 0, 0, .45);
+    --overlay: rgba(5, 3, 8, .7); --focus: #f2a33a;
+    --cat-num21: #74b3f2; --cat-num21-soft: #1c2b3f;
+    --cat-air: #5fd2bd;   --cat-air-soft: #15302c;
+    --st-neutral: #c4b79e; --st-neutral-soft: #2f2838;
+    --st-info: #74b3f2;    --st-info-soft: #1c2b3f;
+    --st-warning: #f2a33a; --st-warning-soft: #3a2a14;
+    --st-success: #7ad25e; --st-success-soft: #1d3019;
+    --st-danger: #f2676c;  --st-danger-soft: #3f1a20;
+    --row-overdue: #3a1920; --row-overdue-edge: #f2676c;
+    --row-soon: #33260f;    --row-soon-edge: #f2a33a;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #1b1b1b; --surface: #262626; --surface-2: #2c2c2c; --surface-hover: #2f3338;
-  --fg: #f2f2f2; --fg-muted: #b8b8b8; --fg-subtle: #8f8f8f;
-  --stroke: #3a3a3a; --stroke-strong: #525252;
-  --brand: #479ef5; --brand-hover: #62abf5; --brand-fg: #0b1a2b; --brand-soft: #0e2a47;
-  --appbar: #1f2a38; --appbar-fg: #ffffff; --focus: #62abf5;
-  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.3);
-  --shadow-pop: 0 8px 32px rgba(0,0,0,.6);
-  --cat-num21: #62abf5; --cat-num21-soft: #0e2a47;
-  --cat-air: #4cc2c4; --cat-air-soft: #0d3335;
-  --st-neutral: #c4c4c4; --st-neutral-soft: #353535;
-  --st-info: #62abf5;    --st-info-soft: #0e2a47;
-  --st-warning: #f7a35c; --st-warning-soft: #3d2614;
-  --st-success: #6ccb5f; --st-success-soft: #19331a;
-  --st-danger: #f1707b;  --st-danger-soft: #3f1a1e;
-  --row-overdue: #3a1d21; --row-overdue-edge: #f1707b;
-  --row-soon: #3a2816;    --row-soon-edge: #f7a35c;
+  --bg: #141019;
+  --wall: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='24'%3E%3Cpath d='M0 0h48v2H0zM0 2h2v10H0zM0 12h48v2H0zM24 14h2v10h-2z' fill='%23000' fill-opacity='.45'/%3E%3Cpath d='M2 2h22v1H2zM26 14h22v1H26zM2 14h22v1H2zM26 2h22v1H26z' fill='%23fff' fill-opacity='.025'/%3E%3C/svg%3E");
+  --surface: #211b28; --surface-2: #2a2332; --sunk: #18131e;
+  --stroke: #4b405a; --stroke-soft: #352d40;
+  --fg: #efe4cc; --muted: #a99a80; --subtle: #7e715f;
+  --accent: #f2a33a; --accent-hi: #ffbb5c; --accent-fg: #1c1206;
+  --hilite: rgba(255, 255, 255, .06); --shade: rgba(0, 0, 0, .45);
+  --overlay: rgba(5, 3, 8, .7); --focus: #f2a33a;
+  --cat-num21: #74b3f2; --cat-num21-soft: #1c2b3f;
+  --cat-air: #5fd2bd;   --cat-air-soft: #15302c;
+  --st-neutral: #c4b79e; --st-neutral-soft: #2f2838;
+  --st-info: #74b3f2;    --st-info-soft: #1c2b3f;
+  --st-warning: #f2a33a; --st-warning-soft: #3a2a14;
+  --st-success: #7ad25e; --st-success-soft: #1d3019;
+  --st-danger: #f2676c;  --st-danger-soft: #3f1a20;
+  --row-overdue: #3a1920; --row-overdue-edge: #f2676c;
+  --row-soon: #33260f;    --row-soon-edge: #f2a33a;
   color-scheme: dark;
 }
 
 /* ==========================================================================
-   BASE
+   BASE — écran unique, la page elle-même ne défile pas
    ========================================================================== */
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+html { height: 100%; -webkit-text-size-adjust: 100%; }
 body {
-  margin: 0;
-  background: var(--bg);
+  margin: 0; height: 100%; height: 100dvh; overflow: hidden;
+  display: flex; flex-direction: column;
+  background: var(--bg) var(--wall); background-size: 48px 24px;
   color: var(--fg);
-  font: 14px/1.45 var(--font-ui);
-  min-height: 100vh;
+  font: 15px/1.35 var(--font-display);
 }
 [hidden] { display: none !important; }
 button, input, select, textarea { font: inherit; color: inherit; }
-:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.mono { font-family: var(--font-mono); font-size: 13px; letter-spacing: -.01em; }
+:focus-visible { outline: 2px dashed var(--focus); outline-offset: 3px; }
+.data { font-family: var(--font-data); font-size: 19px; line-height: 1; letter-spacing: .02em; }
 .num { font-variant-numeric: tabular-nums; }
 .visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.icon { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 
-/* Bande supérieure (encoche des téléphones) */
-body::before {
-  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
-  z-index: 30; background: var(--appbar);
-}
+/* Icônes pixel (générées en JS à partir de grilles) */
+svg.px { width: 18px; height: 18px; flex: none; shape-rendering: crispEdges; }
+svg.px.sm { width: 13px; height: 13px; }
+svg.px.lg { width: 24px; height: 24px; }
 
-/* ==========================================================================
-   BARRE D'APPLICATION
-   ========================================================================== */
-.appbar {
-  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
-  background: var(--appbar); color: var(--appbar-fg);
+/* Cadre pixel : bordure par ombres portées, coins crantés, relief intérieur */
+.frame {
+  background: var(--surface);
+  box-shadow:
+    0 calc(-1 * var(--px)) 0 var(--stroke), 0 var(--px) 0 var(--stroke),
+    calc(-1 * var(--px)) 0 0 var(--stroke), var(--px) 0 0 var(--stroke),
+    inset 0 var(--px) 0 var(--hilite), inset 0 calc(-1 * var(--px)) 0 var(--shade);
 }
-.appbar-inner {
-  display: flex; align-items: center; gap: 12px;
-  height: 48px; max-width: 1600px; margin: 0 auto;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-}
-.brand-mark {
-  width: 28px; height: 28px; border-radius: 6px; display: grid; place-items: center;
-  background: rgba(255,255,255,.16); font-weight: 700; font-size: 13px; letter-spacing: .02em;
-}
-.appbar h1 { font: 600 16px/1 var(--font-display); margin: 0; white-space: nowrap; }
-.appbar .sub { opacity: .78; font-size: 13px; white-space: nowrap; }
-.appbar .spacer { flex: 1; }
-.appbar-btn {
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  height: 32px; min-width: 32px; padding: 0 8px; border: 0; border-radius: 6px;
-  background: transparent; color: inherit; cursor: pointer;
-}
-.appbar-btn:hover { background: rgba(255,255,255,.14); }
-.appbar-btn .label { font-size: 13px; }
-.save-indicator { font-size: 12px; opacity: .78; white-space: nowrap; }
-@media (max-width: 640px) { .appbar .sub, .save-indicator, .appbar-btn .label, .btn kbd, .search kbd { display: none; } }
 
 /* ==========================================================================
-   MISE EN PAGE
+   BARRE DE TITRE
    ========================================================================== */
-.wrap {
-  max-width: 1600px; margin: 0 auto;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 20px 48px;
-  display: grid; gap: 16px;
+.bar {
+  flex: none; display: flex; align-items: center; gap: 10px;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: max(14px, env(safe-area-inset-left, 0px));
+  padding-right: max(14px, env(safe-area-inset-right, 0px));
+  min-height: calc(46px + env(safe-area-inset-top, 0px));
+  background: var(--surface-2);
+  box-shadow: 0 var(--px) 0 var(--stroke), inset 0 calc(-1 * var(--px)) 0 var(--shade);
+  position: relative; z-index: 5;
 }
-.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.toolbar .grow { flex: 1; }
-.page-title { font: 600 20px/1.2 var(--font-display); margin: 0; text-wrap: balance; }
-.page-hint { color: var(--fg-muted); font-size: 13px; margin: 2px 0 0; }
+.bar .torch { color: var(--stroke); }
+.bar .torch .flame { animation: flicker 1.6s steps(2) infinite; }
+@keyframes flicker { 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .bar .torch .flame { animation: none; } }
+.bar h1 { margin: 0; font: 700 19px/1 var(--font-display); letter-spacing: .02em; white-space: nowrap; }
+.bar h1 span { color: var(--accent); }
+.bar .sub { color: var(--muted); font-size: 13px; white-space: nowrap; }
+.bar .spacer { flex: 1; }
+.save-ind { font-size: 12px; color: var(--subtle); white-space: nowrap; }
+.bar-btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; min-width: 32px; padding: 0 8px;
+  border: 0; background: none; cursor: pointer; color: var(--fg); font-size: 13px;
+}
+.bar-btn:hover { color: var(--accent); }
+@media (max-width: 899px) { .bar .sub, .save-ind, .bar-btn .label { display: none; } }
 
-.main-grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) 340px; align-items: start; }
-@media (max-width: 1500px) { .main-grid { grid-template-columns: minmax(0, 1fr); } }
-.side { display: grid; gap: 16px; }
-@media (max-width: 1500px) and (min-width: 700px) { .side { grid-template-columns: 1fr 1fr; } .side .offline-note { grid-column: 1 / -1; } }
+/* ==========================================================================
+   STRUCTURE
+   Bureau : colonne latérale (actions, compteurs, jauges) + registre.
+   Téléphone : compteurs / registre (défile seul) / barre d'actions en bas.
+   ========================================================================== */
+.app {
+  flex: 1; min-height: 0; display: grid; gap: 14px;
+  grid-template-columns: 300px minmax(0, 1fr);
+  padding-block: 14px;
+  padding-left: max(14px, env(safe-area-inset-left, 0px));
+  padding-right: max(14px, env(safe-area-inset-right, 0px));
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+}
+.side { display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto; padding: var(--px); margin: calc(-1 * var(--px)); }
+.main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+
+@media (max-width: 899px) {
+  .app { display: flex; flex-direction: column; gap: 10px; padding-block: 10px 0; padding-bottom: 0; }
+  .side { display: contents; }
+  .stats { order: 1; }
+  .main { order: 2; flex: 1; }
+  .dock { order: 3; }
+  .side .gauges-panel, .side .offline-note { display: none; }
+}
 
 /* ==========================================================================
    BOUTONS
    ========================================================================== */
-.btn {
-  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px;
-  border-radius: 6px; border: 1px solid var(--stroke-strong); background: var(--surface);
-  color: var(--fg); font-weight: 600; font-size: 13px; cursor: pointer; white-space: nowrap;
+.pbtn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  height: 36px; padding: 0 12px; border: 0; cursor: pointer; white-space: nowrap;
+  font: 600 14px/1 var(--font-display); color: var(--fg); background: var(--surface-2);
+  box-shadow:
+    0 -2px 0 var(--stroke), 0 2px 0 var(--stroke), -2px 0 0 var(--stroke), 2px 0 0 var(--stroke),
+    inset 0 2px 0 var(--hilite), inset 0 -3px 0 var(--shade);
 }
-.btn:hover { background: var(--surface-hover); }
-.btn:disabled { opacity: .5; cursor: not-allowed; }
-.btn.primary { background: var(--brand); border-color: var(--brand); color: var(--brand-fg); }
-.btn.primary:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
-.btn.danger { color: var(--st-danger); border-color: var(--st-danger); }
-.btn.danger.solid { background: var(--st-danger); color: var(--surface); }
-.btn.ghost { border-color: transparent; background: transparent; }
-.btn.ghost:hover { background: var(--surface-hover); }
-.btn kbd { font: 11px var(--font-mono); opacity: .7; border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; }
+.pbtn:hover { background: var(--sunk); }
+.pbtn:active { transform: translateY(2px); box-shadow: 0 -2px 0 var(--stroke), 0 2px 0 var(--stroke), -2px 0 0 var(--stroke), 2px 0 0 var(--stroke), inset 0 2px 0 var(--shade); }
+.pbtn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.pbtn.gold { background: var(--accent); color: var(--accent-fg); }
+.pbtn.gold:hover { background: var(--accent-hi); }
+.pbtn.danger { color: var(--st-danger); }
+.pbtn.danger.solid { background: var(--st-danger); color: var(--surface); }
+.pbtn kbd { font: 15px var(--font-data); opacity: .75; }
 
-/* Menus déroulants (Exporter / Plus) */
+/* Barre d'actions */
+.dock { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: var(--px); }
+.dock .pbtn.gold { grid-column: 1 / -1; height: 42px; font-size: 15px; }
+.dock .menu .pbtn { width: 100%; }
+.dock .only-phone { display: none; }
+@media (max-width: 899px) {
+  .dock {
+    grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 8px; margin-inline: calc(-1 * max(14px, env(safe-area-inset-left, 0px))) calc(-1 * max(14px, env(safe-area-inset-right, 0px)));
+    padding: 10px max(14px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+    background: var(--surface-2); box-shadow: 0 calc(-1 * var(--px)) 0 var(--stroke);
+  }
+  .dock .pbtn.gold { grid-column: auto; height: 44px; }
+  .dock .pbtn { height: 44px; padding: 0 6px; flex-direction: column; gap: 3px; font-size: 11px; }
+  .dock .pbtn.gold { flex-direction: row; font-size: 14px; }
+  .dock .only-phone { display: inline-flex; }
+  .dock kbd { display: none; }
+}
+
+/* Menus déroulants */
 .menu { position: relative; }
 .menu-pop {
-  position: absolute; right: 0; top: calc(100% + 4px); z-index: 15; min-width: 220px;
-  background: var(--surface); border: 1px solid var(--stroke); border-radius: var(--radius);
-  box-shadow: var(--shadow-pop); padding: 4px; display: grid;
+  position: absolute; left: 0; right: 0; top: calc(100% + 8px); z-index: 20; min-width: 220px;
+  display: grid; padding: 6px;
 }
+@media (max-width: 899px) { .dock .menu-pop { top: auto; bottom: calc(100% + 10px); left: auto; right: 0; } }
 .menu-pop button {
-  display: flex; align-items: center; gap: 10px; text-align: left; border: 0; background: none;
-  padding: 8px 10px; border-radius: 6px; cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; gap: 10px; border: 0; background: none; padding: 9px 10px;
+  text-align: left; cursor: pointer; font-size: 14px;
 }
-.menu-pop button:hover { background: var(--surface-hover); }
-.menu-pop hr { border: 0; border-top: 1px solid var(--stroke); margin: 4px 0; }
-.menu-pop .danger-item { color: var(--st-danger); }
+.menu-pop button:hover, .menu-pop button[aria-checked="true"] { background: var(--sunk); color: var(--accent); }
+.menu-pop hr { border: 0; border-top: 2px dashed var(--stroke-soft); margin: 4px 0; }
 
 /* ==========================================================================
-   INDICATEURS (DASHBOARD)
+   COMPTEURS (TABLEAU DE BORD)
    ========================================================================== */
-.kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
-@media (max-width: 980px) { .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (max-width: 560px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.kpi {
-  display: grid; gap: 6px; text-align: left; padding: 14px 16px;
-  background: var(--surface); border: 1px solid var(--stroke); border-radius: var(--radius-lg);
-  box-shadow: var(--shadow); cursor: pointer; position: relative;
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: var(--px); }
+.stat {
+  display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 10px; padding: 10px 12px;
+  text-align: left; border: 0; cursor: pointer; color: var(--fg);
 }
-.kpi:hover { border-color: var(--stroke-strong); }
-.kpi[aria-pressed="true"] { border-color: var(--kpi-color, var(--brand)); box-shadow: 0 0 0 1px var(--kpi-color, var(--brand)), var(--shadow); }
-.kpi-label { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--fg-muted); }
-.kpi-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--kpi-color, var(--fg-subtle)); }
-.kpi-value { font: 600 30px/1 var(--font-display); font-variant-numeric: tabular-nums; }
-.kpi-foot { font-size: 12px; color: var(--fg-muted); }
-.kpi.alert .kpi-value { color: var(--kpi-color); }
-@media (max-width: 560px) { .kpi:last-child:nth-child(odd) { grid-column: span 2; } }
+.stat:nth-child(3) { grid-column: 1 / -1; }
+.stat .ico { grid-row: span 2; color: var(--c, var(--muted)); }
+.stat .v { font: 400 34px/0.9 var(--font-data); color: var(--fg); }
+.stat.alert .v { color: var(--c); }
+.stat .l { font-size: 12px; color: var(--muted); letter-spacing: .03em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat[aria-pressed="true"] { background: var(--sunk); box-shadow: 0 -3px 0 var(--c), 0 3px 0 var(--c), -3px 0 0 var(--c), 3px 0 0 var(--c), inset 0 3px 0 var(--shade); }
+@media (max-width: 899px) {
+  .stats { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+  .stat:nth-child(3) { grid-column: auto; }
+  .stat { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 2px; padding: 7px 2px 6px; }
+  .stat .ico { grid-row: auto; }
+  .stat .v { font-size: 27px; }
+  .stat .l { font-size: 10px; max-width: 100%; letter-spacing: 0; }
+  .stat svg.px { width: 15px; height: 15px; }
+}
 
 /* ==========================================================================
-   PANNEAUX
+   JAUGES (répartition et statuts — remplacent les graphiques)
    ========================================================================== */
-.panel { background: var(--surface); border: 1px solid var(--stroke); border-radius: var(--radius-lg); box-shadow: var(--shadow); min-width: 0; }
-.panel-head { display: flex; align-items: center; gap: 8px; padding: 14px 16px 0; }
-.panel-head h2 { font: 600 14px/1.2 var(--font-display); margin: 0; }
-.panel-head .meta { margin-left: auto; color: var(--fg-muted); font-size: 12px; }
-.panel-body { padding: 12px 16px 16px; }
+.gauges-panel { padding: 14px; display: grid; gap: 12px; }
+.panel-title { margin: 0; font: 700 14px/1 var(--font-display); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.panel-title::after { content: ""; flex: 1; border-top: 2px dashed var(--stroke-soft); }
+.split { display: flex; height: 18px; background: var(--sunk); box-shadow: inset 0 0 0 2px var(--stroke); padding: 3px; gap: 3px; }
+.split > span { display: block; height: 100%; background: repeating-linear-gradient(90deg, var(--c) 0 6px, transparent 6px 8px); min-width: 0; }
+.legend { display: grid; gap: 7px; }
+.lg { display: grid; grid-template-columns: auto 1fr auto 40px; align-items: center; gap: 8px; font-size: 14px; }
+.lg svg.px { color: var(--c); }
+.lg .v { font: 21px/1 var(--font-data); }
+.lg .p { font: 17px/1 var(--font-data); color: var(--subtle); text-align: right; }
+.gauge { grid-column: 1 / -1; height: 10px; background: var(--sunk); box-shadow: inset 0 0 0 2px var(--stroke-soft); padding: 2px; }
+.gauge > span { display: block; height: 100%; background: repeating-linear-gradient(90deg, var(--c) 0 5px, transparent 5px 7px); }
 
-/* Filtres */
-.filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--stroke); }
+/* ==========================================================================
+   REGISTRE (liste des dossiers)
+   ========================================================================== */
+.main.frame { padding: 0; }
+.filters { display: flex; flex-wrap: wrap; gap: 10px; padding: 12px 12px 10px; }
 .search { position: relative; flex: 1 1 260px; min-width: 0; }
-.search .icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--fg-subtle); }
-.search kbd { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font: 11px var(--font-mono); color: var(--fg-subtle); border: 1px solid var(--stroke-strong); border-radius: 4px; padding: 0 5px; }
-.input, .select, .textarea {
-  width: 100%; height: 32px; padding: 0 10px; border-radius: 6px; border: 1px solid var(--stroke-strong);
-  border-bottom-color: var(--fg-subtle); background: var(--surface); color: var(--fg);
+.search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--subtle); }
+.field-in, .search input, .select, .textarea {
+  width: 100%; height: 36px; padding: 0 10px; border: 0; background: var(--sunk); color: var(--fg);
+  box-shadow: inset 0 0 0 2px var(--stroke-soft), inset 0 3px 0 var(--shade);
+  font: 400 16px/1 var(--font-display);
 }
-.textarea { height: auto; min-height: 72px; padding: 8px 10px; resize: vertical; }
-.input:focus, .select:focus, .textarea:focus { outline: none; border-bottom: 2px solid var(--brand); }
-.search .input { padding-left: 32px; padding-right: 32px; }
-.filters .select { width: auto; min-width: 150px; }
-@media (max-width: 560px) { .filters .select { flex: 1 1 140px; min-width: 0; } }
+.search input { padding-left: 34px; font-family: var(--font-data); font-size: 19px; }
+.search input::placeholder { font-family: var(--font-display); font-size: 14px; color: var(--subtle); }
+.field-in:focus, .search input:focus, .select:focus, .textarea:focus { outline: none; box-shadow: inset 0 0 0 2px var(--accent), inset 0 3px 0 var(--shade); }
+.select { width: auto; padding-right: 8px; font-size: 14px; cursor: pointer; }
+.textarea { height: auto; min-height: 76px; padding: 9px 10px; resize: vertical; font: 15px/1.4 var(--font-text); }
+
+.seg { display: inline-flex; box-shadow: inset 0 0 0 2px var(--stroke-soft); background: var(--sunk); padding: 3px; gap: 3px; height: 36px; }
+.seg label { position: relative; display: flex; }
+.seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.seg span { display: flex; align-items: center; gap: 5px; padding: 0 10px; font-size: 14px; font-weight: 600; color: var(--muted); }
+.seg input:checked + span { background: var(--surface-2); color: var(--fg); box-shadow: inset 0 0 0 2px var(--stroke), inset 0 -3px 0 var(--shade); }
+.seg input:focus-visible + span { outline: 2px dashed var(--focus); outline-offset: 1px; }
+.icon-sq { width: 36px; height: 36px; padding: 0; }
+
+@media (max-width: 899px) {
+  .filters { padding: 10px 10px 8px; gap: 8px; }
+  .search { flex-basis: 100%; }
+  .filters .seg { flex: none; }
+  .filters .select { flex: 1; min-width: 0; }
+  .seg span { padding: 0 8px; font-size: 13px; }
+}
+
+.list-meta { display: flex; align-items: center; gap: 8px; padding: 0 12px 8px; min-height: 26px; font-size: 13px; color: var(--muted); }
+.search .count { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font: 18px/1 var(--font-data); color: var(--subtle); pointer-events: none; }
+.search input { padding-right: 70px; }
 .chip {
-  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 6px 0 10px;
-  border-radius: var(--radius-pill); background: var(--brand-soft); color: var(--brand);
-  font-size: 12px; font-weight: 600; border: 0; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 6px 0 9px; border: 0; cursor: pointer;
+  background: var(--sunk); color: var(--c, var(--accent)); font: 600 12px/1 var(--font-display);
+  box-shadow: inset 0 0 0 2px var(--c, var(--accent));
 }
-.chip .icon { width: 14px; height: 14px; }
-.result-count { color: var(--fg-muted); font-size: 12px; margin-left: auto; white-space: nowrap; }
 
-/* ==========================================================================
-   TABLEAU
-   ========================================================================== */
-.table-scroll { overflow-x: auto; }
-table.dossiers { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
-.dossiers th {
-  position: sticky; top: 0; background: var(--surface-2); text-align: left; font-weight: 600;
-  color: var(--fg-muted); font-size: 12px; padding: 0; border-bottom: 1px solid var(--stroke); white-space: nowrap;
+.list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; border-top: 3px solid var(--stroke); background: var(--surface); }
+
+/* Grille commune à l'en-tête et aux lignes (bureau) */
+.row, .list-head {
+  display: grid; align-items: center; column-gap: 12px;
+  grid-template-columns: 84px minmax(170px, 210px) minmax(124px, 150px) 104px 116px 124px minmax(0, 1fr) auto;
+  padding: 0 12px;
 }
-.dossiers th button {
-  display: flex; align-items: center; gap: 4px; width: 100%; padding: 10px 12px; border: 0;
-  background: none; color: inherit; font: inherit; cursor: pointer; text-align: left;
+/* Écrans moyens : la date d'affectation passe dans la fiche détail */
+@media (min-width: 900px) and (max-width: 1399px) {
+  .row, .list-head { grid-template-columns: 84px minmax(170px, 200px) minmax(120px, 150px) 116px 124px minmax(0, 1fr) auto; }
+  .c-aff, .list-head .h-aff { display: none; }
 }
-.dossiers th button:hover { color: var(--fg); }
-.dossiers th .sort-ind { opacity: 0; font-size: 10px; }
-.dossiers th[aria-sort] .sort-ind { opacity: 1; color: var(--brand); }
-.dossiers th.th-static { padding: 10px 12px; }
-.dossiers td { padding: 8px 10px; border-bottom: 1px solid var(--stroke); vertical-align: middle; }
-.dossiers tbody tr { cursor: default; }
-.dossiers tbody tr:hover td { background: var(--surface-hover); }
-.dossiers tr.row-overdue td { background: var(--row-overdue); }
-.dossiers tr.row-soon td { background: var(--row-soon); }
-.dossiers tr.row-overdue td:first-child { box-shadow: inset 3px 0 0 var(--row-overdue-edge); }
-.dossiers tr.row-soon td:first-child { box-shadow: inset 3px 0 0 var(--row-soon-edge); }
-.dossiers tr.row-done td { color: var(--fg-muted); }
-.td-gcblo { font-weight: 600; white-space: nowrap; }
-.td-fci { white-space: nowrap; }
-.td-date { white-space: nowrap; }
-.td-comment { max-width: 240px; color: var(--fg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.no-fci { color: var(--fg-subtle); font-style: italic; font-family: var(--font-ui); }
-.fci-more { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--st-neutral-soft); color: var(--fg-muted); font-size: 11px; font-family: var(--font-ui); }
-.rel-hint { display: block; font-size: 11px; color: var(--fg-muted); }
-.row-overdue .rel-hint { color: var(--row-overdue-edge); font-weight: 600; }
-.row-soon .rel-hint { color: var(--row-soon-edge); font-weight: 600; }
+.list-head { position: sticky; top: 0; z-index: 2; background: var(--surface-2); box-shadow: 0 2px 0 var(--stroke-soft); }
+.list-head button {
+  display: flex; align-items: center; gap: 4px; width: 100%; padding: 9px 0; border: 0; background: none; cursor: pointer;
+  font: 600 12px/1 var(--font-display); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); text-align: left;
+}
+.list-head button:hover, .list-head button[aria-sort] { color: var(--accent); }
+.list-head .arrow { font-size: 10px; visibility: hidden; }
+.list-head button[aria-sort] .arrow { visibility: visible; }
+.list-head .h-act { font: 600 12px/1 var(--font-display); letter-spacing: .05em; text-transform: uppercase; color: var(--muted); text-align: right; padding-right: 4px; }
 
-/* Badges catégorie */
-.cat { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: .04em; }
-.cat-NUM21 { background: var(--cat-num21-soft); color: var(--cat-num21); }
-.cat-AIR { background: var(--cat-air-soft); color: var(--cat-air); }
+.row > * { min-width: 0; }
+.row { min-height: 48px; padding-block: 6px; border-bottom: 2px solid var(--stroke-soft); touch-action: manipulation; position: relative; }
+.row:hover { background: var(--surface-2); }
+.row.row-overdue { background: var(--row-overdue); box-shadow: inset 4px 0 0 var(--row-overdue-edge); }
+.row.row-soon { background: var(--row-soon); box-shadow: inset 4px 0 0 var(--row-soon-edge); }
+.row.row-done .c-gcblo, .row.row-done .c-fci { color: var(--subtle); }
+.c-gcblo { font-size: 20px; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.c-fci .data, .c-aff, .c-rel .data { font-size: 18px; }
+.c-fci, .c-aff, .c-rel { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.c-com { font: 14px/1.3 var(--font-text); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.c-rel .rel-hint { display: block; font: 600 11px/1.2 var(--font-display); color: var(--muted); }
+.row-overdue .rel-hint { color: var(--row-overdue-edge); }
+.row-soon .rel-hint { color: var(--row-soon-edge); }
+.none { color: var(--subtle); font: italic 13px var(--font-display); }
+.more { display: inline-block; margin-left: 5px; padding: 1px 5px; background: var(--sunk); color: var(--muted); font: 600 11px var(--font-display); vertical-align: 3px; }
 
-/* Statut : sélecteur en forme de pastille, couleur automatique */
+/* Badges de catégorie */
+.cat { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; font: 700 12px/1 var(--font-display); letter-spacing: .05em; }
+.cat-NUM21 { background: var(--cat-num21-soft); color: var(--cat-num21); box-shadow: inset 0 0 0 2px var(--cat-num21); }
+.cat-AIR { background: var(--cat-air-soft); color: var(--cat-air); box-shadow: inset 0 0 0 2px var(--cat-air); }
+
+/* Statut : sélecteur « gemme » coloré automatiquement */
 .status-select {
-  appearance: none; -webkit-appearance: none; height: 24px; padding: 0 22px 0 10px; border-radius: var(--radius-pill);
-  border: 0; font-size: 12px; font-weight: 600; cursor: pointer;
-  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
-  background-position: calc(100% - 12px) 10px, calc(100% - 8px) 10px; background-size: 4px 4px; background-repeat: no-repeat;
+  appearance: none; -webkit-appearance: none; height: 28px; width: 100%; max-width: 124px; padding: 0 22px 0 9px; border: 0; cursor: pointer;
+  font: 600 13px/1 var(--font-display);
+  background-color: var(--sb); color: var(--sc); box-shadow: inset 0 0 0 2px var(--sc);
+  background-image: linear-gradient(var(--sc), var(--sc)), linear-gradient(var(--sc), var(--sc)), linear-gradient(var(--sc), var(--sc));
+  background-size: 8px 2px, 4px 2px, 2px 2px; background-repeat: no-repeat;
+  background-position: right 7px top 11px, right 9px top 13px, right 10px top 15px;
 }
-.pill { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: var(--radius-pill); font-size: 12px; font-weight: 600; }
-.tone-neutral { background-color: var(--st-neutral-soft); color: var(--st-neutral); }
-.tone-info { background-color: var(--st-info-soft); color: var(--st-info); }
-.tone-warning { background-color: var(--st-warning-soft); color: var(--st-warning); }
-.tone-success { background-color: var(--st-success-soft); color: var(--st-success); }
-.tone-danger { background-color: var(--st-danger-soft); color: var(--st-danger); }
 .status-select option { background: var(--surface); color: var(--fg); }
+.tone-neutral { --sc: var(--st-neutral); --sb: var(--st-neutral-soft); }
+.tone-info    { --sc: var(--st-info);    --sb: var(--st-info-soft); }
+.tone-warning { --sc: var(--st-warning); --sb: var(--st-warning-soft); }
+.tone-success { --sc: var(--st-success); --sb: var(--st-success-soft); }
+.tone-danger  { --sc: var(--st-danger);  --sb: var(--st-danger-soft); }
+.pill { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; font: 600 12px/1 var(--font-display); background: var(--sb); color: var(--sc); box-shadow: inset 0 0 0 2px var(--sc); }
 
 /* Actions de ligne */
-.actions { display: flex; gap: 2px; justify-content: flex-end; }
-.icon-btn {
-  display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 6px;
-  border: 0; background: transparent; color: var(--fg-muted); cursor: pointer;
+.c-act { display: flex; gap: 2px; justify-content: flex-end; }
+.ibtn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 32px; height: 32px; padding: 0 5px;
+  border: 0; background: none; cursor: pointer; color: var(--muted);
 }
-.icon-btn:hover { background: var(--brand-soft); color: var(--brand); }
-.icon-btn.del:hover { background: var(--st-danger-soft); color: var(--st-danger); }
-.icon-btn .icon { width: 17px; height: 17px; }
-.icon-btn .tag { font: 700 9px/1 var(--font-ui); letter-spacing: .02em; }
-.icon-btn.copy { width: auto; padding: 0 6px; gap: 3px; display: inline-flex; align-items: center; }
+.ibtn:hover { background: var(--sunk); color: var(--accent); box-shadow: inset 0 0 0 2px var(--stroke-soft); }
+.ibtn.del:hover { color: var(--st-danger); }
+.ibtn:disabled { opacity: .3; cursor: not-allowed; background: none; box-shadow: none; }
+.ibtn .tag { font: 700 10px/1 var(--font-display); letter-spacing: .02em; }
+
+/* Téléphone : chaque dossier devient une fiche compacte ; un appui affiche ses actions */
+@media (max-width: 899px) {
+  .list-head { display: none; }
+  .c-gcblo { font-size: 20px; }
+  .row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "cat gcblo st" "fci fci rel" "act act act";
+    gap: 5px 10px; padding: 9px 12px; min-height: 0;
+  }
+  .c-cat { grid-area: cat; } .c-gcblo { grid-area: gcblo; } .c-st { grid-area: st; }
+  .c-fci { grid-area: fci; font-size: 17px; color: var(--muted); }
+  .c-rel { grid-area: rel; text-align: right; font-size: 17px; }
+  .c-rel .rel-hint { display: inline; margin-left: 6px; }
+  .c-aff, .c-com { display: none; }
+  .c-act { grid-area: act; display: none; justify-content: space-between; padding-top: 4px; border-top: 2px dashed var(--stroke-soft); }
+  .row.open .c-act { display: flex; }
+  .row.open { background: var(--surface-2); }
+  .ibtn { min-width: 40px; height: 36px; }
+  .cat { height: 22px; padding: 0 6px; font-size: 11px; }
+  .status-select { height: 26px; font-size: 12px; max-width: 108px; }
+}
 
 /* États vides */
-.empty { padding: 48px 16px; text-align: center; display: grid; justify-items: center; gap: 10px; }
-.empty h3 { margin: 0; font: 600 16px var(--font-display); }
-.empty p { margin: 0; color: var(--fg-muted); max-width: 46ch; }
-.empty .row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 6px; }
-
-/* Tableau → cartes sur téléphone */
-@media (max-width: 760px) {
-  table.dossiers, .dossiers tbody, .dossiers tr, .dossiers td { display: block; width: 100%; }
-  .dossiers thead { display: none; }
-  .dossiers tbody tr { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; padding: 12px 14px; border-bottom: 1px solid var(--stroke); }
-  .dossiers tbody tr td { padding: 0; border: 0; background: none !important; box-shadow: none !important; }
-  .dossiers tr.row-overdue { background: var(--row-overdue); box-shadow: inset 3px 0 0 var(--row-overdue-edge); }
-  .dossiers tr.row-soon { background: var(--row-soon); box-shadow: inset 3px 0 0 var(--row-soon-edge); }
-  .dossiers td.td-cat { grid-column: 1; }
-  .dossiers td.td-gcblo { grid-column: 2; align-self: center; }
-  .dossiers td.td-status { grid-column: 3; }
-  .dossiers td.td-fci, .dossiers td.td-date, .dossiers td.td-comment, .dossiers td.td-actions { grid-column: 1 / -1; }
-  .dossiers td[data-label]::before { content: attr(data-label) " · "; color: var(--fg-subtle); font-size: 12px; font-family: var(--font-ui); }
-  .td-comment { max-width: none; white-space: normal; }
-  .actions { justify-content: flex-start; margin-top: 4px; flex-wrap: wrap; }
-  .empty td { display: block; }
-}
+.empty { display: grid; justify-items: center; gap: 10px; padding: 36px 16px; text-align: center; }
+.empty h3 { margin: 0; font: 700 18px var(--font-display); }
+.empty p { margin: 0; max-width: 44ch; color: var(--muted); font: 14px/1.45 var(--font-text); }
+.empty .btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 6px; }
+.empty svg.px { width: 40px; height: 40px; color: var(--stroke); }
 
 /* ==========================================================================
-   GRAPHIQUES
-   ========================================================================== */
-.chart-box { position: relative; height: 200px; }
-.chart-legend { display: grid; gap: 6px; margin-top: 12px; }
-.legend-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-.legend-row .sw { width: 10px; height: 10px; border-radius: 3px; flex: none; }
-.legend-row .v { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 600; }
-.legend-row .p { width: 42px; text-align: right; color: var(--fg-muted); font-variant-numeric: tabular-nums; font-size: 12px; }
-.chart-off { color: var(--fg-muted); font-size: 13px; padding: 24px 0; text-align: center; }
-
-/* ==========================================================================
-   DIALOGUES
+   DIALOGUES (feuilles en bas d'écran sur téléphone)
    ========================================================================== */
 dialog {
-  width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0;
-  border: 1px solid var(--stroke); border-radius: var(--radius-lg); background: var(--surface); color: var(--fg);
-  box-shadow: var(--shadow-pop);
+  width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); padding: 0; border: 0; color: var(--fg);
 }
-dialog.wide { width: min(760px, calc(100vw - 32px)); }
-dialog::backdrop { background: rgba(0,0,0,.4); }
-.dlg { display: flex; flex-direction: column; max-height: calc(100vh - 48px); }
-.dlg-head { display: flex; align-items: flex-start; gap: 12px; padding: 18px 20px 6px; }
-.dlg-head h2 { margin: 0; font: 600 18px/1.3 var(--font-display); text-wrap: balance; }
-.dlg-head .sub { color: var(--fg-muted); font-size: 13px; margin-top: 2px; }
-.dlg-head .icon-btn { margin-left: auto; }
-.dlg-body { padding: 10px 20px 16px; overflow-y: auto; display: grid; gap: 14px; }
-.dlg-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 12px 20px 18px; border-top: 1px solid var(--stroke); }
+dialog.frame { overflow: visible; }
+dialog.wide { width: min(720px, calc(100vw - 32px)); }
+dialog::backdrop { background: var(--overlay); }
+.dlg { display: flex; flex-direction: column; max-height: calc(100dvh - 48px); }
+.dlg-head { display: flex; align-items: flex-start; gap: 10px; padding: 16px 18px 8px; }
+.dlg-head h2 { margin: 0; font: 700 20px/1.2 var(--font-display); text-wrap: balance; }
+.dlg-head h2.data { font: 400 28px/1 var(--font-data); }
+.dlg-head .sub { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; color: var(--muted); font-size: 13px; }
+.dlg-head .ibtn { margin-left: auto; }
+.dlg-body { padding: 8px 18px 16px; overflow-y: auto; overflow-x: hidden; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.dlg-body > * { min-width: 0; }
+.dlg-foot { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; padding: 14px 18px 18px; border-top: 2px dashed var(--stroke-soft); }
 .dlg-foot .left { margin-right: auto; }
+@media (max-width: 899px) {
+  dialog, dialog.wide { width: 100%; max-width: 100%; margin: auto 0 0; max-height: 92dvh; }
+  .dlg { max-height: 92dvh; }
+  .dlg-foot { padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+  .dlg-foot .pbtn { flex: 1; }
+  .dlg-foot .left { margin-right: 0; flex: 0 0 auto; }
+}
 
-/* Formulaire */
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-@media (max-width: 520px) { .form-grid { grid-template-columns: 1fr; } }
-.field { display: grid; gap: 4px; min-width: 0; }
+@media (max-width: 520px) { .form-grid { grid-template-columns: 1fr 1fr; gap: 12px; } .form-grid .field.wide-phone { grid-column: 1 / -1; } }
+.field { display: grid; gap: 5px; min-width: 0; align-content: start; }
 .field.full { grid-column: 1 / -1; }
-.field label, .field .lbl { font-size: 13px; font-weight: 600; }
-.field .req { color: var(--st-danger); }
-.field .help { font-size: 12px; color: var(--fg-muted); }
-.field .err { font-size: 12px; color: var(--st-danger); font-weight: 600; }
-.field.invalid .input, .field.invalid .textarea { border-color: var(--st-danger); }
-.segmented { display: inline-flex; border: 1px solid var(--stroke-strong); border-radius: 6px; overflow: hidden; width: fit-content; }
-.segmented label { position: relative; }
-.segmented input { position: absolute; opacity: 0; inset: 0; }
-.segmented span { display: block; padding: 5px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
-.segmented input:checked + span { background: var(--brand); color: var(--brand-fg); }
-.segmented input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: -2px; }
+.field > label, .field .lbl { font-size: 14px; font-weight: 600; }
+.field .req { color: var(--accent); }
+.field .help { font: 12px/1.35 var(--font-text); color: var(--muted); }
+.field .err { font: 600 13px/1.3 var(--font-display); color: var(--st-danger); }
+.field.invalid .field-in { box-shadow: inset 0 0 0 2px var(--st-danger), inset 0 3px 0 var(--shade); }
+.field-in.data { font-family: var(--font-data); font-size: 20px; }
+input[type="date"].field-in { font-family: var(--font-data); font-size: 19px; }
+.field-in { min-width: 0; }
+@media (max-width: 520px) { input[type="date"].field-in { font-size: 16px; padding: 0 6px; } }
 
-/* Fiche détail */
-.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
-.kv div { display: grid; gap: 2px; min-width: 0; }
-.kv dt { font-size: 12px; color: var(--fg-muted); }
-.kv dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
-.section-title { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--fg-muted); margin: 4px 0 -4px; }
-.mail-preview { border: 1px solid var(--stroke); border-radius: var(--radius); background: var(--surface-2); }
-.mail-preview .mail-subject { padding: 10px 12px; border-bottom: 1px solid var(--stroke); font-weight: 600; overflow-wrap: anywhere; }
-.mail-preview pre { margin: 0; padding: 12px; white-space: pre-wrap; font: 13px/1.5 var(--font-ui); }
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 0; }
+.kv div { display: grid; gap: 3px; min-width: 0; }
+.kv dt { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.kv dd { margin: 0; font: 20px/1.1 var(--font-data); overflow-wrap: anywhere; }
+.note { white-space: pre-wrap; background: var(--sunk); padding: 10px 12px; font: 14px/1.45 var(--font-text); box-shadow: inset 0 0 0 2px var(--stroke-soft); }
+.mail { background: var(--sunk); box-shadow: inset 0 0 0 2px var(--stroke-soft); }
+.mail .subj { padding: 10px 12px; border-bottom: 2px dashed var(--stroke-soft); font: 600 14px/1.35 var(--font-text); overflow-wrap: anywhere; }
+.mail .subj small { display: block; font-weight: 400; color: var(--muted); }
+.mail pre { margin: 0; padding: 12px; white-space: pre-wrap; font: 14px/1.5 var(--font-text); }
+.btn-row { display: flex; flex-wrap: wrap; gap: 12px; }
 .timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.timeline li { display: grid; grid-template-columns: 12px 1fr; gap: 10px; }
-.timeline .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--stroke-strong); margin-top: 6px; }
-.timeline li:first-child .dot { background: var(--brand); }
-.timeline .when { font-size: 12px; color: var(--fg-muted); }
-.note-block { white-space: pre-wrap; background: var(--surface-2); border-radius: var(--radius); padding: 10px 12px; }
+.timeline li { display: grid; grid-template-columns: 14px 1fr; gap: 8px; font: 14px/1.35 var(--font-text); }
+.timeline svg.px { width: 11px; height: 11px; margin-top: 3px; color: var(--stroke); }
+.timeline li:first-child svg.px { color: var(--accent); }
+.timeline .when { font: 16px/1 var(--font-data); color: var(--subtle); margin-top: 2px; }
 
-/* Rapport d'import */
-.report-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
-.report-stats div { border: 1px solid var(--stroke); border-radius: var(--radius); padding: 10px 12px; }
-.report-stats b { display: block; font: 600 22px var(--font-display); font-variant-numeric: tabular-nums; }
-.report-stats span { font-size: 12px; color: var(--fg-muted); }
-.report-list { margin: 0; padding-left: 18px; display: grid; gap: 2px; font-size: 13px; max-height: 180px; overflow: auto; }
+.report { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; padding: 3px; }
+.report div { padding: 10px 12px; }
+.report b { display: block; font: 400 32px/1 var(--font-data); }
+.report span { font-size: 12px; color: var(--muted); }
+.report-list { margin: 0; padding-left: 18px; display: grid; gap: 3px; font: 13px/1.4 var(--font-text); max-height: 170px; overflow: auto; }
 
 /* ==========================================================================
-   NOTIFICATIONS (TOASTS)
+   NOTIFICATIONS
    ========================================================================== */
 .toasts {
-  position: fixed; z-index: 50; display: grid; gap: 8px; justify-items: end;
-  right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  left: calc(16px + env(safe-area-inset-left, 0px)); pointer-events: none;
+  position: fixed; z-index: 60; display: grid; gap: 10px; justify-items: center; pointer-events: none;
+  left: max(14px, env(safe-area-inset-left, 0px)); right: max(14px, env(safe-area-inset-right, 0px));
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
 }
+@media (min-width: 900px) { .toasts { justify-items: end; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); } }
 .toast {
-  pointer-events: auto; display: flex; align-items: center; gap: 12px; max-width: 460px;
-  background: var(--fg); color: var(--bg); border-radius: var(--radius); padding: 10px 12px 10px 14px;
-  box-shadow: var(--shadow-pop); font-size: 13px; animation: toast-in .18s ease-out;
+  pointer-events: auto; display: flex; align-items: center; gap: 12px; max-width: 440px; padding: 10px 12px;
+  background: var(--surface-2); font-size: 14px; animation: pop .15s steps(3);
 }
-.toast button { border: 0; background: none; color: inherit; font-weight: 700; cursor: pointer; padding: 4px 6px; border-radius: 4px; text-decoration: underline; }
-.toast.error { background: var(--st-danger); color: #fff; }
-@keyframes toast-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+.toast.error { color: var(--st-danger); }
+.toast button { border: 0; background: var(--accent); color: var(--accent-fg); font: 600 13px var(--font-display); padding: 6px 9px; cursor: pointer; }
+@keyframes pop { from { transform: translateY(8px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
 
-.offline-note { font-size: 12px; color: var(--fg-muted); }
+.offline-note { font-size: 12px; color: var(--subtle); padding: 0 4px; }
 </style>
 </head>
 <body>
 
-<!-- ======================================================================
-     ICÔNES (sprite SVG réutilisé via <use>)
-     ====================================================================== -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
-  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></symbol>
-  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></symbol>
-  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></symbol>
-  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
-  <symbol id="i-open" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></symbol>
-  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 7 8.5 6 8.5-6"/></symbol>
-  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></symbol>
-  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></symbol>
-  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
-  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
-  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
-  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
-  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
-  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
-  <symbol id="i-auto" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4v16" /><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></symbol>
-  <symbol id="i-restore" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></symbol>
-</svg>
+<!-- Sprite des icônes pixel (rempli au démarrage par PixelIcons.build) -->
+<svg id="sprite" width="0" height="0" style="position:absolute" aria-hidden="true"></svg>
 
 <!-- ======================================================================
-     BARRE D'APPLICATION
+     BARRE DE TITRE
      ====================================================================== -->
-<header class="appbar">
-  <div class="appbar-inner">
-    <div class="brand-mark" aria-hidden="true">GC</div>
-    <h1>Affectations GCBLO</h1>
-    <span class="sub">NUM21 · AIR</span>
-    <span class="spacer"></span>
-    <span class="save-indicator" id="saveIndicator" aria-live="polite"></span>
-    <button class="appbar-btn" id="btnTheme" type="button" title="Changer de thème">
-      <svg class="icon"><use href="#i-auto"/></svg><span class="label" id="themeLabel">Système</span>
-    </button>
-    <button class="appbar-btn" id="btnSettings" type="button" title="Paramètres" aria-label="Paramètres">
-      <svg class="icon"><use href="#i-gear"/></svg>
-    </button>
-  </div>
+<header class="bar">
+  <svg class="px lg torch" aria-hidden="true"><use href="#p-torch"/></svg>
+  <h1>Registre <span>GCBLO</span></h1>
+  <span class="sub">NUM21 · AIR</span>
+  <span class="spacer"></span>
+  <span class="save-ind" id="saveIndicator" aria-live="polite"></span>
+  <button class="bar-btn" id="btnTheme" type="button"></button>
+  <button class="bar-btn" id="btnSettings" type="button" title="Paramètres" aria-label="Paramètres"><svg class="px"><use href="#p-gear"/></svg></button>
 </header>
 
-<main class="wrap">
+<div class="app">
+  <aside class="side">
+    <!-- Actions principales (en bas de l'écran sur téléphone) -->
+    <nav class="dock" aria-label="Actions principales">
+      <button class="pbtn gold" id="btnNew" type="button"><svg class="px"><use href="#p-plus"/></svg>Nouveau dossier <kbd>N</kbd></button>
+      <button class="pbtn" id="btnImport" type="button"><svg class="px"><use href="#p-upload"/></svg>Importer</button>
+      <div class="menu" id="menuExport">
+        <button class="pbtn" type="button" data-menu-toggle aria-haspopup="true" aria-expanded="false"><svg class="px"><use href="#p-download"/></svg>Exporter</button>
+        <div class="menu-pop frame" role="menu" hidden>
+          <button type="button" role="menuitem" data-export="xlsx"><svg class="px"><use href="#p-download"/></svg>Export Excel (.xlsx)</button>
+          <button type="button" role="menuitem" data-export="csv"><svg class="px"><use href="#p-download"/></svg>Export CSV</button>
+          <hr>
+          <button type="button" role="menuitem" data-export="json"><svg class="px"><use href="#p-chest"/></svg>Sauvegarde JSON</button>
+          <button type="button" role="menuitem" data-export="restore"><svg class="px"><use href="#p-upload"/></svg>Restaurer une sauvegarde…</button>
+        </div>
+      </div>
+      <button class="pbtn only-phone" id="btnStats" type="button"><svg class="px"><use href="#p-stats"/></svg>Stats</button>
+    </nav>
 
-  <!-- Barre d'outils -->
-  <section class="toolbar" aria-label="Actions principales">
-    <div class="grow">
-      <h2 class="page-title">Suivi des affectations</h2>
-      <p class="page-hint">Double-cliquez sur un dossier pour préparer sa relance.</p>
-    </div>
-    <button class="btn primary" id="btnNew" type="button"><svg class="icon"><use href="#i-plus"/></svg>Nouveau dossier <kbd>N</kbd></button>
-    <button class="btn" id="btnImport" type="button"><svg class="icon"><use href="#i-upload"/></svg>Importer Excel</button>
-    <div class="menu" id="menuExport">
-      <button class="btn" type="button" data-menu-toggle aria-haspopup="true" aria-expanded="false"><svg class="icon"><use href="#i-download"/></svg>Exporter<svg class="icon" style="width:14px;height:14px"><use href="#i-chev"/></svg></button>
-      <div class="menu-pop" role="menu" hidden>
-        <button type="button" role="menuitem" data-export="xlsx"><svg class="icon"><use href="#i-download"/></svg>Export Excel (.xlsx)</button>
-        <button type="button" role="menuitem" data-export="csv"><svg class="icon"><use href="#i-download"/></svg>Export CSV</button>
-        <hr>
-        <button type="button" role="menuitem" data-export="json"><svg class="icon"><use href="#i-download"/></svg>Sauvegarde JSON</button>
-        <button type="button" role="menuitem" data-export="restore"><svg class="icon"><use href="#i-restore"/></svg>Restaurer une sauvegarde…</button>
+    <!-- Compteurs -->
+    <section class="stats" id="kpis" aria-label="Tableau de bord"></section>
+
+    <!-- Jauges (bureau) -->
+    <section class="frame gauges-panel" aria-label="Statistiques" data-gauges></section>
+    <p class="offline-note" id="libNote" hidden></p>
+  </aside>
+
+  <!-- Registre des dossiers -->
+  <section class="main frame" aria-label="Dossiers">
+    <div class="filters">
+      <div class="search">
+        <svg class="px"><use href="#p-search"/></svg>
+        <label for="fSearch" class="visually-hidden">Rechercher</label>
+        <input id="fSearch" type="search" placeholder="GCBLO, FCI, commentaire…" autocomplete="off" spellcheck="false">
+        <span class="count num" id="resultCount" aria-live="polite"></span>
+      </div>
+      <div class="seg" id="fCategorie" role="radiogroup" aria-label="Catégorie"></div>
+      <label for="fStatut" class="visually-hidden">Statut</label>
+      <select class="select" id="fStatut"></select>
+      <div class="menu" id="menuSort">
+        <button class="pbtn icon-sq" type="button" data-menu-toggle aria-haspopup="true" aria-expanded="false" title="Trier" aria-label="Trier"><svg class="px"><use href="#p-sort"/></svg></button>
+        <div class="menu-pop frame" role="menu" hidden style="left:auto;right:0"></div>
       </div>
     </div>
-    <input type="file" id="fileExcel" accept=".xlsx,.xls,.xlsm" hidden>
-    <input type="file" id="fileJson" accept=".json,application/json" hidden>
+    <div class="list-meta" id="listMeta" hidden><span id="specialChip"></span></div>
+    <div class="list" id="list" role="table" aria-label="Dossiers">
+      <div class="list-head" role="row" id="listHead"></div>
+      <div id="rows" role="rowgroup"></div>
+    </div>
   </section>
-
-  <!-- Indicateurs -->
-  <section class="kpis" aria-label="Tableau de bord" id="kpis"></section>
-
-  <div class="main-grid">
-    <!-- Tableau des dossiers -->
-    <section class="panel" aria-label="Dossiers">
-      <div class="filters">
-        <div class="search">
-          <svg class="icon"><use href="#i-search"/></svg>
-          <label for="fSearch" class="visually-hidden">Rechercher</label>
-          <input class="input" id="fSearch" type="search" placeholder="Rechercher un GCBLO, un FCI, un commentaire…" autocomplete="off">
-          <kbd aria-hidden="true">/</kbd>
-        </div>
-        <label for="fCategorie" class="visually-hidden">Catégorie</label>
-        <select class="select" id="fCategorie"></select>
-        <label for="fStatut" class="visually-hidden">Statut</label>
-        <select class="select" id="fStatut"></select>
-        <span id="specialChip"></span>
-        <span class="result-count num" id="resultCount"></span>
-      </div>
-      <div class="table-scroll">
-        <table class="dossiers" id="table">
-          <thead><tr id="theadRow"></tr></thead>
-          <tbody id="tbody"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- Statistiques -->
-    <aside class="side" aria-label="Statistiques">
-      <section class="panel">
-        <div class="panel-head"><h2>Répartition NUM21 / AIR</h2></div>
-        <div class="panel-body">
-          <div class="chart-box"><canvas id="chartCat" aria-label="Répartition par catégorie" role="img"></canvas></div>
-          <div class="chart-legend" id="legendCat"></div>
-        </div>
-      </section>
-      <section class="panel">
-        <div class="panel-head"><h2>Statut des dossiers</h2></div>
-        <div class="panel-body">
-          <div class="chart-box"><canvas id="chartStatus" aria-label="Dossiers par statut" role="img"></canvas></div>
-          <div class="chart-legend" id="legendStatus"></div>
-        </div>
-      </section>
-      <p class="offline-note" id="libNote" hidden></p>
-    </aside>
-  </div>
-</main>
+</div>
 
 <!-- ======================================================================
      DIALOGUES
      ====================================================================== -->
 
 <!-- Création / modification -->
-<dialog id="dlgForm">
+<dialog id="dlgForm" class="frame">
   <form class="dlg" id="dossierForm" novalidate>
     <div class="dlg-head">
-      <div><h2 id="formTitle">Nouveau dossier</h2><div class="sub" id="formSub">Les champs marqués * sont obligatoires.</div></div>
-      <button class="icon-btn" type="button" data-close aria-label="Fermer"><svg class="icon"><use href="#i-x"/></svg></button>
+      <div><h2 id="formTitle">Nouveau dossier</h2><div class="sub" id="formSub">Champs marqués * obligatoires.</div></div>
+      <button class="ibtn" type="button" data-close aria-label="Fermer"><svg class="px"><use href="#p-x"/></svg></button>
     </div>
     <div class="dlg-body">
       <div class="form-grid">
         <div class="field full" data-field="categorie">
           <span class="lbl">Type <span class="req">*</span></span>
-          <div class="segmented" id="catSegmented" role="radiogroup" aria-label="Type"></div>
+          <div class="seg" id="catSegmented" role="radiogroup" aria-label="Type"></div>
           <span class="err" hidden></span>
         </div>
-        <div class="field" data-field="gcblo">
+        <div class="field wide-phone" data-field="gcblo">
           <label for="inGcblo">GCBLO <span class="req">*</span></label>
-          <input class="input mono" id="inGcblo" name="gcblo" autocomplete="off" placeholder="SBA501404-THF010" spellcheck="false">
-          <span class="help">Format : 3 lettres, 6 chiffres, tiret, 3 lettres, 3 chiffres.</span>
+          <input class="field-in data" id="inGcblo" name="gcblo" autocomplete="off" placeholder="SBA501404-THF010" spellcheck="false" autocapitalize="characters">
           <span class="err" hidden></span>
         </div>
-        <div class="field" data-field="fci">
+        <div class="field wide-phone" data-field="fci">
           <label for="inFci">FCI</label>
-          <input class="input mono" id="inFci" name="fci" autocomplete="off" placeholder="F26154200726" spellcheck="false">
-          <span class="help">Plusieurs FCI : séparez-les par une virgule ou un espace. Vide si aucun.</span>
+          <input class="field-in data" id="inFci" name="fci" autocomplete="off" placeholder="F26154200726" spellcheck="false" autocapitalize="characters">
+          <span class="help">Plusieurs : séparés par une virgule. Vide si aucun.</span>
           <span class="err" hidden></span>
         </div>
         <div class="field" data-field="dateAffectation">
-          <label for="inDateAff">Date d'affectation <span class="req">*</span></label>
-          <input class="input num" id="inDateAff" name="dateAffectation" type="date">
+          <label for="inDateAff">Affectation <span class="req">*</span></label>
+          <input class="field-in" id="inDateAff" name="dateAffectation" type="date">
           <span class="err" hidden></span>
         </div>
         <div class="field" data-field="dateRelance">
-          <label for="inDateRel">Date de relance</label>
-          <input class="input num" id="inDateRel" name="dateRelance" type="date">
+          <label for="inDateRel">Relance</label>
+          <input class="field-in" id="inDateRel" name="dateRelance" type="date">
           <span class="err" hidden></span>
         </div>
-        <div class="field" data-field="statut">
+        <div class="field full" data-field="statut">
           <label for="inStatut">Statut <span class="req">*</span></label>
-          <select class="select" id="inStatut" name="statut"></select>
+          <select class="select field-in" id="inStatut" name="statut" style="width:100%"></select>
           <span class="err" hidden></span>
         </div>
         <div class="field full" data-field="commentaire">
           <label for="inComment">Commentaire</label>
-          <textarea class="textarea" id="inComment" name="commentaire" rows="3"></textarea>
+          <textarea class="textarea" id="inComment" name="commentaire" rows="2"></textarea>
         </div>
       </div>
     </div>
     <div class="dlg-foot">
-      <button class="btn" type="button" data-close>Annuler</button>
-      <button class="btn primary" type="submit" id="formSubmit">Créer le dossier</button>
+      <button class="pbtn" type="button" data-close>Annuler</button>
+      <button class="pbtn gold" type="submit" id="formSubmit">Créer le dossier</button>
     </div>
   </form>
 </dialog>
 
 <!-- Fiche détail -->
-<dialog id="dlgDetail" class="wide">
+<dialog id="dlgDetail" class="frame wide">
   <div class="dlg">
     <div class="dlg-head">
-      <div><h2 class="mono" id="detTitle"></h2><div class="sub" id="detSub"></div></div>
-      <button class="icon-btn" type="button" data-close aria-label="Fermer"><svg class="icon"><use href="#i-x"/></svg></button>
+      <div><h2 class="data" id="detTitle"></h2><div class="sub" id="detSub"></div></div>
+      <button class="ibtn" type="button" data-close aria-label="Fermer"><svg class="px"><use href="#p-x"/></svg></button>
     </div>
     <div class="dlg-body" id="detBody"></div>
     <div class="dlg-foot">
-      <button class="btn danger left" type="button" id="detDelete"><svg class="icon"><use href="#i-trash"/></svg>Supprimer</button>
-      <button class="btn" type="button" id="detEdit"><svg class="icon"><use href="#i-edit"/></svg>Modifier</button>
-      <button class="btn primary" type="button" id="detRelance"><svg class="icon"><use href="#i-mail"/></svg>Préparer relance</button>
+      <button class="pbtn danger left" type="button" id="detDelete" aria-label="Supprimer"><svg class="px"><use href="#p-trash"/></svg><span class="hide-xs">Supprimer</span></button>
+      <button class="pbtn" type="button" id="detEdit"><svg class="px"><use href="#p-quill"/></svg>Modifier</button>
+      <button class="pbtn gold" type="button" id="detRelance"><svg class="px"><use href="#p-mail"/></svg>Préparer relance</button>
     </div>
   </div>
 </dialog>
 
-<!-- Confirmation générique (remplace window.confirm) -->
-<dialog id="dlgConfirm">
+<!-- Confirmation (remplace window.confirm) -->
+<dialog id="dlgConfirm" class="frame">
   <div class="dlg">
     <div class="dlg-head"><div><h2 id="cfTitle"></h2></div></div>
-    <div class="dlg-body"><p id="cfText" style="margin:0"></p></div>
+    <div class="dlg-body"><p id="cfText" style="margin:0;font:15px/1.45 var(--font-text)"></p></div>
     <div class="dlg-foot">
-      <button class="btn" type="button" id="cfCancel">Annuler</button>
-      <button class="btn danger solid" type="button" id="cfOk">Confirmer</button>
+      <button class="pbtn" type="button" id="cfCancel">Annuler</button>
+      <button class="pbtn danger solid" type="button" id="cfOk">Confirmer</button>
     </div>
   </div>
 </dialog>
 
 <!-- Rapport d'import -->
-<dialog id="dlgImport" class="wide">
+<dialog id="dlgImport" class="frame wide">
   <div class="dlg">
     <div class="dlg-head">
       <div><h2>Import terminé</h2><div class="sub" id="impSub"></div></div>
-      <button class="icon-btn" type="button" data-close aria-label="Fermer"><svg class="icon"><use href="#i-x"/></svg></button>
+      <button class="ibtn" type="button" data-close aria-label="Fermer"><svg class="px"><use href="#p-x"/></svg></button>
     </div>
     <div class="dlg-body" id="impBody"></div>
-    <div class="dlg-foot"><button class="btn primary" type="button" data-close>Fermer</button></div>
+    <div class="dlg-foot"><button class="pbtn gold" type="button" data-close>Fermer</button></div>
+  </div>
+</dialog>
+
+<!-- Statistiques (téléphone) -->
+<dialog id="dlgStats" class="frame">
+  <div class="dlg">
+    <div class="dlg-head">
+      <div><h2>Statistiques</h2></div>
+      <button class="ibtn" type="button" data-close aria-label="Fermer"><svg class="px"><use href="#p-x"/></svg></button>
+    </div>
+    <div class="dlg-body" data-gauges></div>
   </div>
 </dialog>
 
 <!-- Paramètres -->
-<dialog id="dlgSettings">
+<dialog id="dlgSettings" class="frame">
   <form class="dlg" id="settingsForm" novalidate>
     <div class="dlg-head">
       <div><h2>Paramètres</h2><div class="sub">Enregistrés dans ce navigateur.</div></div>
-      <button class="icon-btn" type="button" data-close aria-label="Fermer"><svg class="icon"><use href="#i-x"/></svg></button>
+      <button class="ibtn" type="button" data-close aria-label="Fermer"><svg class="px"><use href="#p-x"/></svg></button>
     </div>
     <div class="dlg-body">
       <div class="field">
         <label for="setTo">Destinataire des relances</label>
-        <input class="input" id="setTo" type="text" placeholder="prenom.nom@exemple.fr" autocomplete="off">
+        <input class="field-in" id="setTo" type="text" placeholder="prenom.nom@exemple.fr" autocomplete="off" style="font-family:var(--font-text);font-size:15px">
         <span class="help">Pré-rempli dans Outlook. Plusieurs adresses : séparez-les par « ; ».</span>
       </div>
       <div class="field">
         <label for="setCc">Copie (Cc)</label>
-        <input class="input" id="setCc" type="text" autocomplete="off">
+        <input class="field-in" id="setCc" type="text" autocomplete="off" style="font-family:var(--font-text);font-size:15px">
       </div>
       <div class="field">
-        <label for="setDelay">Prochaine relance après (jours)</label>
-        <input class="input num" id="setDelay" type="number" min="1" max="60" step="1" style="max-width:120px">
-        <span class="help">Utilisé quand vous marquez un dossier comme « Relancé ».</span>
+        <label for="setDelay">Relance suivante après (jours)</label>
+        <input class="field-in data" id="setDelay" type="number" min="1" max="60" step="1" style="max-width:110px">
+        <span class="help">Utilisé quand vous marquez un dossier « Relancé ».</span>
       </div>
       <div class="field">
         <span class="lbl">Données</span>
         <span class="help" id="setStats"></span>
-        <div><button class="btn danger" type="button" id="btnWipe"><svg class="icon"><use href="#i-trash"/></svg>Effacer tous les dossiers</button></div>
+        <div><button class="pbtn danger" type="button" id="btnWipe"><svg class="px"><use href="#p-trash"/></svg>Effacer tous les dossiers</button></div>
       </div>
     </div>
     <div class="dlg-foot">
-      <button class="btn" type="button" data-close>Annuler</button>
-      <button class="btn primary" type="submit">Enregistrer</button>
+      <button class="pbtn" type="button" data-close>Annuler</button>
+      <button class="pbtn gold" type="submit">Enregistrer</button>
     </div>
   </form>
 </dialog>
 
+<input type="file" id="fileExcel" accept=".xlsx,.xls,.xlsm" hidden>
+<input type="file" id="fileJson" accept=".json,application/json" hidden>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
 <script>
@@ -740,8 +768,8 @@ dialog::backdrop { background: rgba(0,0,0,.4); }
        le choix s'affiche automatiquement dès qu'il y en a plus d'un.
    ############################################################################ */
 const APP = Object.freeze({
-  name: 'Affectations GCBLO',
-  version: '1.0.0',
+  name: 'Registre GCBLO',
+  version: '2.0.0',
   storageKey: 'gcblo.affectations.v1',   // données métier
   settingsKey: 'gcblo.settings.v1',      // paramètres utilisateur
   uiKey: 'gcblo.ui.v1',                  // préférences d'affichage (thème, tri)
@@ -750,8 +778,8 @@ const APP = Object.freeze({
 
 /** Catégories de dossiers. L'ordre définit l'ordre d'affichage. */
 const CATEGORIES = [
-  { id: 'NUM21', label: 'NUM21', cssVar: '--cat-num21', aliases: ['NUM21', 'NUMERUS21', 'NUMERUS 21', 'NUM 21'] },
-  { id: 'AIR',   label: 'AIR',   cssVar: '--cat-air',   aliases: ['AIR'] }
+  { id: 'NUM21', label: 'NUM21', cssVar: '--cat-num21', icon: 'shield', aliases: ['NUM21', 'NUMERUS21', 'NUMERUS 21', 'NUM 21'] },
+  { id: 'AIR',   label: 'AIR',   cssVar: '--cat-air',   icon: 'wing', aliases: ['AIR'] }
   // { id: 'CMD_S', label: 'Commande simple',   cssVar: '--cat-cmds', aliases: ['COMMANDE SIMPLE'] },
   // { id: 'CMD_C', label: 'Commande complexe', cssVar: '--cat-cmdc', aliases: ['COMMANDE COMPLEXE'] },
   // { id: 'DFT',   label: 'DFT',               cssVar: '--cat-dft',  aliases: ['DFT'] },
@@ -1381,19 +1409,83 @@ const ExportService = {
    ############################################################################ */
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
-const icon = id => `<svg class="icon"><use href="#${id}"/></svg>`;
+
+/**
+ * Icônes pixel : chaque icône est une petite grille de caractères.
+ *   #  = couleur courante      +  = couleur courante atténuée
+ *   a  = couleur d'accent (torche)   .  = transparent
+ * Les pixels contigus d'une même ligne sont fusionnés en un seul rectangle.
+ */
+const PixelIcons = {
+  grids: {
+    plus:     ['..###..', '..#+#..', '###+###', '#+++++#', '###+###', '..#+#..', '..###..'],
+    upload:   ['....#....', '...###...', '..#####..', '.#######.', '...###...', '...###...', '...###...', '.........', '#########'],
+    download: ['...###...', '...###...', '...###...', '.#######.', '..#####..', '...###...', '....#....', '.........', '#########'],
+    search:   ['.####....', '#++++#...', '#++++#...', '#++++#...', '#++++#...', '.#####...', '.....##..', '......##.', '.......##'],
+    copy:     ['#####....', '#+++#....', '#+#######', '#+#+++++#', '###+++++#', '..#+++++#', '..#+++++#', '..#######'],
+    eye:      ['..######..', '.#++++++#.', '#++#aa#++#', '#++#aa#++#', '.#++++++#.', '..######..'],
+    mail:     ['##########', '##++++++##', '#+#++++#+#', '#++#++#++#', '#+++##+++#', '#++++++++#', '##########'],
+    quill:    ['.......##', '......#a#', '.....#a#.', '....#a#..', '...#a#...', '..#a#....', '.#.#.....', '#........'],
+    trash:    ['...###...', '#########', '.........', '.#######.', '.#+#+#+#.', '.#+#+#+#.', '.#+#+#+#.', '.#+#+#+#.', '.#######.'],
+    x:        ['##....##', '###..###', '.######.', '..####..', '..####..', '.######.', '###..###', '##....##'],
+    gear:     ['...#.#...', '.#######.', '.##+++##.', '##+...+##', '.#+...+#.', '##+...+##', '.##+++##.', '.#######.', '...#.#...'],
+    torch:    ['...a...', '..aaa..', '.aa#aa.', '..aaa..', '#######', '.#+++#.', '..#+#..', '..#+#..', '..#+#..', '..#+#..', '..###..'],
+    shield:   ['#########', '#+++++++#', '#+++#+++#', '#++###++#', '#+++#+++#', '#+++#+++#', '.#+++++#.', '.#+++++#.', '..#+++#..', '...###...'],
+    wing:     ['......###', '....###+#', '...##++#.', '..##++#..', '.##++#...', '.#++#....', '##+#.....', '#.#......', '#........'],
+    chest:    ['.########.', '#++++++++#', '##########', '#+++aa+++#', '#+++aa+++#', '#++++++++#', '#++++++++#', '##########'],
+    skull:    ['.#######.', '#########', '##..#..##', '##..#..##', '#########', '.###.###.', '..#####..', '..#.#.#..'],
+    key:      ['.###.....', '#...#####', '#...#.#.#', '.###.....'],
+    gem:      ['..#..', '.#+#.', '#+++#', '.#+#.', '..#..'],
+    sort:     ['..#...#..', '.###..#..', '#####.#..', '..#...#..', '..#...#..', '..#.#####', '..#..###.', '..#...#..'],
+    stats:    ['......##.', '......##.', '...##.##.', '...##.##.', '##.##.##.', '##.##.##.', '##.##.##.', '#########'],
+    scroll:   ['.#######.', '#.#+++++#', '.##+++++#', '..#+###+#', '..#+++++#', '..#+###+#', '..#+++++#', '..######.', '.........'],
+    moon:     ['..####.', '.##....', '##.....', '##.....', '##.....', '.##....', '..####.'],
+    sun:      ['#..#..#', '.#####.', '.#aaa#.', '##aaa##', '.#aaa#.', '.#####.', '#..#..#']
+  },
+  build() {
+    const NS = 'http://www.w3.org/2000/svg';
+    const sprite = document.getElementById('sprite');
+    Object.entries(PixelIcons.grids).forEach(([name, rows]) => {
+      const w = Math.max(...rows.map(r => r.length)), h = rows.length;
+      const size = Math.max(w, h);
+      const sym = document.createElementNS(NS, 'symbol');
+      sym.setAttribute('id', 'p-' + name);
+      // Carré centré pour garder les icônes alignées entre elles
+      sym.setAttribute('viewBox', `${-(size - w) / 2} ${-(size - h) / 2} ${size} ${size}`);
+      rows.forEach((row, y) => {
+        let x = 0;
+        while (x < row.length) {
+          const ch = row[x];
+          if (ch === '.' || ch === ' ') { x++; continue; }
+          let end = x; while (row[end + 1] === ch) end++;
+          const r = document.createElementNS(NS, 'rect');
+          r.setAttribute('x', x); r.setAttribute('y', y); r.setAttribute('width', end - x + 1); r.setAttribute('height', 1);
+          if (ch === 'a') r.setAttribute('style', 'fill:var(--accent)');
+          else { r.setAttribute('fill', 'currentColor'); if (ch === '+') r.setAttribute('fill-opacity', '.4'); }
+          if (name === 'torch' && ch === 'a') r.setAttribute('class', 'flame');
+          sym.appendChild(r);
+          x = end + 1;
+        }
+      });
+      sprite.appendChild(sym);
+    });
+  }
+};
+const px = (name, cls = '') => `<svg class="px ${cls}" aria-hidden="true"><use href="#p-${name}"/></svg>`;
 
 /** État d'affichage (filtres, tri) — distinct des données. */
 const ViewState = {
   q: '', categorie: '', statut: '', special: '',
-  sortKey: UiPrefs.get().sortKey, sortDir: UiPrefs.get().sortDir
+  sortKey: UiPrefs.get().sortKey, sortDir: UiPrefs.get().sortDir,
+  openRow: null           // fiche dépliée sur téléphone
 };
+const isPhone = () => matchMedia('(max-width: 899px)').matches;
 
 /** Notifications éphémères, avec action optionnelle. */
 const Toast = {
-  show(message, { action, onAction, error = false, duration = 4000 } = {}) {
+  show(message, { action, onAction, error = false, duration = 3500 } = {}) {
     const el = document.createElement('div');
-    el.className = 'toast' + (error ? ' error' : '');
+    el.className = 'toast frame' + (error ? ' error' : '');
     el.setAttribute('role', error ? 'alert' : 'status');
     el.innerHTML = `<span>${Util.esc(message)}</span>`;
     if (action) {
@@ -1402,8 +1494,16 @@ const Toast = {
       b.addEventListener('click', () => { onAction?.(); el.remove(); });
       el.appendChild(b);
     }
-    $('#toasts').appendChild(el);
+    // Au-dessus d'un dialogue ouvert si besoin (les dialogues sont dans la « top layer »)
+    const host = document.querySelector('dialog[open]') ? Toast.dialogHost() : $('#toasts');
+    host.appendChild(el);
     setTimeout(() => el.remove(), action ? Math.max(duration, 9000) : duration);
+  },
+  dialogHost() {
+    const dlg = [...document.querySelectorAll('dialog[open]')].pop();
+    let h = dlg.querySelector('.toasts');
+    if (!h) { h = document.createElement('div'); h.className = 'toasts'; dlg.appendChild(h); }
+    return h;
   },
   error(message) { Toast.show(message, { error: true, duration: 6000 }); }
 };
@@ -1423,87 +1523,117 @@ const Clipboard = {
   }
 };
 
-/** Thème clair / sombre / système. */
+/** Thème : automatique / parchemin (clair) / donjon (sombre). */
 const Theme = {
   order: ['system', 'light', 'dark'],
-  labels: { system: 'Système', light: 'Clair', dark: 'Sombre' },
-  icons: { system: 'i-auto', light: 'i-sun', dark: 'i-moon' },
+  labels: { system: 'Auto', light: 'Parchemin', dark: 'Donjon' },
+  icons: { system: 'torch', light: 'sun', dark: 'moon' },
   apply(mode) {
     if (mode === 'system') document.documentElement.removeAttribute('data-theme');
     else document.documentElement.setAttribute('data-theme', mode);
-    $('#btnTheme').innerHTML = `${icon(Theme.icons[mode])}<span class="label">${Theme.labels[mode]}</span>`;
-    $('#btnTheme').title = `Thème : ${Theme.labels[mode]} (cliquer pour changer)`;
+    $('#btnTheme').innerHTML = `${px(Theme.icons[mode])}<span class="label">${Theme.labels[mode]}</span>`;
+    $('#btnTheme').title = `Thème : ${Theme.labels[mode]} (changer)`;
+    $('#btnTheme').setAttribute('aria-label', `Thème : ${Theme.labels[mode]}`);
     UiPrefs.set({ theme: mode });
-    Charts.refresh();
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = getComputedStyle(document.documentElement).getPropertyValue('--surface-2').trim();
   },
   next() { const m = UiPrefs.get().theme; Theme.apply(Theme.order[(Theme.order.indexOf(m) + 1) % Theme.order.length]); },
-  init() {
-    Theme.apply(UiPrefs.get().theme);
-    matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => Charts.refresh());
-  }
+  init() { Theme.apply(UiPrefs.get().theme); }
 };
 
-/** Lit une variable CSS (pour colorer les graphiques selon le thème). */
-const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-
-/** Tableau de bord : cartes indicateurs. Un clic filtre le tableau. */
+/** Compteurs du tableau de bord. Un appui filtre le registre. */
 const DashboardView = {
   render(stats) {
     const cards = [
-      ...CATEGORIES.map(c => ({ key: 'cat:' + c.id, label: c.label, value: stats.byCat[c.id] || 0, color: `var(${c.cssVar})`,
-        foot: stats.total ? `${Math.round((stats.byCat[c.id] || 0) / stats.total * 100)} % du total` : '—' })),
-      { key: 'all', label: 'Total', value: stats.total, color: 'var(--fg-subtle)', foot: `${stats.byStatus.TERMINE || 0} terminé${(stats.byStatus.TERMINE || 0) > 1 ? 's' : ''}` },
-      { key: 'special:overdue', label: 'Relances en retard', value: stats.overdue, color: 'var(--st-danger)', alert: stats.overdue > 0,
-        foot: stats.soon ? `+ ${stats.soon} dans les ${RULES.relanceSoonDays} jours` : 'Aucune relance imminente' },
-      { key: 'special:nofci', label: 'Sans FCI', value: stats.noFci, color: 'var(--st-warning)', alert: stats.noFci > 0,
-        foot: stats.total ? `${Math.round(stats.noFci / stats.total * 100)} % des dossiers` : '—' }
+      ...CATEGORIES.map(c => ({ key: 'cat:' + c.id, label: c.label, icon: c.icon || 'scroll', value: stats.byCat[c.id] || 0, color: `var(${c.cssVar})` })),
+      { key: 'all', label: 'Total', icon: 'chest', value: stats.total, color: 'var(--accent)' },
+      { key: 'special:overdue', label: 'En retard', icon: 'skull', value: stats.overdue, color: 'var(--st-danger)', alert: stats.overdue > 0,
+        title: `Relances en retard${stats.soon ? ` (+ ${stats.soon} dans les ${RULES.relanceSoonDays} jours)` : ''}` },
+      { key: 'special:nofci', label: 'Sans FCI', icon: 'key', value: stats.noFci, color: 'var(--st-warning)', alert: stats.noFci > 0, title: 'Dossiers sans FCI' }
     ];
     const active = ViewState.special ? 'special:' + ViewState.special : (ViewState.categorie ? 'cat:' + ViewState.categorie : '');
     $('#kpis').innerHTML = cards.map(c => `
-      <button type="button" class="kpi${c.alert ? ' alert' : ''}" data-kpi="${c.key}" aria-pressed="${active === c.key}" style="--kpi-color:${c.color}">
-        <span class="kpi-label"><span class="kpi-dot"></span>${Util.esc(c.label)}</span>
-        <span class="kpi-value">${c.value}</span>
-        <span class="kpi-foot">${Util.esc(c.foot)}</span>
+      <button type="button" class="stat frame${c.alert ? ' alert' : ''}" data-kpi="${c.key}" aria-pressed="${active === c.key}" style="--c:${c.color}" title="${Util.esc(c.title || c.label)}">
+        <span class="ico">${px(c.icon, 'lg')}</span>
+        <span class="v num">${c.value}</span>
+        <span class="l">${Util.esc(c.label)}</span>
       </button>`).join('');
   },
   onClick(key) {
-    if (key === 'all') { ViewState.categorie = ''; ViewState.special = ''; ViewState.statut = ''; }
+    if (key === 'all') Object.assign(ViewState, { categorie: '', special: '', statut: '' });
     else if (key.startsWith('cat:')) { const c = key.slice(4); ViewState.categorie = ViewState.categorie === c ? '' : c; ViewState.special = ''; }
     else if (key.startsWith('special:')) { const s = key.slice(8); ViewState.special = ViewState.special === s ? '' : s; }
-    $('#fCategorie').value = ViewState.categorie; $('#fStatut').value = ViewState.statut;
-    App.render();
+    FilterView.sync(); App.render();
   }
 };
 
-/** Tableau principal. */
-const TableView = {
+/** Jauges : répartition NUM21/AIR et statuts (bureau : colonne ; téléphone : fenêtre Stats). */
+const GaugesView = {
+  render(stats) {
+    const pct = v => (stats.total ? Math.round(v / stats.total * 100) : 0);
+    const split = CATEGORIES.map(c => ({ c, v: stats.byCat[c.id] || 0 }));
+    const html = `
+      <h2 class="panel-title">Répartition</h2>
+      <div class="split" role="img" aria-label="${split.map(s => `${s.c.label} ${s.v}`).join(', ')}">
+        ${stats.total ? split.filter(s => s.v).map(s => `<span style="flex:${s.v};--c:var(${s.c.cssVar})"></span>`).join('') : ''}
+      </div>
+      <div class="legend">${split.map(s => `
+        <div class="lg" style="--c:var(${s.c.cssVar})">${px(s.c.icon || 'scroll', 'sm')}<span>${s.c.label}</span><span class="v num">${s.v}</span><span class="p num">${pct(s.v)}%</span></div>`).join('')}
+      </div>
+      <h2 class="panel-title">Statuts</h2>
+      <div class="legend">${STATUSES.map(s => { const v = stats.byStatus[s.id] || 0; return `
+        <div class="lg" style="--c:var(${s.cssVar})">${px('gem', 'sm')}<span>${s.label}</span><span class="v num">${v}</span><span class="p num">${pct(v)}%</span>
+          <div class="gauge"><span style="width:${pct(v)}%;--c:var(${s.cssVar})"></span></div></div>`; }).join('')}
+      </div>`;
+    $$('[data-gauges]').forEach(el => { el.innerHTML = html; });
+  }
+};
+
+/** Filtres : catégorie (segments), statut, tri. */
+const FilterView = {
+  sortOptions: [
+    ['dateAffectation', 'desc', 'Affectation récente'], ['dateAffectation', 'asc', 'Affectation ancienne'],
+    ['dateRelance', 'asc', 'Relance la plus proche'], ['gcblo', 'asc', 'GCBLO A → Z'],
+    ['statut', 'asc', 'Statut'], ['categorie', 'asc', 'Catégorie']
+  ],
+  init() {
+    $('#fCategorie').innerHTML = [['', 'Tous'], ...CATEGORIES.map(c => [c.id, c.label])].map(([v, l]) =>
+      `<label><input type="radio" name="fcat" value="${v}"${v === '' ? ' checked' : ''}><span>${l}</span></label>`).join('');
+    $('#fStatut').innerHTML = '<option value="">Tous statuts</option>' + STATUSES.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
+  },
+  sync() {
+    const r = $(`#fCategorie input[value="${ViewState.categorie}"]`); if (r) r.checked = true;
+    $('#fStatut').value = ViewState.statut;
+    $('#menuSort .menu-pop').innerHTML = FilterView.sortOptions.map(([k, d, l]) =>
+      `<button type="button" role="menuitemradio" data-sortopt="${k}:${d}" aria-checked="${ViewState.sortKey === k && ViewState.sortDir === d}">${l}</button>`).join('');
+  }
+};
+
+/** Registre : en-tête triable (bureau) + lignes / fiches. */
+const ListView = {
   columns: [
-    { key: 'categorie', label: 'Catégorie' },
-    { key: 'gcblo', label: 'GCBLO' },
-    { key: 'fci', label: 'FCI' },
-    { key: 'dateAffectation', label: 'Date affectation' },
-    { key: 'dateRelance', label: 'Date relance' },
-    { key: 'statut', label: 'Statut' },
-    { key: 'commentaire', label: 'Commentaire' }
+    { key: 'categorie', label: 'Type' }, { key: 'gcblo', label: 'GCBLO' }, { key: 'fci', label: 'FCI' },
+    { key: 'dateAffectation', label: 'Affectation' }, { key: 'dateRelance', label: 'Relance' },
+    { key: 'statut', label: 'Statut' }, { key: 'commentaire', label: 'Commentaire' }
   ],
   renderHead() {
-    $('#theadRow').innerHTML = TableView.columns.map(c => {
-      const sorted = ViewState.sortKey === c.key;
-      const aria = sorted ? ` aria-sort="${ViewState.sortDir === 'asc' ? 'ascending' : 'descending'}"` : '';
-      return `<th scope="col"${aria}><button type="button" data-sort="${c.key}">${c.label}<span class="sort-ind">${sorted && ViewState.sortDir === 'asc' ? '▲' : '▼'}</span></button></th>`;
-    }).join('') + '<th scope="col" class="th-static" style="text-align:right">Actions</th>';
+    $('#listHead').innerHTML = ListView.columns.map(c => {
+      const on = ViewState.sortKey === c.key;
+      return `<div role="columnheader"${c.key === 'dateAffectation' ? ' class="h-aff"' : ''}><button type="button" data-sort="${c.key}"${on ? ` aria-sort="${ViewState.sortDir === 'asc' ? 'ascending' : 'descending'}"` : ''}>${c.label}<span class="arrow">${on && ViewState.sortDir === 'asc' ? '▲' : '▼'}</span></button></div>`;
+    }).join('') + '<div class="h-act" role="columnheader">Actions</div>';
   },
   relanceCell(d) {
-    if (!d.dateRelance) return '<span class="no-fci">—</span>';
+    if (!d.dateRelance) return '<span class="none">pas de relance</span>';
     const n = DateUtil.daysFromToday(d.dateRelance);
     let hint = '';
     if (!Ref.status(d.statut).closed) {
-      if (n < 0) hint = `en retard de ${Util.plural(-n, 'jour', 'jours')}`;
+      if (n < 0) hint = `retard ${-n} j`;
       else if (n === 0) hint = 'aujourd\'hui';
       else if (n === 1) hint = 'demain';
-      else if (n <= RULES.relanceSoonDays) hint = `dans ${n} jours`;
+      else if (n <= RULES.relanceSoonDays) hint = `dans ${n} j`;
     }
-    return `<span class="num">${DateUtil.fmt(d.dateRelance)}</span>${hint ? `<span class="rel-hint">${hint}</span>` : ''}`;
+    return `<span class="data num">${DateUtil.fmt(d.dateRelance)}</span>${hint ? `<span class="rel-hint">${hint}</span>` : ''}`;
   },
   statusSelect(d) {
     const st = Ref.status(d.statut);
@@ -1514,114 +1644,52 @@ const TableView = {
   },
   row(d) {
     const rs = DossierService.relanceState(d);
-    const cls = [rs === 'overdue' ? 'row-overdue' : rs === 'soon' ? 'row-soon' : '', Ref.status(d.statut).closed ? 'row-done' : ''].join(' ').trim();
+    const cat = Ref.category(d.categorie);
+    const cls = ['row', rs === 'overdue' ? 'row-overdue' : rs === 'soon' ? 'row-soon' : '', Ref.status(d.statut).closed ? 'row-done' : '', ViewState.openRow === d.id ? 'open' : ''].filter(Boolean).join(' ');
     const fci = d.fci.length
-      ? `<span class="mono">${Util.esc(d.fci[0])}</span>${d.fci.length > 1 ? `<span class="fci-more" title="${Util.esc(d.fci.slice(1).join(', '))}">+${d.fci.length - 1}</span>` : ''}`
-      : '<span class="no-fci">aucun</span>';
+      ? `<span class="data">${Util.esc(d.fci[0])}</span>${d.fci.length > 1 ? `<span class="more" title="${Util.esc(d.fci.slice(1).join(', '))}">+${d.fci.length - 1}</span>` : ''}`
+      : '<span class="none">aucun FCI</span>';
     const g = Util.esc(d.gcblo);
-    return `<tr data-id="${d.id}" class="${cls}" title="Double-clic : préparer la relance">
-      <td class="td-cat"><span class="cat cat-${Util.esc(d.categorie)}">${Util.esc(Ref.category(d.categorie)?.label || d.categorie)}</span></td>
-      <td class="td-gcblo mono">${g}</td>
-      <td class="td-fci" data-label="FCI">${fci}</td>
-      <td class="td-date num" data-label="Affecté le">${DateUtil.fmt(d.dateAffectation)}</td>
-      <td class="td-date" data-label="Relance">${TableView.relanceCell(d)}</td>
-      <td class="td-status">${TableView.statusSelect(d)}</td>
-      <td class="td-comment" data-label="Commentaire" title="${Util.esc(d.commentaire)}">${Util.esc(d.commentaire) || '<span class="no-fci">—</span>'}</td>
-      <td class="td-actions"><div class="actions">
-        <button type="button" class="icon-btn copy" data-action="copy-gcblo" title="Copier GCBLO" aria-label="Copier le GCBLO ${g}">${icon('i-copy')}<span class="tag">GC</span></button>
-        <button type="button" class="icon-btn copy" data-action="copy-fci" title="Copier FCI" aria-label="Copier le FCI de ${g}" ${d.fci.length ? '' : 'disabled style="opacity:.35;cursor:not-allowed"'}>${icon('i-copy')}<span class="tag">FCI</span></button>
-        <button type="button" class="icon-btn" data-action="open" title="Ouvrir le dossier" aria-label="Ouvrir ${g}">${icon('i-open')}</button>
-        <button type="button" class="icon-btn" data-action="relance" title="Préparer relance" aria-label="Préparer la relance de ${g}">${icon('i-mail')}</button>
-        <button type="button" class="icon-btn" data-action="edit" title="Modifier" aria-label="Modifier ${g}">${icon('i-edit')}</button>
-        <button type="button" class="icon-btn del" data-action="delete" title="Supprimer" aria-label="Supprimer ${g}">${icon('i-trash')}</button>
-      </div></td>
-    </tr>`;
+    return `<div class="${cls}" role="row" data-id="${d.id}" title="Double-clic : préparer la relance">
+      <div class="c-cat" role="cell"><span class="cat cat-${Util.esc(d.categorie)}">${px(cat?.icon || 'scroll', 'sm')}${Util.esc(cat?.label || d.categorie)}</span></div>
+      <div class="c-gcblo data" role="cell">${g}</div>
+      <div class="c-fci" role="cell">${fci}</div>
+      <div class="c-aff data num" role="cell">${DateUtil.fmt(d.dateAffectation)}</div>
+      <div class="c-rel" role="cell">${ListView.relanceCell(d)}</div>
+      <div class="c-st" role="cell">${ListView.statusSelect(d)}</div>
+      <div class="c-com" role="cell" title="${Util.esc(d.commentaire)}">${Util.esc(d.commentaire) || '<span class="none">—</span>'}</div>
+      <div class="c-act" role="cell">
+        <button type="button" class="ibtn" data-action="copy-gcblo" title="Copier GCBLO" aria-label="Copier le GCBLO ${g}">${px('copy', 'sm')}<span class="tag">GC</span></button>
+        <button type="button" class="ibtn" data-action="copy-fci" title="Copier FCI" aria-label="Copier le FCI de ${g}"${d.fci.length ? '' : ' disabled'}>${px('copy', 'sm')}<span class="tag">FCI</span></button>
+        <button type="button" class="ibtn" data-action="open" title="Ouvrir le dossier" aria-label="Ouvrir ${g}">${px('eye')}</button>
+        <button type="button" class="ibtn" data-action="relance" title="Préparer relance" aria-label="Préparer la relance de ${g}">${px('mail')}</button>
+        <button type="button" class="ibtn" data-action="edit" title="Modifier" aria-label="Modifier ${g}">${px('quill')}</button>
+        <button type="button" class="ibtn del" data-action="delete" title="Supprimer" aria-label="Supprimer ${g}">${px('trash')}</button>
+      </div>
+    </div>`;
   },
   render(rows, total) {
-    TableView.renderHead();
-    const tbody = $('#tbody');
+    ListView.renderHead();
+    const box = $('#rows');
     if (!total) {
-      tbody.innerHTML = `<tr class="empty"><td colspan="8"><div class="empty">
-        <h3>Aucun dossier pour l'instant</h3>
-        <p>Importez votre classeur Excel « Robot affectation » : les colonnes GCBLO NUM21, GCBLO AIR et leurs FCI sont reconnues automatiquement.</p>
-        <div class="row">
-          <button class="btn primary" type="button" data-empty="import">${icon('i-upload')}Importer Excel</button>
-          <button class="btn" type="button" data-empty="new">${icon('i-plus')}Nouveau dossier</button>
-          <button class="btn ghost" type="button" data-empty="demo">Charger 3 exemples</button>
-        </div></div></td></tr>`;
+      box.innerHTML = `<div class="empty">${px('chest')}
+        <h3>Le registre est vide</h3>
+        <p>Importez le classeur « Robot affectation » : les colonnes GCBLO NUM21, GCBLO AIR et leurs FCI sont reconnues automatiquement.</p>
+        <div class="btns">
+          <button class="pbtn gold" type="button" data-empty="import">${px('upload')}Importer Excel</button>
+          <button class="pbtn" type="button" data-empty="new">${px('plus')}Nouveau dossier</button>
+          <button class="pbtn" type="button" data-empty="demo">3 exemples</button>
+        </div></div>`;
     } else if (!rows.length) {
-      tbody.innerHTML = `<tr class="empty"><td colspan="8"><div class="empty">
-        <h3>Aucun dossier ne correspond</h3><p>Modifiez la recherche ou les filtres.</p>
-        <div class="row"><button class="btn" type="button" data-empty="reset">Réinitialiser les filtres</button></div></div></td></tr>`;
+      box.innerHTML = `<div class="empty">${px('search')}<h3>Aucun dossier trouvé</h3><p>Modifiez la recherche ou les filtres.</p>
+        <div class="btns"><button class="pbtn" type="button" data-empty="reset">Réinitialiser les filtres</button></div></div>`;
     } else {
-      tbody.innerHTML = rows.map(TableView.row).join('');
+      box.innerHTML = rows.map(ListView.row).join('');
     }
-    $('#resultCount').textContent = total ? `${rows.length} / ${Util.plural(total, 'dossier', 'dossiers')}` : '';
-    const sp = { overdue: 'Relances en retard', nofci: 'Sans FCI' }[ViewState.special];
-    $('#specialChip').innerHTML = sp ? `<button type="button" class="chip" data-clear-special>${sp}${icon('i-x')}</button>` : '';
-  }
-};
-
-/** Graphiques Chart.js (désactivés proprement si la bibliothèque manque). */
-const Charts = {
-  cat: null, status: null,
-  get available() { return typeof window.Chart !== 'undefined'; },
-  legend(el, items, total) {
-    el.innerHTML = items.map(i => `<div class="legend-row"><span class="sw" style="background:${i.color}"></span>${Util.esc(i.label)}
-      <span class="v">${i.value}</span><span class="p">${total ? Math.round(i.value / total * 100) : 0} %</span></div>`).join('');
-  },
-  render(stats) {
-    const catItems = CATEGORIES.map(c => ({ label: c.label, value: stats.byCat[c.id] || 0, color: cssVar(c.cssVar) }));
-    const stItems = STATUSES.map(s => ({ label: s.label, value: stats.byStatus[s.id] || 0, color: cssVar(s.cssVar) }));
-    Charts.legend($('#legendCat'), catItems, stats.total);
-    Charts.legend($('#legendStatus'), stItems, stats.total);
-    if (!Charts.available) {
-      $$('.chart-box').forEach(b => { b.innerHTML = '<div class="chart-off">Graphique indisponible hors ligne.</div>'; b.style.height = 'auto'; });
-      return;
-    }
-    const fg = cssVar('--fg-muted'), grid = cssVar('--stroke'), surface = cssVar('--surface');
-    Chart.defaults.font.family = cssVar('--font-ui');
-    Chart.defaults.color = fg;
-    const empty = !stats.total;
-
-    const catData = {
-      labels: catItems.map(i => i.label),
-      datasets: [{ data: empty ? [1] : catItems.map(i => i.value), backgroundColor: empty ? [grid] : catItems.map(i => i.color), borderColor: surface, borderWidth: 2 }]
-    };
-    if (empty) catData.labels = ['Aucun dossier'];
-    if (Charts.cat) { Charts.cat.data = catData; Charts.cat.options.plugins.tooltip.enabled = !empty; Charts.cat.update(); }
-    else Charts.cat = new Chart($('#chartCat'), {
-      type: 'doughnut', data: catData,
-      options: { responsive: true, maintainAspectRatio: false, cutout: '68%', animation: { duration: 250 },
-        plugins: { legend: { display: false }, tooltip: { enabled: !empty } } }
-    });
-
-    const stData = {
-      labels: stItems.map(i => i.label),
-      datasets: [{ data: stItems.map(i => i.value), backgroundColor: stItems.map(i => i.color), borderRadius: 4, barThickness: 16 }]
-    };
-    if (Charts.status) {
-      Charts.status.data = stData;
-      Object.assign(Charts.status.options.scales.x.grid, { color: grid });
-      Charts.status.options.scales.x.ticks.color = fg; Charts.status.options.scales.y.ticks.color = fg;
-      Charts.status.update();
-    } else Charts.status = new Chart($('#chartStatus'), {
-      type: 'bar', data: stData,
-      options: {
-        indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: { duration: 250 },
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { beginAtZero: true, ticks: { precision: 0, color: fg }, grid: { color: grid }, border: { display: false } },
-          y: { ticks: { color: fg }, grid: { display: false }, border: { display: false } }
-        }
-      }
-    });
-  },
-  /** Recolore après un changement de thème. */
-  refresh() {
-    if (!Charts.available || !Charts.cat) return;
-    Charts.cat.destroy(); Charts.status.destroy(); Charts.cat = Charts.status = null;
-    App.render();
+    $('#resultCount').textContent = total ? `${rows.length} / ${total}` : '';
+    const sp = { overdue: ['En retard', 'var(--st-danger)'], nofci: ['Sans FCI', 'var(--st-warning)'] }[ViewState.special];
+    $('#listMeta').hidden = !sp;
+    $('#specialChip').innerHTML = sp ? `<button type="button" class="chip" style="--c:${sp[1]}" data-clear-special>${sp[0]} ${px('x', 'sm')}</button>` : '';
   }
 };
 
@@ -1631,10 +1699,10 @@ const ConfirmDialog = {
     return new Promise(resolve => {
       const dlg = $('#dlgConfirm');
       $('#cfTitle').textContent = title; $('#cfText').textContent = text; $('#cfOk').textContent = ok;
-      const done = v => { dlg.close(); cleanup(); resolve(v); };
-      const onOk = () => done(true), onCancel = () => done(false), onClose = () => { cleanup(); resolve(false); };
-      const cleanup = () => { $('#cfOk').removeEventListener('click', onOk); $('#cfCancel').removeEventListener('click', onCancel); dlg.removeEventListener('cancel', onClose); };
-      $('#cfOk').addEventListener('click', onOk); $('#cfCancel').addEventListener('click', onCancel); dlg.addEventListener('cancel', onClose);
+      const cleanup = () => { $('#cfOk').removeEventListener('click', onOk); $('#cfCancel').removeEventListener('click', onCancel); dlg.removeEventListener('cancel', onCancel); };
+      const done = v => { cleanup(); if (dlg.open) dlg.close(); resolve(v); };
+      const onOk = () => done(true), onCancel = () => done(false);
+      $('#cfOk').addEventListener('click', onOk); $('#cfCancel').addEventListener('click', onCancel); dlg.addEventListener('cancel', onCancel);
       dlg.showModal(); $('#cfCancel').focus();
     });
   }
@@ -1645,38 +1713,32 @@ const FormDialog = {
   editingId: null,
   init() {
     $('#catSegmented').innerHTML = CATEGORIES.map((c, i) =>
-      `<label><input type="radio" name="categorie" value="${c.id}"${i === 0 ? ' checked' : ''}><span>${c.label}</span></label>`).join('');
+      `<label><input type="radio" name="categorie" value="${c.id}"${i === 0 ? ' checked' : ''}><span>${px(c.icon || 'scroll', 'sm')}${c.label}</span></label>`).join('');
     $('#inStatut').innerHTML = STATUSES.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
-    $('#inGcblo').addEventListener('input', e => {
+    ['#inGcblo', '#inFci'].forEach(sel => $(sel).addEventListener('input', e => {
       const pos = e.target.selectionStart; e.target.value = e.target.value.toUpperCase(); e.target.setSelectionRange(pos, pos);
-      FormDialog.clearError('gcblo');
-    });
-    $('#inFci').addEventListener('input', e => {
-      const pos = e.target.selectionStart; e.target.value = e.target.value.toUpperCase(); e.target.setSelectionRange(pos, pos);
-      FormDialog.clearError('fci');
-    });
+      FormDialog.clearError(sel === '#inGcblo' ? 'gcblo' : 'fci');
+    }));
     $('#dossierForm').addEventListener('submit', e => { e.preventDefault(); FormDialog.submit(); });
   },
-  open(id = null, preset = {}) {
+  open(id = null) {
     FormDialog.editingId = id;
     const d = id ? DossierRepository.get(id) : null;
-    const f = $('#dossierForm');
-    f.reset(); $$('#dossierForm .field').forEach(el => FormDialog.clearError(el.dataset.field));
-    const v = d || { categorie: preset.categorie || ViewState.categorie || CATEGORIES[0].id, gcblo: '', fci: [], dateAffectation: DateUtil.today(), dateRelance: '', statut: DEFAULT_STATUS, commentaire: '' };
-    f.querySelector(`input[name="categorie"][value="${v.categorie}"]`).checked = true;
+    $('#dossierForm').reset(); $$('#dossierForm .field').forEach(el => FormDialog.clearError(el.dataset.field));
+    const v = d || { categorie: ViewState.categorie || CATEGORIES[0].id, gcblo: '', fci: [], dateAffectation: DateUtil.today(), dateRelance: '', statut: DEFAULT_STATUS, commentaire: '' };
+    $(`#dossierForm input[name="categorie"][value="${v.categorie}"]`).checked = true;
     $('#inGcblo').value = v.gcblo; $('#inFci').value = v.fci.join(', ');
     $('#inDateAff').value = v.dateAffectation; $('#inDateRel').value = v.dateRelance || '';
     $('#inStatut').value = v.statut; $('#inComment').value = v.commentaire;
     $('#formTitle').textContent = d ? `Modifier ${d.gcblo}` : 'Nouveau dossier';
-    $('#formSub').textContent = d ? `Créé le ${DateUtil.fmtDateTime(d.createdAt)}` : 'Les champs marqués * sont obligatoires.';
+    $('#formSub').textContent = d ? `Créé le ${DateUtil.fmtDateTime(d.createdAt)}` : 'Champs marqués * obligatoires.';
     $('#formSubmit').textContent = d ? 'Enregistrer' : 'Créer le dossier';
     $('#dlgForm').showModal();
-    (d ? $('#inStatut') : $('#inGcblo')).focus();
+    if (!isPhone()) (d ? $('#inStatut') : $('#inGcblo')).focus();
   },
   read() {
-    const f = $('#dossierForm');
     return {
-      categorie: f.querySelector('input[name="categorie"]:checked')?.value,
+      categorie: $('#dossierForm input[name="categorie"]:checked')?.value,
       gcblo: $('#inGcblo').value, fci: $('#inFci').value,
       dateAffectation: $('#inDateAff').value, dateRelance: $('#inDateRel').value,
       statut: $('#inStatut').value, commentaire: $('#inComment').value
@@ -1696,12 +1758,11 @@ const FormDialog = {
     $$('#dossierForm .field').forEach(el => FormDialog.clearError(el.dataset.field));
     if (res.errors) {
       Object.entries(res.errors).forEach(([k, m]) => FormDialog.showError(k, m));
-      const first = Object.keys(res.errors)[0];
-      ({ gcblo: $('#inGcblo'), fci: $('#inFci'), dateAffectation: $('#inDateAff'), dateRelance: $('#inDateRel'), statut: $('#inStatut') })[first]?.focus();
+      ({ gcblo: $('#inGcblo'), fci: $('#inFci'), dateAffectation: $('#inDateAff'), dateRelance: $('#inDateRel'), statut: $('#inStatut') })[Object.keys(res.errors)[0]]?.focus();
       return;
     }
     $('#dlgForm').close();
-    Toast.show(FormDialog.editingId ? (res.unchanged ? 'Aucune modification.' : `${res.dossier.gcblo} mis à jour.`) : `${res.dossier.gcblo} créé.`);
+    Toast.show(FormDialog.editingId ? (res.unchanged ? 'Aucune modification.' : `${res.dossier.gcblo} mis à jour.`) : `${res.dossier.gcblo} ajouté au registre.`);
   }
 };
 
@@ -1709,52 +1770,54 @@ const FormDialog = {
 const DetailDialog = {
   currentId: null,
   open(id) {
-    const d = DossierRepository.get(id); if (!d) return;
+    if (!DossierRepository.get(id)) return;
     DetailDialog.currentId = id;
-    DetailDialog.render(d);
+    DetailDialog.render(DossierRepository.get(id));
     if (!$('#dlgDetail').open) $('#dlgDetail').showModal();
   },
   render(d) {
     const st = Ref.status(d.statut);
+    const cat = Ref.category(d.categorie);
     const rs = DossierService.relanceState(d);
-    $('#detTitle').textContent = d.gcblo;
-    $('#detSub').innerHTML = `<span class="cat cat-${Util.esc(d.categorie)}">${Util.esc(Ref.category(d.categorie)?.label)}</span>
-      <span class="pill tone-${st.tone}" style="margin-left:6px">${st.label}</span>
-      ${rs ? `<span class="pill tone-${rs === 'overdue' ? 'danger' : 'warning'}" style="margin-left:6px">${rs === 'overdue' ? 'Relance en retard' : 'Relance imminente'}</span>` : ''}`;
-    const mail = MailService.build(d);
     const s = SettingsStore.get();
+    const tplId = $('#detTpl')?.value || s.templateId;
+    const mail = MailService.build(d, tplId);
+    $('#detTitle').textContent = d.gcblo;
+    $('#detSub').innerHTML = `<span class="cat cat-${Util.esc(d.categorie)}">${px(cat?.icon || 'scroll', 'sm')}${Util.esc(cat?.label)}</span>
+      <span class="pill tone-${st.tone}">${px('gem', 'sm')}${st.label}</span>
+      ${rs ? `<span class="pill tone-${rs === 'overdue' ? 'danger' : 'warning'}">${rs === 'overdue' ? 'Relance en retard' : 'Relance imminente'}</span>` : ''}`;
     const tplPicker = EMAIL_TEMPLATES.length > 1
-      ? `<select class="select" id="detTpl" style="max-width:260px">${EMAIL_TEMPLATES.map(t => `<option value="${t.id}"${t.id === s.templateId ? ' selected' : ''}>${Util.esc(t.label)}</option>`).join('')}</select>` : '';
-    const history = [...d.history].reverse();
+      ? `<select class="select" id="detTpl">${EMAIL_TEMPLATES.map(t => `<option value="${t.id}"${t.id === tplId ? ' selected' : ''}>${Util.esc(t.label)}</option>`).join('')}</select>` : '';
+    const last = d.relances[d.relances.length - 1];
     $('#detBody').innerHTML = `
       <dl class="kv">
-        <div><dt>FCI</dt><dd class="mono">${d.fci.length ? d.fci.map(Util.esc).join('<br>') : '<span class="no-fci">aucun</span>'}</dd></div>
-        <div><dt>Date d'affectation</dt><dd class="num">${DateUtil.fmt(d.dateAffectation)}</dd></div>
-        <div><dt>Date de relance</dt><dd class="num">${d.dateRelance ? DateUtil.fmt(d.dateRelance) : '—'}</dd></div>
-        <div><dt>Relances envoyées</dt><dd class="num">${d.relances.length}${d.relances.length ? ` (dernière le ${DateUtil.fmtDateTime(d.relances[d.relances.length - 1].at)})` : ''}</dd></div>
+        <div><dt>FCI</dt><dd>${d.fci.length ? d.fci.map(Util.esc).join('<br>') : '<span class="none">aucun</span>'}</dd></div>
+        <div><dt>Affectation</dt><dd class="num">${DateUtil.fmt(d.dateAffectation)}</dd></div>
+        <div><dt>Relance</dt><dd class="num">${d.dateRelance ? DateUtil.fmt(d.dateRelance) : '—'}</dd></div>
+        <div><dt>Relances préparées</dt><dd class="num">${d.relances.length}${last ? ` · ${DateUtil.fmtDateTime(last.at)}` : ''}</dd></div>
         <div><dt>Créé le</dt><dd class="num">${DateUtil.fmtDateTime(d.createdAt)}</dd></div>
         <div><dt>Modifié le</dt><dd class="num">${DateUtil.fmtDateTime(d.updatedAt)}</dd></div>
       </dl>
-      ${d.commentaire ? `<p class="section-title">Commentaire</p><div class="note-block">${Util.esc(d.commentaire)}</div>` : ''}
-      <p class="section-title">Email de relance</p>
+      ${d.commentaire ? `<h3 class="panel-title">Commentaire</h3><div class="note">${Util.esc(d.commentaire)}</div>` : ''}
+      <h3 class="panel-title">Email de relance</h3>
       ${tplPicker}
-      <div class="mail-preview">
-        <div class="mail-subject">${s.to ? `<span style="font-weight:400;color:var(--fg-muted)">À : ${Util.esc(s.to)}</span><br>` : ''}${Util.esc(mail.subject)}</div>
+      <div class="mail">
+        <div class="subj">${s.to ? `<small>À : ${Util.esc(s.to)}</small>` : ''}${Util.esc(mail.subject)}</div>
         <pre>${Util.esc(mail.body)}</pre>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">
-        <button class="btn" type="button" data-det="copy-subject">${icon('i-copy')}Copier l'objet</button>
-        <button class="btn" type="button" data-det="copy-body">${icon('i-copy')}Copier le texte</button>
-        ${d.statut !== 'RELANCE' || rs ? `<button class="btn" type="button" data-det="mark">Marquer relancé (+${Number(s.relanceDelay) || RULES.defaultRelanceDelay} j)</button>` : ''}
+      <div class="btn-row">
+        <button class="pbtn" type="button" data-det="copy-gcblo">${px('copy', 'sm')}GCBLO</button>
+        ${d.fci.length ? `<button class="pbtn" type="button" data-det="copy-fci">${px('copy', 'sm')}FCI</button>` : ''}
+        <button class="pbtn" type="button" data-det="copy-body">${px('copy', 'sm')}Texte de l'email</button>
+        ${d.statut !== 'RELANCE' || rs ? `<button class="pbtn" type="button" data-det="mark">${px('gem', 'sm')}Marquer relancé (+${Number(s.relanceDelay) || RULES.defaultRelanceDelay} j)</button>` : ''}
       </div>
-      <p class="section-title">Historique</p>
-      <ul class="timeline">${history.map(h => `<li><span class="dot"></span><div><div>${Util.esc(h.text)}</div><div class="when">${DateUtil.fmtDateTime(h.at)}</div></div></li>`).join('')}</ul>`;
+      <h3 class="panel-title">Historique</h3>
+      <ul class="timeline">${[...d.history].reverse().map(h => `<li>${px('gem')}<div>${Util.esc(h.text)}<div class="when">${DateUtil.fmtDateTime(h.at)}</div></div></li>`).join('')}</ul>`;
   },
   refreshIfOpen() {
-    if ($('#dlgDetail').open && DetailDialog.currentId) {
-      const d = DossierRepository.get(DetailDialog.currentId);
-      if (d) DetailDialog.render(d); else $('#dlgDetail').close();
-    }
+    if (!$('#dlgDetail').open || !DetailDialog.currentId) return;
+    const d = DossierRepository.get(DetailDialog.currentId);
+    if (d) DetailDialog.render(d); else $('#dlgDetail').close();
   }
 };
 
@@ -1762,17 +1825,17 @@ const DetailDialog = {
 const ImportReportDialog = {
   open(r) {
     $('#impSub').textContent = `${r.file} · ${Util.plural(r.read, 'ligne lue', 'lignes lues')}`;
-    const list = (title, items) => items.length ? `<p class="section-title">${title} (${items.length})</p><ul class="report-list">${items.map(i => `<li>${Util.esc(i)}</li>`).join('')}</ul>` : '';
+    const list = (title, items) => items.length ? `<h3 class="panel-title">${title} (${items.length})</h3><ul class="report-list">${items.map(i => `<li>${Util.esc(i)}</li>`).join('')}</ul>` : '';
     const byCat = CATEGORIES.map(c => `${r.added.filter(d => d.categorie === c.id).length} ${c.label}`).join(' · ');
     $('#impBody').innerHTML = `
-      <div class="report-stats">
-        <div><b>${r.added.length}</b><span>ajoutés (${byCat})</span></div>
-        <div><b>${r.duplicates.length}</b><span>doublons ignorés</span></div>
-        <div><b>${r.added.filter(d => !d.fci.length).length}</b><span>sans FCI</span></div>
-        <div><b>${r.errors.length}</b><span>lignes rejetées</span></div>
+      <div class="report">
+        <div class="frame"><b>${r.added.length}</b><span>ajoutés (${byCat})</span></div>
+        <div class="frame"><b>${r.duplicates.length}</b><span>doublons ignorés</span></div>
+        <div class="frame"><b>${r.added.filter(d => !d.fci.length).length}</b><span>sans FCI</span></div>
+        <div class="frame"><b>${r.errors.length}</b><span>lignes rejetées</span></div>
       </div>
-      ${list('Doublons ignorés', r.duplicates)}
-      ${list('FCI non reconnus (conservés en commentaire)', r.fciNotes)}
+      ${list('Doublons à vérifier', r.duplicates)}
+      ${list('FCI non reconnus (gardés en commentaire)', r.fciNotes)}
       ${list('Lignes rejetées', r.errors)}`;
     $('#dlgImport').showModal();
   }
@@ -1785,7 +1848,7 @@ const SettingsDialog = {
     $('#setTo').value = s.to; $('#setCc').value = s.cc; $('#setDelay').value = s.relanceDelay;
     const n = DossierRepository.all().length;
     $('#setStats').textContent = `${Util.plural(n, 'dossier enregistré', 'dossiers enregistrés')} dans ce navigateur.` +
-      (StorageAdapter.persistent ? '' : ' Attention : le stockage local est bloqué, les données seront perdues à la fermeture.');
+      (StorageAdapter.persistent ? '' : ' Attention : stockage local bloqué, les données seront perdues à la fermeture.');
     $('#dlgSettings').showModal();
   },
   save() {
@@ -1805,14 +1868,15 @@ const App = {
     const all = DossierRepository.all();
     const stats = DossierService.stats(all);
     DashboardView.render(stats);
-    TableView.render(DossierService.query(all, ViewState), all.length);
-    Charts.render(stats);
+    GaugesView.render(stats);
+    FilterView.sync();
+    ListView.render(DossierService.query(all, ViewState), all.length);
   },
 
-  /** Actions communes (tableau + fiche détail). */
+  /** Actions de ligne (mêmes actions dans la fiche détail). */
   actions: {
     'copy-gcblo': d => Clipboard.copy(d.gcblo, 'GCBLO'),
-    'copy-fci': d => d.fci.length ? Clipboard.copy(d.fci.join(', '), d.fci.length > 1 ? 'FCI' : 'FCI') : Toast.show('Ce dossier n\'a pas de FCI.'),
+    'copy-fci': d => (d.fci.length ? Clipboard.copy(d.fci.join(', '), 'FCI') : Toast.show('Ce dossier n\'a pas de FCI.')),
     open: d => DetailDialog.open(d.id),
     relance: d => App.relance(d.id),
     edit: d => FormDialog.open(d.id),
@@ -1824,13 +1888,13 @@ const App = {
     MailService.prepareRelance(id, templateId);
     Toast.show(`Email de relance préparé pour ${d.gcblo}.`, {
       action: 'Marquer relancé',
-      onAction: () => { MailService.markRelanced(id); Toast.show(`${d.gcblo} : statut « Relancé », prochaine relance le ${DateUtil.fmt(DossierRepository.get(id).dateRelance)}.`); }
+      onAction: () => { MailService.markRelanced(id); Toast.show(`${d.gcblo} relancé, prochaine relance le ${DateUtil.fmt(DossierRepository.get(id).dateRelance)}.`); }
     });
   },
 
   async remove(id) {
     const d = DossierRepository.get(id); if (!d) return;
-    const ok = await ConfirmDialog.ask({ title: `Supprimer ${d.gcblo} ?`, text: 'Le dossier et son historique seront définitivement supprimés de ce navigateur.' });
+    const ok = await ConfirmDialog.ask({ title: `Supprimer ${d.gcblo} ?`, text: 'Le dossier et son historique seront supprimés de ce navigateur.' });
     if (!ok) return;
     const backup = JSON.parse(JSON.stringify(d));
     DossierService.remove(id);
@@ -1839,10 +1903,8 @@ const App = {
   },
 
   async handleExcel(file) {
-    try {
-      const report = await ImportService.importFile(file);
-      ImportReportDialog.open(report);
-    } catch (e) { Toast.error(e.message || 'Import impossible.'); }
+    try { ImportReportDialog.open(await ImportService.importFile(file)); }
+    catch (e) { Toast.error(e.message || 'Import impossible.'); }
   },
 
   async handleRestore(file) {
@@ -1869,88 +1931,107 @@ const App = {
     Toast.show('3 dossiers d\'exemple ajoutés (commentaire « Exemple »).');
   },
 
+  resetFilters() {
+    Object.assign(ViewState, { q: '', categorie: '', statut: '', special: '' });
+    $('#fSearch').value = '';
+    App.render();
+  },
+
   closeMenus(except) {
     $$('.menu').forEach(m => { if (m !== except) { m.querySelector('.menu-pop').hidden = true; m.querySelector('[data-menu-toggle]').setAttribute('aria-expanded', 'false'); } });
   },
 
+  exportAs(kind) {
+    const all = DossierRepository.all();
+    const visible = DossierService.query(all, ViewState);
+    try {
+      if (kind === 'restore') return $('#fileJson').click();
+      if (kind === 'json') { ExportService.toJson(); return Toast.show('Sauvegarde téléchargée.'); }
+      if (!visible.length) return Toast.show('Aucun dossier à exporter.');
+      if (kind === 'xlsx') ExportService.toExcel(visible);
+      if (kind === 'csv') ExportService.toCsv(visible);
+      Toast.show(`${Util.plural(visible.length, 'dossier exporté', 'dossiers exportés')}${visible.length < all.length ? ' (filtres appliqués)' : ''}.`);
+    } catch (err) { Toast.error(err.message); }
+  },
+
   bind() {
     // Filtres
-    $('#fCategorie').innerHTML = '<option value="">Toutes catégories</option>' + CATEGORIES.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
-    $('#fStatut').innerHTML = '<option value="">Tous statuts</option>' + STATUSES.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
     $('#fSearch').addEventListener('input', Util.debounce(e => { ViewState.q = e.target.value; App.render(); }, 80));
-    $('#fCategorie').addEventListener('change', e => { ViewState.categorie = e.target.value; App.render(); });
+    $('#fCategorie').addEventListener('change', e => { ViewState.categorie = e.target.value; ViewState.special = ''; App.render(); });
     $('#fStatut').addEventListener('change', e => { ViewState.statut = e.target.value; App.render(); });
     $('#specialChip').addEventListener('click', e => { if (e.target.closest('[data-clear-special]')) { ViewState.special = ''; App.render(); } });
     $('#kpis').addEventListener('click', e => { const k = e.target.closest('[data-kpi]'); if (k) DashboardView.onClick(k.dataset.kpi); });
 
-    // Tri
-    $('#theadRow').addEventListener('click', e => {
+    // Tri (en-tête sur bureau, menu sur téléphone)
+    const setSort = (k, dir) => { ViewState.sortKey = k; ViewState.sortDir = dir; UiPrefs.set({ sortKey: k, sortDir: dir }); App.render(); };
+    $('#listHead').addEventListener('click', e => {
       const b = e.target.closest('[data-sort]'); if (!b) return;
       const k = b.dataset.sort;
-      if (ViewState.sortKey === k) ViewState.sortDir = ViewState.sortDir === 'asc' ? 'desc' : 'asc';
-      else { ViewState.sortKey = k; ViewState.sortDir = /date/.test(k) ? 'desc' : 'asc'; }
-      UiPrefs.set({ sortKey: ViewState.sortKey, sortDir: ViewState.sortDir });
-      App.render();
+      setSort(k, ViewState.sortKey === k ? (ViewState.sortDir === 'asc' ? 'desc' : 'asc') : (/date/.test(k) && k !== 'dateRelance' ? 'desc' : 'asc'));
+    });
+    $('#menuSort .menu-pop').addEventListener('click', e => {
+      const b = e.target.closest('[data-sortopt]'); if (!b) return;
+      const [k, d] = b.dataset.sortopt.split(':'); App.closeMenus(); setSort(k, d);
     });
 
-    // Tableau : actions, statut, double-clic
-    const tbody = $('#tbody');
-    tbody.addEventListener('click', e => {
+    // Registre : actions, statut, appui (téléphone), double-clic (relance)
+    const rows = $('#rows');
+    rows.addEventListener('click', e => {
       const empty = e.target.closest('[data-empty]');
       if (empty) {
-        const a = empty.dataset.empty;
-        if (a === 'import') $('#fileExcel').click();
-        else if (a === 'new') FormDialog.open();
-        else if (a === 'demo') App.loadDemo();
-        else if (a === 'reset') { Object.assign(ViewState, { q: '', categorie: '', statut: '', special: '' }); $('#fSearch').value = ''; $('#fCategorie').value = ''; $('#fStatut').value = ''; App.render(); }
+        ({ import: () => $('#fileExcel').click(), new: () => FormDialog.open(), demo: App.loadDemo, reset: App.resetFilters })[empty.dataset.empty]?.();
         return;
       }
-      const btn = e.target.closest('[data-action]'); if (!btn || btn.disabled) return;
-      const d = DossierRepository.get(btn.closest('tr').dataset.id);
-      if (d) App.actions[btn.dataset.action]?.(d);
+      const btn = e.target.closest('[data-action]');
+      if (btn) {
+        if (btn.disabled) return;
+        const d = DossierRepository.get(btn.closest('[data-id]').dataset.id);
+        if (d) App.actions[btn.dataset.action]?.(d);
+        return;
+      }
+      if (e.target.closest('select, label, a, input')) return;
+      const row = e.target.closest('.row');
+      if (row && isPhone()) {
+        const id = row.dataset.id;
+        ViewState.openRow = ViewState.openRow === id ? null : id;
+        $$('#rows .row.open').forEach(r => r.classList.remove('open'));
+        if (ViewState.openRow) row.classList.add('open');
+      }
     });
-    tbody.addEventListener('change', e => {
+    rows.addEventListener('change', e => {
       const sel = e.target.closest('[data-status-for]'); if (!sel) return;
       const d = DossierService.setStatus(sel.dataset.statusFor, sel.value);
       if (d) Toast.show(`${d.gcblo} : ${Ref.status(d.statut).label}`);
     });
-    tbody.addEventListener('dblclick', e => {
+    rows.addEventListener('dblclick', e => {
       if (e.target.closest('button, select, a, input')) return;
-      const tr = e.target.closest('tr[data-id]'); if (tr) App.relance(tr.dataset.id);
+      const row = e.target.closest('.row[data-id]'); if (row) App.relance(row.dataset.id);
     });
 
-    // Barre d'outils
+    // Actions principales
     $('#btnNew').addEventListener('click', () => FormDialog.open());
     $('#btnImport').addEventListener('click', () => $('#fileExcel').click());
+    $('#btnStats').addEventListener('click', () => $('#dlgStats').showModal());
     $('#fileExcel').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) App.handleExcel(f); });
     $('#fileJson').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) App.handleRestore(f); });
     $$('.menu').forEach(m => m.querySelector('[data-menu-toggle]').addEventListener('click', e => {
       e.stopPropagation(); const pop = m.querySelector('.menu-pop'); const open = pop.hidden;
       App.closeMenus(m); pop.hidden = !open; e.currentTarget.setAttribute('aria-expanded', String(open));
     }));
-    document.addEventListener('click', () => App.closeMenus());
+    document.addEventListener('click', e => { if (!e.target.closest('.menu')) App.closeMenus(); });
     $('#menuExport .menu-pop').addEventListener('click', e => {
       const b = e.target.closest('[data-export]'); if (!b) return;
-      App.closeMenus();
-      const visible = DossierService.query(DossierRepository.all(), ViewState);
-      try {
-        if (b.dataset.export === 'restore') return $('#fileJson').click();
-        if (b.dataset.export === 'json') { ExportService.toJson(); return Toast.show('Sauvegarde téléchargée.'); }
-        if (!visible.length) return Toast.show('Aucun dossier à exporter.');
-        if (b.dataset.export === 'xlsx') ExportService.toExcel(visible);
-        if (b.dataset.export === 'csv') ExportService.toCsv(visible);
-        Toast.show(`${Util.plural(visible.length, 'dossier exporté', 'dossiers exportés')}${visible.length < DossierRepository.all().length ? ' (filtres appliqués)' : ''}.`);
-      } catch (err) { Toast.error(err.message); }
+      App.closeMenus(); App.exportAs(b.dataset.export);
     });
 
-    // Appbar
+    // Barre de titre
     $('#btnTheme').addEventListener('click', Theme.next);
     $('#btnSettings').addEventListener('click', SettingsDialog.open);
     $('#settingsForm').addEventListener('submit', e => { e.preventDefault(); SettingsDialog.save(); });
     $('#btnWipe').addEventListener('click', async () => {
       const n = DossierRepository.all().length;
       if (!n) return Toast.show('Aucun dossier à effacer.');
-      const ok = await ConfirmDialog.ask({ title: `Effacer les ${n} dossiers ?`, text: 'Pensez à faire une sauvegarde JSON avant. Cette action est définitive.', ok: 'Tout effacer' });
+      const ok = await ConfirmDialog.ask({ title: `Effacer les ${n} dossiers ?`, text: 'Faites d\'abord une sauvegarde JSON. Cette action est définitive.', ok: 'Tout effacer' });
       if (!ok) return;
       DossierRepository.replaceAll([]); $('#dlgSettings').close(); Toast.show('Tous les dossiers ont été effacés.');
     });
@@ -1962,24 +2043,25 @@ const App = {
     $('#detBody').addEventListener('click', e => {
       const b = e.target.closest('[data-det]'); if (!b) return;
       const d = DossierRepository.get(DetailDialog.currentId); if (!d) return;
-      const mail = MailService.build(d, $('#detTpl')?.value);
-      if (b.dataset.det === 'copy-subject') Clipboard.copy(mail.subject, 'Objet');
-      if (b.dataset.det === 'copy-body') Clipboard.copy(mail.body, 'Texte de l\'email');
-      if (b.dataset.det === 'mark') { MailService.markRelanced(d.id); Toast.show(`${d.gcblo} marqué « Relancé ».`); }
+      const kind = b.dataset.det;
+      if (kind === 'copy-gcblo') Clipboard.copy(d.gcblo, 'GCBLO');
+      if (kind === 'copy-fci') Clipboard.copy(d.fci.join(', '), 'FCI');
+      if (kind === 'copy-body') { const m = MailService.build(d, $('#detTpl')?.value); Clipboard.copy(`${m.subject}\n\n${m.body}`, 'Email'); }
+      if (kind === 'mark') { MailService.markRelanced(d.id); Toast.show(`${d.gcblo} marqué « Relancé ».`); }
     });
     $('#detBody').addEventListener('change', e => { if (e.target.id === 'detTpl') { SettingsStore.set({ templateId: e.target.value }); DetailDialog.refreshIfOpen(); } });
 
-    // Fermeture des dialogues (boutons [data-close] + clic sur le fond)
-    $$('dialog').forEach(dlg => {
-      dlg.addEventListener('click', e => { if (e.target.closest('[data-close]') || e.target === dlg) dlg.close(); });
-    });
+    // Fermeture des dialogues (boutons [data-close] + appui sur le fond)
+    $$('dialog').forEach(dlg => dlg.addEventListener('click', e => {
+      if (e.target.closest('[data-close]') || e.target === dlg) dlg.close();
+    }));
 
-    // Raccourcis clavier : N = nouveau, / = recherche
+    // Raccourcis clavier : N = nouveau dossier, / = recherche, Échap = vider la recherche
     document.addEventListener('keydown', e => {
       if (document.querySelector('dialog[open]')) return;
       const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName);
       if (e.key === '/' && !typing) { e.preventDefault(); $('#fSearch').focus(); }
-      else if ((e.key === 'n' || e.key === 'N') && !typing && !e.ctrlKey && !e.metaKey) { e.preventDefault(); FormDialog.open(); }
+      else if ((e.key === 'n' || e.key === 'N') && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); FormDialog.open(); }
       else if (e.key === 'Escape' && document.activeElement === $('#fSearch')) { $('#fSearch').value = ''; ViewState.q = ''; App.render(); }
     });
 
@@ -1993,12 +2075,11 @@ const App = {
     setInterval(App.render, 60 * 60 * 1000);
   },
 
-  /** Signale les bibliothèques manquantes (poste hors ligne). */
+  /** Signale la bibliothèque Excel manquante (poste hors ligne). */
   checkLibs() {
-    const missing = [];
-    if (!ImportService.available) { missing.push('import/export Excel'); }
-    if (!Charts.available) missing.push('graphiques');
-    if (missing.length) { const n = $('#libNote'); n.hidden = false; n.textContent = `Hors ligne : ${missing.join(' et ')} indisponible${missing.length > 1 ? 's' : ''}. Le reste fonctionne normalement.`; }
+    if (ImportService.available) return;
+    const n = $('#libNote'); n.hidden = false;
+    n.textContent = 'Hors ligne : import et export Excel indisponibles. Le CSV et la sauvegarde JSON fonctionnent.';
   }
 };
 
@@ -2006,9 +2087,11 @@ const App = {
    5. BOOTSTRAP
    ############################################################################ */
 document.addEventListener('DOMContentLoaded', () => {
+  PixelIcons.build();
+  FilterView.init();
   FormDialog.init();
   App.bind();
-  Theme.init();      // déclenche un premier rendu
+  Theme.init();
   App.render();
   App.checkLibs();
   if (!StorageAdapter.persistent) Toast.error('Stockage local indisponible : les données ne seront pas conservées.');
