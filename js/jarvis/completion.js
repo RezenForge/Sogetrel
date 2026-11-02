@@ -148,6 +148,7 @@ export function apercu(analyse, ctx) {
       return `→ ${v.cibles.length === 1 ? 'email de relance' : `${types.length > 1 ? `${types.length} emails récapitulatifs` : 'email récapitulatif'}`} pour ${qui}${sans.length ? ` · sans destinataire : ${sans.join(', ')}` : ''}`;
     }
     case 'jour': return '→ le point du jour';
+    case 'wiki': return `→ définition de « ${v.terme} » (Wikipédia)`;
     case 'meteo': return `→ météo de ${v.ville.join(' ')} · ${{ jour: 'aujourd\'hui', demain: 'demain', semaine: '7 jours' }[v.periode || 'jour']} (service Open-Meteo)`;
     case 'email':
       if (!v.type) return '→ affiche les destinataires';

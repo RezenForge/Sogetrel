@@ -9,6 +9,7 @@
  *   regles, store            les données et leurs règles
  *   reglages                 destinataires des emails par type, villes récentes
  *   meteo                    service météo (meteo.js)
+ *   wiki                     définitions Wikipédia (wiki.js)
  *   ecran                    { ligne(html, classe), tableau(dossiers), fiche(dossier), vider() }
  *   confirmer(question)      → Promise<boolean>  (l'invite pose la question o/n)
  *   demander(question, choix) → Promise<choix|null>  (question à choix, avec propositions)
@@ -29,7 +30,7 @@ export const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;'
 const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`;
 const SEUIL_CONFIRMATION = 3;
 
-export function creerActions({ regles, store, reglages, meteo, ecran, confirmer, demander, ouvrirLien, telecharger, choisirFichier }) {
+export function creerActions({ regles, store, reglages, meteo, wiki, ecran, confirmer, demander, ouvrirLien, telecharger, choisirFichier }) {
   let annulation = null;       // { libelle, faire() } : de quoi défaire la dernière modification
 
   const ok = html => ecran.ligne(`✓ ${html}`, 'ok');
@@ -134,6 +135,22 @@ export function creerActions({ regles, store, reglages, meteo, ecran, confirmer,
     },
 
     jour() { point(); },
+
+    /** Définition d'un mot ou d'une expression (début de l'article Wikipédia). */
+    async wiki(v) {
+      const terme = v.terme.trim();
+      let r;
+      try { r = await wiki.chercher(terme); } catch (e) { return erreur(esc(e.message)); }
+      if (!r.page) return erreur(`aucune page Wikipédia pour « ${esc(terme)} »`);
+      const lien = `<a href="${esc(r.page.url)}" target="_blank" rel="noopener">lire sur Wikipédia</a>`;
+      const autres = r.autres.length
+        ? `\n<span class="dim">${r.homonymie ? 'plusieurs sens possibles' : 'voir aussi'} : </span>${r.autres.map(t => `<span class="c-valeur">${esc(t)}</span>`).join('<span class="dim"> · </span>')}`
+        : '';
+      if (r.homonymie) {
+        return ecran.ligne(`<b>wiki</b> · ${esc(r.page.titre)}\n<span class="dim">« ${esc(terme)} » a plusieurs sens. Précisez, par exemple : </span><span class="c-verbe">wiki</span> <span class="c-texte">${esc(r.autres[0] || terme)}</span>${autres}\n${lien}`);
+      }
+      ecran.ligne(`<b>wiki</b> · ${esc(r.page.titre)}${r.page.description ? ` <span class="dim">— ${esc(r.page.description)}</span>` : ''}\n${esc(r.page.extrait || '(pas de résumé disponible)')}\n${lien}${autres}`);
+    },
 
     /** Météo d'une ville : aujourd'hui ou demain (heure par heure), ou 7 jours. */
     async meteo(v) {

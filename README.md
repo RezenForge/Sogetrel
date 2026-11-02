@@ -28,6 +28,7 @@ Au premier lancement, les dossiers de la version 1 enregistrés dans ce navigate
 | adresser les relances | `email air prenom.nom@…` (une fois par type) ; `email` affiche les réglages |
 | changer un statut | `passe 501404 en refuse` |
 | la météo | `meteo bordeaux`, `meteo le taillan medoc semaine`, `meteo merignac demain` |
+| ce que veut dire un mot | `wiki "fibre optique"`, `wiki GPON`, `def PBO` |
 | tout le reste | `aide` |
 
 ## Avancement
@@ -53,7 +54,7 @@ La page affiche « ✓ tout est vert » quand toutes les règles sont respectée
 
 ## Services extérieurs
 
-Seule la commande `meteo` contacte un service : [Open-Meteo](https://open-meteo.com), gratuit et sans compte. Elle n'envoie que le nom de la ville. Open-Meteo est gratuit pour un usage non commercial ; pour un usage professionnel régulier, leurs conditions prévoient un abonnement.
+Deux commandes contactent un service, et n'envoient que ce que vous tapez après elles : `meteo` ([Open-Meteo](https://open-meteo.com), gratuit et sans compte : le nom de la ville) et `wiki` ([Wikipédia](https://fr.wikipedia.org) en français : le terme cherché). Open-Meteo est gratuit pour un usage non commercial ; pour un usage professionnel régulier, leurs conditions prévoient un abonnement.
 
 ## Organisation
 
@@ -69,11 +70,12 @@ js/dossiers.js           les règles : seul module autorisé à modifier les dos
 js/reprise-v1.js         relit les dossiers et sauvegardes de la version 1
 js/reglages.js           destinataires des emails par type
 js/collage.js            lit une liste collée (Excel, mail, classeur robot)
-js/meteo.js              prévisions Open-Meteo (seul module qui contacte un service extérieur)
+js/meteo.js              prévisions Open-Meteo (service extérieur)
+js/wiki.js               définitions Wikipédia (service extérieur)
 js/jarvis/grammaire.js   les commandes, sous forme de tableau (source unique)
 js/jarvis/analyse.js     comprend la ligne tapée (ne modifie rien)
 js/jarvis/completion.js  propositions, texte grisé, aperçu (ne modifie rien)
 js/jarvis/actions.js     exécute une commande via les règles
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   124 tests : règles, analyse, autocomplétion, collage, relances, météo (service simulé)
+tests/                   134 tests : règles, analyse, autocomplétion, collage, relances, météo et wiki (services simulés)
 ```
