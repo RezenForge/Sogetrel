@@ -10,7 +10,7 @@
   ============================================================================
   REGISTRE GCBLO — Sogetrel
   ----------------------------------------------------------------------------
-  Application mono-fichier qui remplace le classeur Excel/VBA
+  Application mono-fichier (types NUM21, AIR, Sogetrel) qui remplace le classeur Excel/VBA
   « ROBOT_AFFECTATION_NUMERUS21_ET_AIR ».
 
   - Aucun serveur, aucune base : les données vivent dans le localStorage
@@ -68,6 +68,7 @@
 
   --cat-num21: #2b62a3;  --cat-num21-soft: #d6e0ec;
   --cat-air: #13786a;    --cat-air-soft: #d0e6de;
+  --cat-sogetrel: #8a3b8f; --cat-sogetrel-soft: #ead4e6;
 
   --st-neutral: #6b5e4b; --st-neutral-soft: #e2d5ba;
   --st-info: #2b62a3;    --st-info-soft: #d6e0ec;
@@ -98,6 +99,8 @@
     --overlay: rgba(5, 3, 8, .7); --focus: #f2a33a;
     --cat-num21: #74b3f2; --cat-num21-soft: #1c2b3f;
     --cat-air: #5fd2bd;   --cat-air-soft: #15302c;
+  --cat-sogetrel: #d78be0; --cat-sogetrel-soft: #33193a;
+    --cat-sogetrel: #d78be0; --cat-sogetrel-soft: #33193a;
     --st-neutral: #c4b79e; --st-neutral-soft: #2f2838;
     --st-info: #74b3f2;    --st-info-soft: #1c2b3f;
     --st-warning: #f2a33a; --st-warning-soft: #3a2a14;
@@ -276,19 +279,17 @@ svg.px.lg { width: 24px; height: 24px; }
   display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 2px 10px; padding: 10px 12px;
   text-align: left; border: 0; cursor: pointer; color: var(--fg);
 }
-.stat:nth-child(3) { grid-column: 1 / -1; }
 .stat .ico { grid-row: span 2; color: var(--c, var(--muted)); }
 .stat .v { font: 400 34px/0.9 var(--font-data); color: var(--fg); }
 .stat.alert .v { color: var(--c); }
 .stat .l { font-size: 12px; color: var(--muted); letter-spacing: .03em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .stat[aria-pressed="true"] { background: var(--sunk); box-shadow: 0 -3px 0 var(--c), 0 3px 0 var(--c), -3px 0 0 var(--c), 3px 0 0 var(--c), inset 0 3px 0 var(--shade); }
 @media (max-width: 899px) {
-  .stats { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
-  .stat:nth-child(3) { grid-column: auto; }
+  .stats { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; }
   .stat { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 2px; padding: 7px 2px 6px; }
   .stat .ico { grid-row: auto; }
-  .stat .v { font-size: 27px; }
-  .stat .l { font-size: 10px; max-width: 100%; letter-spacing: 0; }
+  .stat .v { font-size: 25px; }
+  .stat .l { font-size: 9px; max-width: 100%; letter-spacing: 0; text-transform: none; }
   .stat svg.px { width: 15px; height: 15px; }
 }
 
@@ -298,8 +299,6 @@ svg.px.lg { width: 24px; height: 24px; }
 .gauges-panel { padding: 14px; display: grid; gap: 12px; }
 .panel-title { margin: 0; font: 700 14px/1 var(--font-display); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 8px; }
 .panel-title::after { content: ""; flex: 1; border-top: 2px dashed var(--stroke-soft); }
-.split { display: flex; height: 18px; background: var(--sunk); box-shadow: inset 0 0 0 2px var(--stroke); padding: 3px; gap: 3px; }
-.split > span { display: block; height: 100%; background: repeating-linear-gradient(90deg, var(--c) 0 6px, transparent 6px 8px); min-width: 0; }
 .legend { display: grid; gap: 7px; }
 .lg { display: grid; grid-template-columns: auto 1fr auto 40px; align-items: center; gap: 8px; font-size: 14px; }
 .lg svg.px { color: var(--c); }
@@ -356,12 +355,12 @@ svg.px.lg { width: 24px; height: 24px; }
 /* Grille commune à l'en-tête et aux lignes (bureau) */
 .row, .list-head {
   display: grid; align-items: center; column-gap: 12px;
-  grid-template-columns: 84px minmax(170px, 210px) minmax(124px, 150px) 104px 116px 124px minmax(0, 1fr) auto;
+  grid-template-columns: 96px minmax(170px, 210px) minmax(124px, 150px) 104px 116px 175px minmax(60px, 1fr) auto;
   padding: 0 12px;
 }
 /* Écrans moyens : la date d'affectation passe dans la fiche détail */
-@media (min-width: 900px) and (max-width: 1399px) {
-  .row, .list-head { grid-template-columns: 84px minmax(170px, 200px) minmax(120px, 150px) 116px 124px minmax(0, 1fr) auto; }
+@media (min-width: 900px) and (max-width: 1599px) {
+  .row, .list-head { grid-template-columns: 96px minmax(160px, 200px) minmax(120px, 150px) 116px 175px minmax(60px, 1fr) auto; }
   .c-aff, .list-head .h-aff { display: none; }
 }
 .list-head { position: sticky; top: 0; z-index: 2; background: var(--surface-2); box-shadow: 0 2px 0 var(--stroke-soft); }
@@ -382,6 +381,7 @@ svg.px.lg { width: 24px; height: 24px; }
 .row.row-done .c-gcblo, .row.row-done .c-fci { color: var(--subtle); }
 .c-gcblo { font-size: 20px; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .c-fci .data, .c-aff, .c-rel .data { font-size: 18px; }
+.d-short { display: none; }
 .c-fci, .c-aff, .c-rel { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .c-com { font: 14px/1.3 var(--font-text); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .c-rel .rel-hint { display: block; font: 600 11px/1.2 var(--font-display); color: var(--muted); }
@@ -394,10 +394,11 @@ svg.px.lg { width: 24px; height: 24px; }
 .cat { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 8px; font: 700 12px/1 var(--font-display); letter-spacing: .05em; }
 .cat-NUM21 { background: var(--cat-num21-soft); color: var(--cat-num21); box-shadow: inset 0 0 0 2px var(--cat-num21); }
 .cat-AIR { background: var(--cat-air-soft); color: var(--cat-air); box-shadow: inset 0 0 0 2px var(--cat-air); }
+.cat-SOGETREL { background: var(--cat-sogetrel-soft); color: var(--cat-sogetrel); box-shadow: inset 0 0 0 2px var(--cat-sogetrel); }
 
 /* Statut : sélecteur « gemme » coloré automatiquement */
 .status-select {
-  appearance: none; -webkit-appearance: none; height: 28px; width: 100%; max-width: 124px; padding: 0 22px 0 9px; border: 0; cursor: pointer;
+  appearance: none; -webkit-appearance: none; height: 28px; width: 100%; max-width: 175px; text-overflow: ellipsis; padding: 0 22px 0 9px; border: 0; cursor: pointer;
   font: 600 13px/1 var(--font-display);
   background-color: var(--sb); color: var(--sc); box-shadow: inset 0 0 0 2px var(--sc);
   background-image: linear-gradient(var(--sc), var(--sc)), linear-gradient(var(--sc), var(--sc)), linear-gradient(var(--sc), var(--sc));
@@ -428,21 +429,24 @@ svg.px.lg { width: 24px; height: 24px; }
   .list-head { display: none; }
   .c-gcblo { font-size: 20px; }
   .row {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-areas: "cat gcblo st" "fci fci rel" "act act act";
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-areas: "cat gcblo gcblo gcblo" "fci fci rel st" "act act act act";
     gap: 5px 10px; padding: 9px 12px; min-height: 0;
   }
   .c-cat { grid-area: cat; } .c-gcblo { grid-area: gcblo; } .c-st { grid-area: st; }
   .c-fci { grid-area: fci; font-size: 17px; color: var(--muted); }
-  .c-rel { grid-area: rel; text-align: right; font-size: 17px; }
-  .c-rel .rel-hint { display: inline; margin-left: 6px; }
+  .c-rel { grid-area: rel; font-size: 17px; }
+  .c-rel .rel-hint { display: block; margin: 1px 0 0; font-size: 10px; }
+  .c-st { justify-self: end; width: 172px; max-width: 100%; }
+  .d-full, .c-rel .none-full { display: none; }
+  .d-short { display: inline !important; }
   .c-aff, .c-com { display: none; }
   .c-act { grid-area: act; display: none; justify-content: space-between; padding-top: 4px; border-top: 2px dashed var(--stroke-soft); }
   .row.open .c-act { display: flex; }
   .row.open { background: var(--surface-2); }
   .ibtn { min-width: 40px; height: 36px; }
   .cat { height: 22px; padding: 0 6px; font-size: 11px; }
-  .status-select { height: 26px; font-size: 12px; max-width: 108px; }
+  .status-select { height: 26px; font-size: 12px; max-width: 100%; }
 }
 
 /* États vides */
@@ -547,7 +551,7 @@ input[type="date"].field-in { font-family: var(--font-data); font-size: 19px; }
 <header class="bar">
   <svg class="px lg torch" aria-hidden="true"><use href="#p-torch"/></svg>
   <h1>Registre <span>GCBLO</span></h1>
-  <span class="sub">NUM21 · AIR</span>
+  <span class="sub">NUM21 · AIR · Sogetrel</span>
   <span class="spacer"></span>
   <span class="save-ind" id="saveIndicator" aria-live="polite"></span>
   <button class="bar-btn" id="btnTheme" type="button"></button>
@@ -590,8 +594,9 @@ input[type="date"].field-in { font-family: var(--font-data); font-size: 19px; }
         <input id="fSearch" type="search" placeholder="GCBLO, FCI, commentaire…" autocomplete="off" spellcheck="false">
         <span class="count num" id="resultCount" aria-live="polite"></span>
       </div>
-      <div class="seg" id="fCategorie" role="radiogroup" aria-label="Catégorie"></div>
-      <label for="fStatut" class="visually-hidden">Statut</label>
+      <label for="fCategorie" class="visually-hidden">Type</label>
+      <select class="select" id="fCategorie"></select>
+      <label for="fStatut" class="visually-hidden">Statut DFT</label>
       <select class="select" id="fStatut"></select>
       <div class="menu" id="menuSort">
         <button class="pbtn icon-sq" type="button" data-menu-toggle aria-haspopup="true" aria-expanded="false" title="Trier" aria-label="Trier"><svg class="px"><use href="#p-sort"/></svg></button>
@@ -646,7 +651,7 @@ input[type="date"].field-in { font-family: var(--font-data); font-size: 19px; }
           <span class="err" hidden></span>
         </div>
         <div class="field full" data-field="statut">
-          <label for="inStatut">Statut <span class="req">*</span></label>
+          <label for="inStatut">Statut DFT <span class="req">*</span></label>
           <select class="select field-in" id="inStatut" name="statut" style="width:100%"></select>
           <span class="err" hidden></span>
         </div>
@@ -734,7 +739,7 @@ input[type="date"].field-in { font-family: var(--font-data); font-size: 19px; }
       <div class="field">
         <label for="setDelay">Relance suivante après (jours)</label>
         <input class="field-in data" id="setDelay" type="number" min="1" max="60" step="1" style="max-width:110px">
-        <span class="help">Utilisé quand vous marquez un dossier « Relancé ».</span>
+        <span class="help">Utilisé par « Planifier la prochaine relance ».</span>
       </div>
       <div class="field">
         <span class="lbl">Données</span>
@@ -773,27 +778,33 @@ const APP = Object.freeze({
   storageKey: 'gcblo.affectations.v1',   // données métier
   settingsKey: 'gcblo.settings.v1',      // paramètres utilisateur
   uiKey: 'gcblo.ui.v1',                  // préférences d'affichage (thème, tri)
-  schemaVersion: 1                       // à incrémenter si le format change (voir Migrations)
+  schemaVersion: 2                       // à incrémenter si le format change (voir Migrations)
 });
 
 /** Catégories de dossiers. L'ordre définit l'ordre d'affichage. */
 const CATEGORIES = [
   { id: 'NUM21', label: 'NUM21', cssVar: '--cat-num21', icon: 'shield', aliases: ['NUM21', 'NUMERUS21', 'NUMERUS 21', 'NUM 21'] },
-  { id: 'AIR',   label: 'AIR',   cssVar: '--cat-air',   icon: 'wing', aliases: ['AIR'] }
+  { id: 'AIR',   label: 'AIR',   cssVar: '--cat-air',   icon: 'wing', aliases: ['AIR'] },
+  { id: 'SOGETREL', label: 'Sogetrel', cssVar: '--cat-sogetrel', icon: 'banner', aliases: ['SOGETREL'] }
   // { id: 'CMD_S', label: 'Commande simple',   cssVar: '--cat-cmds', aliases: ['COMMANDE SIMPLE'] },
   // { id: 'CMD_C', label: 'Commande complexe', cssVar: '--cat-cmdc', aliases: ['COMMANDE COMPLEXE'] },
   // { id: 'DFT',   label: 'DFT',               cssVar: '--cat-dft',  aliases: ['DFT'] },
 ];
 
-/** Statuts. `tone` pilote la couleur ; `closed` exclut le dossier des alertes de relance. */
+/**
+ * Statuts DFT. `tone` pilote la couleur ; `closed` exclut le dossier des alertes de relance.
+ * « Refusé » reste ouvert : un refus appelle en général une reprise du dossier.
+ */
+const STATUS_LABEL = 'Statut DFT';
 const STATUSES = [
-  { id: 'A_TRAITER', label: 'À traiter', tone: 'neutral', cssVar: '--st-neutral' },
-  { id: 'EN_COURS',  label: 'En cours',  tone: 'info',    cssVar: '--st-info' },
-  { id: 'RELANCE',   label: 'Relancé',   tone: 'warning', cssVar: '--st-warning' },
-  { id: 'TERMINE',   label: 'Terminé',   tone: 'success', cssVar: '--st-success', closed: true },
-  { id: 'BLOQUE',    label: 'Bloqué',    tone: 'danger',  cssVar: '--st-danger' }
+  { id: 'A_FAIRE',       label: 'À faire',                tone: 'neutral', cssVar: '--st-neutral' },
+  { id: 'EN_VALIDATION', label: 'En cours de validation', tone: 'info',    cssVar: '--st-info' },
+  { id: 'MAD',           label: 'Mis à disposition',      tone: 'success', cssVar: '--st-success', closed: true },
+  { id: 'REFUSE',        label: 'Refusé',                 tone: 'danger',  cssVar: '--st-danger' }
 ];
-const DEFAULT_STATUS = 'A_TRAITER';
+const DEFAULT_STATUS = 'A_FAIRE';
+/** Correspondance des anciens statuts (v1) vers les statuts DFT. */
+const LEGACY_STATUS = { A_TRAITER: 'A_FAIRE', EN_COURS: 'EN_VALIDATION', RELANCE: 'EN_VALIDATION', TERMINE: 'MAD', BLOQUE: 'REFUSE' };
 
 /** Priorités (évolution prévue, désactivée pour l'instant). */
 const PRIORITIES = [
@@ -959,8 +970,10 @@ const Migrations = {
   /** Met à niveau un état stocké vers APP.schemaVersion. */
   run(state) {
     if (!state || typeof state !== 'object' || !Array.isArray(state.dossiers)) return { schemaVersion: APP.schemaVersion, dossiers: [] };
-    // Exemple pour une future v2 :
-    // if (state.schemaVersion < 2) { state.dossiers.forEach(d => d.priorite ??= 'NORMALE'); state.schemaVersion = 2; }
+    // v1 → v2 : statuts génériques remplacés par les statuts DFT
+    if ((state.schemaVersion || 1) < 2) {
+      state.dossiers.forEach(d => { if (LEGACY_STATUS[d.statut]) d.statut = LEGACY_STATUS[d.statut]; });
+    }
     state.dossiers = state.dossiers.map(Migrations.sanitize).filter(Boolean);
     state.schemaVersion = APP.schemaVersion;
     return state;
@@ -1070,7 +1083,7 @@ const DossierService = {
     if (fci.invalid.length) errors.fci = `FCI non reconnu : ${fci.invalid.join(', ')}. Format attendu : F suivi de 11 chiffres.`;
     if (!DateUtil.parse(input.dateAffectation)) errors.dateAffectation = 'La date d\'affectation est obligatoire.';
     if (input.dateRelance && !DateUtil.parse(input.dateRelance)) errors.dateRelance = 'Date invalide.';
-    if (!STATUSES.some(s => s.id === input.statut)) errors.statut = 'Statut inconnu.';
+    if (!STATUSES.some(s => s.id === input.statut)) errors.statut = 'Statut DFT inconnu.';
 
     return {
       errors,
@@ -1110,7 +1123,7 @@ const DossierService = {
     const d = DossierRepository.get(id); if (!d || d.statut === statut && !extra.dateRelance) return d;
     const now = new Date().toISOString();
     const parts = [];
-    if (d.statut !== statut) parts.push(`Statut : ${Ref.status(d.statut).label} → ${Ref.status(statut).label}`);
+    if (d.statut !== statut) parts.push(`${STATUS_LABEL} : ${Ref.status(d.statut).label} → ${Ref.status(statut).label}`);
     if (extra.dateRelance && extra.dateRelance !== d.dateRelance) parts.push(`Relance prévue le ${DateUtil.fmt(extra.dateRelance)}`);
     return DossierRepository.update(id, { statut, ...extra, updatedAt: now,
       history: [...d.history, { at: now, type: 'statut', text: parts.join(' · ') }] });
@@ -1127,7 +1140,7 @@ const DossierService = {
       dateRelance: v => (v ? DateUtil.fmt(v) : 'aucune'), commentaire: v => (v ? '« ' + (v.length > 40 ? v.slice(0, 40) + '…' : v) + ' »' : 'vide'),
       gcblo: v => v
     };
-    const names = { categorie: 'Type', gcblo: 'GCBLO', fci: 'FCI', dateAffectation: 'Affectation', dateRelance: 'Relance', statut: 'Statut', commentaire: 'Commentaire' };
+    const names = { categorie: 'Type', gcblo: 'GCBLO', fci: 'FCI', dateAffectation: 'Affectation', dateRelance: 'Relance', statut: STATUS_LABEL, commentaire: 'Commentaire' };
     Object.keys(names).forEach(k => {
       const x = JSON.stringify(a[k] ?? null), y = JSON.stringify(b[k] ?? null);
       if (x !== y) out.push(`${names[k]} : ${lab[k](a[k] ?? (k === 'fci' ? [] : null))} → ${lab[k](b[k] ?? (k === 'fci' ? [] : null))}`);
@@ -1224,10 +1237,11 @@ const MailService = {
     });
     return url;
   },
-  /** Marque le dossier « Relancé » et planifie la relance suivante. */
-  markRelanced(id) {
+  /** Planifie la relance suivante (le statut DFT n'est pas modifié). */
+  scheduleNext(id) {
+    const d = DossierRepository.get(id); if (!d) return null;
     const delay = Number(SettingsStore.get().relanceDelay) || RULES.defaultRelanceDelay;
-    return DossierService.setStatus(id, 'RELANCE', { dateRelance: DateUtil.addDays(DateUtil.today(), delay) });
+    return DossierService.setStatus(id, d.statut, { dateRelance: DateUtil.addDays(DateUtil.today(), delay) });
   }
 };
 
@@ -1361,7 +1375,7 @@ const ExportService = {
       'FCI': d.fci.join(', '),
       'Date affectation': DateUtil.fmt(d.dateAffectation),
       'Date relance': DateUtil.fmt(d.dateRelance),
-      'Statut': Ref.status(d.statut).label,
+      [STATUS_LABEL]: Ref.status(d.statut).label,
       'Commentaire': d.commentaire,
       'Nb relances': d.relances.length,
       'Créé le': DateUtil.fmtDateTime(d.createdAt),
@@ -1377,7 +1391,7 @@ const ExportService = {
   toExcel(list) {
     if (!ImportService.available) throw new Error('Export Excel indisponible hors ligne. Utilisez l\'export CSV.');
     const ws = XLSX.utils.json_to_sheet(ExportService.flatRows(list));
-    ws['!cols'] = [{ wch: 10 }, { wch: 20 }, { wch: 28 }, { wch: 15 }, { wch: 13 }, { wch: 11 }, { wch: 40 }, { wch: 11 }, { wch: 16 }, { wch: 16 }];
+    ws['!cols'] = [{ wch: 10 }, { wch: 20 }, { wch: 28 }, { wch: 15 }, { wch: 13 }, { wch: 23 }, { wch: 40 }, { wch: 11 }, { wch: 16 }, { wch: 16 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Affectations');
     XLSX.writeFile(wb, `affectations-gcblo_${ExportService.stamp()}.xlsx`);
@@ -1430,6 +1444,7 @@ const PixelIcons = {
     x:        ['##....##', '###..###', '.######.', '..####..', '..####..', '.######.', '###..###', '##....##'],
     gear:     ['...#.#...', '.#######.', '.##+++##.', '##+...+##', '.#+...+#.', '##+...+##', '.##+++##.', '.#######.', '...#.#...'],
     torch:    ['...a...', '..aaa..', '.aa#aa.', '..aaa..', '#######', '.#+++#.', '..#+#..', '..#+#..', '..#+#..', '..#+#..', '..###..'],
+    banner:   ['#........', '#######..', '#aaaaaa#.', '#aa##aa#.', '#aaaaaa#.', '#######..', '#........', '#........', '#........', '###......'],
     shield:   ['#########', '#+++++++#', '#+++#+++#', '#++###++#', '#+++#+++#', '#+++#+++#', '.#+++++#.', '.#+++++#.', '..#+++#..', '...###...'],
     wing:     ['......###', '....###+#', '...##++#.', '..##++#..', '.##++#...', '.#++#....', '##+#.....', '#.#......', '#........'],
     chest:    ['.########.', '#++++++++#', '##########', '#+++aa+++#', '#+++aa+++#', '#++++++++#', '#++++++++#', '##########'],
@@ -1568,20 +1583,12 @@ const DashboardView = {
   }
 };
 
-/** Jauges : répartition NUM21/AIR et statuts (bureau : colonne ; téléphone : fenêtre Stats). */
+/** Jauges des statuts DFT (bureau : colonne ; téléphone : fenêtre Stats). */
 const GaugesView = {
   render(stats) {
     const pct = v => (stats.total ? Math.round(v / stats.total * 100) : 0);
-    const split = CATEGORIES.map(c => ({ c, v: stats.byCat[c.id] || 0 }));
     const html = `
-      <h2 class="panel-title">Répartition</h2>
-      <div class="split" role="img" aria-label="${split.map(s => `${s.c.label} ${s.v}`).join(', ')}">
-        ${stats.total ? split.filter(s => s.v).map(s => `<span style="flex:${s.v};--c:var(${s.c.cssVar})"></span>`).join('') : ''}
-      </div>
-      <div class="legend">${split.map(s => `
-        <div class="lg" style="--c:var(${s.c.cssVar})">${px(s.c.icon || 'scroll', 'sm')}<span>${s.c.label}</span><span class="v num">${s.v}</span><span class="p num">${pct(s.v)}%</span></div>`).join('')}
-      </div>
-      <h2 class="panel-title">Statuts</h2>
+      <h2 class="panel-title">${STATUS_LABEL}</h2>
       <div class="legend">${STATUSES.map(s => { const v = stats.byStatus[s.id] || 0; return `
         <div class="lg" style="--c:var(${s.cssVar})">${px('gem', 'sm')}<span>${s.label}</span><span class="v num">${v}</span><span class="p num">${pct(v)}%</span>
           <div class="gauge"><span style="width:${pct(v)}%;--c:var(${s.cssVar})"></span></div></div>`; }).join('')}
@@ -1590,20 +1597,19 @@ const GaugesView = {
   }
 };
 
-/** Filtres : catégorie (segments), statut, tri. */
+/** Filtres : type, statut DFT, tri. */
 const FilterView = {
   sortOptions: [
     ['dateAffectation', 'desc', 'Affectation récente'], ['dateAffectation', 'asc', 'Affectation ancienne'],
     ['dateRelance', 'asc', 'Relance la plus proche'], ['gcblo', 'asc', 'GCBLO A → Z'],
-    ['statut', 'asc', 'Statut'], ['categorie', 'asc', 'Catégorie']
+    ['statut', 'asc', STATUS_LABEL], ['categorie', 'asc', 'Type']
   ],
   init() {
-    $('#fCategorie').innerHTML = [['', 'Tous'], ...CATEGORIES.map(c => [c.id, c.label])].map(([v, l]) =>
-      `<label><input type="radio" name="fcat" value="${v}"${v === '' ? ' checked' : ''}><span>${l}</span></label>`).join('');
-    $('#fStatut').innerHTML = '<option value="">Tous statuts</option>' + STATUSES.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
+    $('#fCategorie').innerHTML = '<option value="">Tous types</option>' + CATEGORIES.map(c => `<option value="${c.id}">${c.label}</option>`).join('');
+    $('#fStatut').innerHTML = '<option value="">Statut DFT</option>' + STATUSES.map(s => `<option value="${s.id}">${s.label}</option>`).join('');
   },
   sync() {
-    const r = $(`#fCategorie input[value="${ViewState.categorie}"]`); if (r) r.checked = true;
+    $('#fCategorie').value = ViewState.categorie;
     $('#fStatut').value = ViewState.statut;
     $('#menuSort .menu-pop').innerHTML = FilterView.sortOptions.map(([k, d, l]) =>
       `<button type="button" role="menuitemradio" data-sortopt="${k}:${d}" aria-checked="${ViewState.sortKey === k && ViewState.sortDir === d}">${l}</button>`).join('');
@@ -1615,7 +1621,7 @@ const ListView = {
   columns: [
     { key: 'categorie', label: 'Type' }, { key: 'gcblo', label: 'GCBLO' }, { key: 'fci', label: 'FCI' },
     { key: 'dateAffectation', label: 'Affectation' }, { key: 'dateRelance', label: 'Relance' },
-    { key: 'statut', label: 'Statut' }, { key: 'commentaire', label: 'Commentaire' }
+    { key: 'statut', label: STATUS_LABEL }, { key: 'commentaire', label: 'Commentaire' }
   ],
   renderHead() {
     $('#listHead').innerHTML = ListView.columns.map(c => {
@@ -1624,7 +1630,7 @@ const ListView = {
     }).join('') + '<div class="h-act" role="columnheader">Actions</div>';
   },
   relanceCell(d) {
-    if (!d.dateRelance) return '<span class="none">pas de relance</span>';
+    if (!d.dateRelance) return '<span class="none none-full">pas de relance</span><span class="none d-short">—</span>';
     const n = DateUtil.daysFromToday(d.dateRelance);
     let hint = '';
     if (!Ref.status(d.statut).closed) {
@@ -1633,11 +1639,11 @@ const ListView = {
       else if (n === 1) hint = 'demain';
       else if (n <= RULES.relanceSoonDays) hint = `dans ${n} j`;
     }
-    return `<span class="data num">${DateUtil.fmt(d.dateRelance)}</span>${hint ? `<span class="rel-hint">${hint}</span>` : ''}`;
+    return `<span class="data num d-full">${DateUtil.fmt(d.dateRelance)}</span><span class="data num d-short" title="Relance">${DateUtil.fmt(d.dateRelance).slice(0, 5)}</span>${hint ? `<span class="rel-hint">${hint}</span>` : ''}`;
   },
   statusSelect(d) {
     const st = Ref.status(d.statut);
-    return `<label class="visually-hidden" for="st-${d.id}">Statut de ${Util.esc(d.gcblo)}</label>
+    return `<label class="visually-hidden" for="st-${d.id}">${STATUS_LABEL} de ${Util.esc(d.gcblo)}</label>
       <select id="st-${d.id}" class="status-select tone-${st.tone}" data-status-for="${d.id}">
         ${STATUSES.map(s => `<option value="${s.id}"${s.id === d.statut ? ' selected' : ''}>${s.label}</option>`).join('')}
       </select>`;
@@ -1809,7 +1815,7 @@ const DetailDialog = {
         <button class="pbtn" type="button" data-det="copy-gcblo">${px('copy', 'sm')}GCBLO</button>
         ${d.fci.length ? `<button class="pbtn" type="button" data-det="copy-fci">${px('copy', 'sm')}FCI</button>` : ''}
         <button class="pbtn" type="button" data-det="copy-body">${px('copy', 'sm')}Texte de l'email</button>
-        ${d.statut !== 'RELANCE' || rs ? `<button class="pbtn" type="button" data-det="mark">${px('gem', 'sm')}Marquer relancé (+${Number(s.relanceDelay) || RULES.defaultRelanceDelay} j)</button>` : ''}
+        <button class="pbtn" type="button" data-det="mark">${px('gem', 'sm')}Prochaine relance (+${Number(s.relanceDelay) || RULES.defaultRelanceDelay} j)</button>
       </div>
       <h3 class="panel-title">Historique</h3>
       <ul class="timeline">${[...d.history].reverse().map(h => `<li>${px('gem')}<div>${Util.esc(h.text)}<div class="when">${DateUtil.fmtDateTime(h.at)}</div></div></li>`).join('')}</ul>`;
@@ -1887,8 +1893,8 @@ const App = {
     const d = DossierRepository.get(id); if (!d) return;
     MailService.prepareRelance(id, templateId);
     Toast.show(`Email de relance préparé pour ${d.gcblo}.`, {
-      action: 'Marquer relancé',
-      onAction: () => { MailService.markRelanced(id); Toast.show(`${d.gcblo} relancé, prochaine relance le ${DateUtil.fmt(DossierRepository.get(id).dateRelance)}.`); }
+      action: `Relance suivante +${Number(SettingsStore.get().relanceDelay) || RULES.defaultRelanceDelay} j`,
+      onAction: () => { MailService.scheduleNext(id); Toast.show(`${d.gcblo} : prochaine relance le ${DateUtil.fmt(DossierRepository.get(id).dateRelance)}.`); }
     });
   },
 
@@ -1924,9 +1930,9 @@ const App = {
   loadDemo() {
     const today = DateUtil.today();
     [
-      { categorie: 'AIR', gcblo: 'SBA501404-THF010', fci: 'F26154200726', dateAffectation: DateUtil.addDays(today, -12), dateRelance: DateUtil.addDays(today, -2), statut: 'RELANCE', commentaire: 'Exemple' },
-      { categorie: 'NUM21', gcblo: 'LRO500767-THF010', fci: 'F09075260926', dateAffectation: DateUtil.addDays(today, -5), dateRelance: DateUtil.addDays(today, 2), statut: 'EN_COURS', commentaire: 'Exemple' },
-      { categorie: 'NUM21', gcblo: 'EST501479-THF011', fci: '', dateAffectation: today, dateRelance: '', statut: 'A_TRAITER', commentaire: 'Exemple' }
+      { categorie: 'AIR', gcblo: 'SBA501404-THF010', fci: 'F26154200726', dateAffectation: DateUtil.addDays(today, -12), dateRelance: DateUtil.addDays(today, -2), statut: 'EN_VALIDATION', commentaire: 'Exemple' },
+      { categorie: 'NUM21', gcblo: 'LRO500767-THF010', fci: 'F09075260926', dateAffectation: DateUtil.addDays(today, -5), dateRelance: DateUtil.addDays(today, 2), statut: 'REFUSE', commentaire: 'Exemple' },
+      { categorie: 'NUM21', gcblo: 'EST501479-THF011', fci: '', dateAffectation: today, dateRelance: '', statut: 'A_FAIRE', commentaire: 'Exemple' }
     ].forEach(x => DossierService.create(x));
     Toast.show('3 dossiers d\'exemple ajoutés (commentaire « Exemple »).');
   },
@@ -2047,7 +2053,7 @@ const App = {
       if (kind === 'copy-gcblo') Clipboard.copy(d.gcblo, 'GCBLO');
       if (kind === 'copy-fci') Clipboard.copy(d.fci.join(', '), 'FCI');
       if (kind === 'copy-body') { const m = MailService.build(d, $('#detTpl')?.value); Clipboard.copy(`${m.subject}\n\n${m.body}`, 'Email'); }
-      if (kind === 'mark') { MailService.markRelanced(d.id); Toast.show(`${d.gcblo} marqué « Relancé ».`); }
+      if (kind === 'mark') { MailService.scheduleNext(d.id); Toast.show(`${d.gcblo} : prochaine relance le ${DateUtil.fmt(DossierRepository.get(d.id).dateRelance)}.`); }
     });
     $('#detBody').addEventListener('change', e => { if (e.target.id === 'detTpl') { SettingsStore.set({ templateId: e.target.value }); DetailDialog.refreshIfOpen(); } });
 
