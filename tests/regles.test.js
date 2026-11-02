@@ -1,0 +1,261 @@
+/**
+ * regles.test.js — tests des règles métier (étape 1).
+ *
+ * Chaque test part d'un store vide en mémoire et d'une horloge fixée au
+ * lundi 2 novembre 2026, 10 h : les résultats ne dépendent ni du jour où l'on
+ * lance les tests, ni du navigateur.
+ */
+import { groupe, test, egal, vrai } from './outil.js';
+import { creerStore, supportMemoire } from '../js/store.js';
+import { creerDossiers, lireFci, normaliserGcblo } from '../js/dossiers.js';
+import { ajouterJours, ecartJours, estJour, formater, versJour } from '../js/dates.js';
+
+const MAINTENANT = new Date(2026, 10, 2, 10, 0);       // 02/11/2026 10:00, heure locale
+const AUJOURDHUI = '2026-11-02';
+
+/** Un environnement neuf pour chaque test. */
+function environnement(depart = null) {
+  const support = supportMemoire(depart);
+  const store = creerStore(support);
+  const regles = creerDossiers(store, { horloge: () => MAINTENANT });
+  return { store, regles, support };
+}
+const saisie = (plus = {}) => ({ type: 'AIR', gcblo: 'SBA501404-THF010', fci: 'F26154200726', ...plus });
+
+/* -------------------------------------------------------------------------- */
+groupe('Dates', () => {
+  test('versJour donne AAAA-MM-JJ en heure locale', () => egal(versJour(MAINTENANT), AUJOURDHUI));
+  test('ajouterJours traverse les mois', () => egal(ajouterJours('2026-10-30', 3), '2026-11-02'));
+  test('ajouterJours traverse le changement d\'heure', () => egal(ajouterJours('2026-10-24', 2), '2026-10-26'));
+  test('ecartJours : futur positif, passé négatif', () => { egal(ecartJours('2026-11-05', AUJOURDHUI), 3); egal(ecartJours('2026-10-31', AUJOURDHUI), -2); });
+  test('estJour refuse une date qui n\'existe pas', () => { vrai(estJour('2026-02-28')); vrai(!estJour('2026-02-31')); vrai(!estJour('02/11/2026')); });
+  test('formater affiche JJ/MM/AAAA', () => egal(formater('2026-11-02'), '02/11/2026'));
+});
+
+/* -------------------------------------------------------------------------- */
+groupe('Lecture des saisies', () => {
+  test('GCBLO mis en majuscules, espaces retirés', () => egal(normaliserGcblo(' sba501404-thf010 '), 'SBA501404-THF010'));
+  test('FCI : plusieurs séparateurs acceptés', () => egal(lireFci('F09069260926 et f09073260926, F09069260926').fci, ['F09069260926', 'F09073260926']));
+  test('FCI : « aucun », « ? » ou vide = pas de FCI', () => { egal(lireFci('aucun').fci, []); egal(lireFci('?').fci, []); egal(lireFci('').fci, []); });
+  test('FCI : morceau invalide signalé', () => egal(lireFci('F123 F26154200726').invalides, ['F123']));
+});
+
+/* -------------------------------------------------------------------------- */
+groupe('Création et validation', () => {
+  test('crée un dossier avec les valeurs par défaut', () => {
+    const { regles } = environnement();
+    const r = regles.creer(saisie());
+    vrai(r.ok, 'création refusée');
+    egal(r.dossier.statutDft, 'A_FAIRE', 'statut par défaut');
+    egal(r.dossier.dateAffectation, AUJOURDHUI, 'affectation par défaut');
+    egal(r.dossier.dateRelance, null, 'pas de relance par défaut');
+    egal(r.dossier.fci, ['F26154200726']);
+  });
+  test('le type est obligatoire', () => {
+    const r = environnement().regles.creer(saisie({ type: '' }));
+    vrai(!r.ok); vrai(r.erreurs.type);
+  });
+  test('le format du GCBLO est vérifié', () => {
+    const r = environnement().regles.creer(saisie({ gcblo: 'SBA5014-THF010' }));
+    vrai(!r.ok); vrai(r.erreurs.gcblo.includes('Format'));
+  });
+  test('un FCI mal formé est refusé', () => {
+    const r = environnement().regles.creer(saisie({ fci: 'F2615' }));
+    vrai(!r.ok); vrai(r.erreurs.fci);
+  });
+  test('un statut inconnu est refusé', () => {
+    const r = environnement().regles.creer(saisie({ statutDft: 'TERMINE' }));
+    vrai(!r.ok); vrai(r.erreurs.statutDft);
+  });
+  test('une date impossible est refusée', () => {
+    const r = environnement().regles.creer(saisie({ dateRelance: '2026-02-31' }));
+    vrai(!r.ok); vrai(r.erreurs.dateRelance);
+  });
+  test('les dossiers enregistrés sont gelés (non modifiables sur place)', () => {
+    const { regles } = environnement();
+    const d = regles.creer(saisie()).dossier;
+    vrai(Object.isFrozen(d) && Object.isFrozen(d.fci) && Object.isFrozen(d.historique));
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+groupe('R1 — Doublons', () => {
+  test('refuse un GCBLO déjà présent, même avec un autre type', () => {
+    const { regles } = environnement();
+    regles.creer(saisie({ type: 'AIR' }));
+    const r = regles.creer(saisie({ type: 'NUM21' }));
+    vrai(!r.ok); vrai(r.erreurs.gcblo.includes('existe déjà'));
+  });
+  test('la casse ne permet pas de contourner', () => {
+    const { regles } = environnement();
+    regles.creer(saisie());
+    vrai(!regles.creer(saisie({ gcblo: 'sba501404-thf010' })).ok);
+  });
+  test('modifier un dossier ne le compte pas comme son propre doublon', () => {
+    const { regles } = environnement();
+    const d = regles.creer(saisie()).dossier;
+    vrai(regles.modifier(d.id, { commentaire: 'ok' }).ok);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+groupe('R2 / R3 — Alertes de relance', () => {
+  const avecRelance = (dateRelance, statutDft = 'A_FAIRE') => {
+    const { regles } = environnement();
+    return regles.etatRelance(regles.creer(saisie({ dateRelance, statutDft })).dossier);
+  };
+  test('relance passée → retard', () => egal(avecRelance('2026-11-01'), 'retard'));
+  test('relance aujourd\'hui → proche', () => egal(avecRelance(AUJOURDHUI), 'proche'));
+  test('relance dans 3 jours → proche', () => egal(avecRelance('2026-11-05'), 'proche'));
+  test('relance dans 4 jours → aucune alerte', () => egal(avecRelance('2026-11-06'), null));
+  test('pas de date de relance → aucune alerte', () => egal(avecRelance(null), null));
+  test('dossier clos (Mis à disposition) → aucune alerte même en retard', () => egal(avecRelance('2026-10-01', 'MAD'), null));
+  test('Refusé reste ouvert → alerte active', () => egal(avecRelance('2026-10-01', 'REFUSE'), 'retard'));
+});
+
+/* -------------------------------------------------------------------------- */
+groupe('R4 / R5 — Relance', () => {
+  test('email : objet et corps avec les FCI', () => {
+    const { regles } = environnement();
+    const d = regles.creer(saisie()).dossier;
+    const m = regles.email(d);
+    egal(m.objet, 'Relance dossier SBA501404-THF010');
+    vrai(m.corps.includes('Je reviens vers vous concernant le dossier SBA501404-THF010.'));
+    vrai(m.corps.includes('FCI : F26154200726'));
+  });
+  test('email : « aucun » quand il n\'y a pas de FCI', () => {
+    const { regles } = environnement();
+    vrai(regles.email(regles.creer(saisie({ fci: '' })).dossier).corps.includes('FCI : aucun'));
+  });
+  test('relance suivante à J+7, statut inchangé', () => {
+    const { regles } = environnement();
+    const d = regles.creer(saisie({ statutDft: 'EN_VALIDATION' })).dossier;
+    const r = regles.planifierRelanceSuivante(d.id);
+    egal(r.dossier.dateRelance, '2026-11-09');
+    egal(r.dossier.statutDft, 'EN_VALIDATION');
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+groupe('R6 — Historique', () => {
+  test('la création ouvre l\'historique', () => {
+    const { regles } = environnement();
+    egal(regles.creer(saisie()).dossier.historique.map(e => e.action), ['creation']);
+  });
+  test('une modification décrit ce qui change', () => {
+    const { regles } = environnement();
+    const d = regles.creer(saisie()).dossier;
+    const r = regles.modifier(d.id, { statutDft: 'REFUSE' });
+    egal(r.dossier.historique.at(-1).detail, 'Statut DFT : À faire → Refusé');
+  });
+  test('une modification sans effet n\'ajoute rien', () => {
+    const { regles } = environnement();
+    const d = regles.creer(saisie()).dossier;
+    const r = regles.modifier(d.id, { statutDft: 'A_FAIRE' });
+    vrai(r.inchange); egal(regles.modifier(d.id, {}).dossier.historique.length, 1);
+  });
+  test('la préparation d\'un email est notée', () => {
+    const { regles } = environnement();
+    const d = regles.creer(saisie()).dossier;
+    egal(regles.noterRelance(d.id).dossier.historique.at(-1).action, 'relance');
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+groupe('R7 — Suppression et annulation', () => {
+  test('supprimer renvoie les dossiers retirés', () => {
+    const { regles, store } = environnement();
+    const d = regles.creer(saisie()).dossier;
+    const r = regles.supprimer(d.id);
+    vrai(r.ok); egal(r.retires.map(x => x.gcblo), ['SBA501404-THF010']); egal(store.tous().length, 0);
+  });
+  test('restaurer remet le dossier à l\'identique', () => {
+    const { regles, store } = environnement();
+    const d = regles.creer(saisie({ commentaire: 'à garder' })).dossier;
+    const { retires } = regles.supprimer(d.id);
+    regles.restaurer(retires);
+    egal(store.parId(d.id), d);
+  });
+  test('restaurer annule aussi une modification', () => {
+    const { regles, store } = environnement();
+    const d = regles.creer(saisie()).dossier;
+    const { avant } = regles.modifier(d.id, { statutDft: 'REFUSE' });
+    regles.restaurer([avant]);
+    egal(store.parId(d.id).statutDft, 'A_FAIRE');
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+groupe('Modifications groupées', () => {
+  test('applique le même changement à plusieurs dossiers', () => {
+    const { regles } = environnement();
+    const a = regles.creer(saisie()).dossier, b = regles.creer(saisie({ gcblo: 'SBA501423-THF010' })).dossier;
+    const r = regles.modifierPlusieurs([a.id, b.id], { statutDft: 'MAD' });
+    egal([r.modifies, r.inchanges], [2, 0]);
+  });
+  test('tout ou rien : un refus annule l\'ensemble', () => {
+    const { regles, store } = environnement();
+    const a = regles.creer(saisie()).dossier;
+    const r = regles.modifierPlusieurs([a.id, 'inconnu'], { statutDft: 'MAD' });
+    vrai(!r.ok); egal(store.parId(a.id).statutDft, 'A_FAIRE');
+  });
+  test('un seul enregistrement pour tout le groupe', () => {
+    const { regles, store } = environnement();
+    const ids = ['SBA501404-THF010', 'SBA501423-THF010', 'SBA501487-THF010'].map(g => regles.creer(saisie({ gcblo: g })).dossier.id);
+    let evenements = 0; store.ecouter(() => evenements++);
+    regles.modifierPlusieurs(ids, { type: 'SOGETREL' });
+    egal(evenements, 1);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+groupe('Filtres, tri, statistiques', () => {
+  const peuple = () => {
+    const env = environnement();
+    env.regles.creer({ type: 'NUM21', gcblo: 'SBA501404-THF010', fci: 'F26154200726', dateRelance: '2026-10-30' });
+    env.regles.creer({ type: 'AIR', gcblo: 'LRO500767-THF010', fci: '', statutDft: 'REFUSE', dateAffectation: '2026-10-01' });
+    env.regles.creer({ type: 'SOGETREL', gcblo: 'EST501479-THF011', fci: 'F09075260926', statutDft: 'MAD', commentaire: 'Attente client', dateRelance: '2026-10-01' });
+    return env;
+  };
+  test('filtre par type', () => egal(peuple().regles.filtrer({ type: 'AIR' }).map(d => d.gcblo), ['LRO500767-THF010']));
+  test('filtre par statut', () => egal(peuple().regles.filtrer({ statut: 'MAD' }).map(d => d.gcblo), ['EST501479-THF011']));
+  test('filtre « en retard » (le dossier clos est exclu)', () => egal(peuple().regles.filtrer({ retard: true }).map(d => d.gcblo), ['SBA501404-THF010']));
+  test('filtre « sans FCI »', () => egal(peuple().regles.filtrer({ sansFci: true }).map(d => d.gcblo), ['LRO500767-THF010']));
+  test('recherche : morceau de GCBLO, sans tiret', () => egal(peuple().regles.filtrer({ texte: '501404' }).length, 1));
+  test('recherche : commentaire sans accents ni majuscules', () => egal(peuple().regles.filtrer({ texte: 'attente CLIENT' }).length, 1));
+  test('recherche : plusieurs mots se cumulent', () => egal(peuple().regles.filtrer({ texte: 'est501479 F0907' }).length, 1));
+  test('tri par relance : sans date en dernier', () => {
+    const { regles, store } = peuple();
+    egal(regles.trier(store.tous(), { cle: 'dateRelance', sens: 'asc' }).map(d => d.gcblo), ['EST501479-THF011', 'SBA501404-THF010', 'LRO500767-THF010']);
+  });
+  test('tri par statut suit l\'ordre de config.js', () => {
+    const { regles, store } = peuple();
+    egal(regles.trier(store.tous(), { cle: 'statutDft', sens: 'asc' }).map(d => d.statutDft), ['A_FAIRE', 'MAD', 'REFUSE']);
+  });
+  test('statistiques', () => {
+    const s = peuple().regles.statistiques();
+    egal([s.total, s.parType.NUM21, s.parType.AIR, s.parType.SOGETREL, s.retard, s.sansFci], [3, 1, 1, 1, 1, 1]);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+groupe('Store et enregistrement', () => {
+  test('les données survivent à un rechargement', () => {
+    const { regles, support } = environnement();
+    regles.creer(saisie());
+    egal(creerStore(support).tous().map(d => d.gcblo), ['SBA501404-THF010']);
+  });
+  test('les abonnés reçoivent le type d\'événement et les ids', () => {
+    const { regles, store } = environnement();
+    const recus = []; store.ecouter(e => recus.push(e.type));
+    const d = regles.creer(saisie()).dossier;
+    regles.modifier(d.id, { commentaire: 'x' }); regles.supprimer(d.id);
+    egal(recus, ['ajout', 'modification', 'suppression']);
+  });
+  test('un échec d\'écriture est signalé sans planter', () => {
+    const store = creerStore({ lire: () => null, ecrire: () => false });
+    let evt = null; store.ecouter(e => { evt = e; });
+    creerDossiers(store, { horloge: () => MAINTENANT }).creer(saisie());
+    egal(evt.enregistre, false);
+  });
+});
