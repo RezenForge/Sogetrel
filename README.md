@@ -14,7 +14,24 @@ entre trois types : **NUM21**, **AIR** et **Sogetrel**.
    Faire régulièrement **Exporter → Sauvegarde JSON** : vider le cache du navigateur
    efface les données.
 
-Raccourcis : `N` nouveau dossier · `/` recherche · double-clic sur une ligne = préparer la relance.
+Raccourcis : `N` nouveau dossier · `/` recherche · `J` ou `Ctrl+K` Jarvis · double-clic sur une ligne = préparer la relance.
+
+### Jarvis
+
+Ligne de commande en bas du registre : on écrit (ou on dicte avec le micro) ce qu'on veut faire, en français.
+
+| Exemple | Effet |
+| --- | --- |
+| `ajoute SBA202020-THF010 AIR fci F12345678901` | crée le dossier (demande le type s'il manque) |
+| `supprime 501404` | demande confirmation puis supprime |
+| `passe 501404 en cours de validation` · `passe-le en refusé` | change le statut DFT |
+| `passe 501404 en Sogetrel` | change le type |
+| `relance 501404` · `relance 501404 lundi` / `dans 3 jours` | prépare l'email · planifie la relance |
+| `ajoute le fci F… à 501404` · `note sur 501404 : texte` | complète le dossier |
+| `montre les dossiers air` · `en retard` · `sans fci` · `tout afficher` | filtre le registre |
+| `combien de refusés ?` · `stats` · `exporte en excel` · `mode sombre` · `annule` · `aide` | divers |
+
+C'est un interpréteur de mots-clés intégré (pas d'IA en ligne) : il fonctionne hors connexion et rien ne quitte le navigateur. Le micro et la voix dépendent du navigateur (Chrome, Edge, Safari ; le micro demande une page en https, par exemple GitHub Pages).
 
 ## Fonctionnalités
 
@@ -45,8 +62,8 @@ Le script est découpé en couches commentées :
 | --- | --- |
 | `CONFIG` | Référentiels : catégories, statuts, modèles d'emails, règles, interrupteurs de fonctionnalités |
 | `DATA LAYER` | `StorageAdapter`, `Migrations`, `DossierRepository`, `SettingsStore` |
-| `BUSINESS LAYER` | `DossierService`, `MailService`, `ImportService`, `ExportService` |
-| `UI LAYER` | Icônes pixel, vues (compteurs, jauges, registre), dialogues, contrôleur `App` |
+| `BUSINESS LAYER` | `DossierService`, `MailService`, `ImportService`, `ExportService`, `CommandService` (analyse des phrases de Jarvis) |
+| `UI LAYER` | Icônes pixel, vues (compteurs, jauges, registre), animations, `Jarvis`, dialogues, contrôleur `App` |
 
 ### Évolutions prévues
 
