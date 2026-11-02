@@ -37,6 +37,10 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .l:has(> pre) { overflow-x: auto; white-space: normal; }
 
 /* Couleurs des types, statuts et alertes (tableaux, fiches, stats) */
+/* Dessins en caractères (stats) */
+.dessin .cadre { color: var(--pale); } .dessin .cadre-titre { color: var(--accent); font-weight: 700; }
+.dessin .vide { color: var(--pale); opacity: .35; } .dessin .fort { color: var(--texte, inherit); font-weight: 700; }
+.dessin { line-height: 1.2; }
 .ty-NUM21 { color: var(--type-NUM21); } .ty-AIR { color: var(--type-AIR); } .ty-SOGETREL { color: var(--type-SOGETREL); }
 .st-A_FAIRE { color: var(--statut-A_FAIRE); } .st-EN_VALIDATION { color: var(--statut-EN_VALIDATION); }
 .st-MAD { color: var(--statut-MAD); } .st-REFUSE { color: var(--statut-REFUSE); }

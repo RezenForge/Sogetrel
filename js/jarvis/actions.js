@@ -18,6 +18,7 @@
  *   choisirFichier()         → Promise<File|null>
  */
 import { COMMANDES, SORTES } from './grammaire.js';
+import { dessinerStats } from './dessin.js';
 import { criteresListe } from './analyse.js';
 import { TYPES, STATUTS, STOCKAGE, typeParCode, statutParCode } from '../config.js';
 import { formater, depuisJour, ecartJours } from '../dates.js';
@@ -208,14 +209,8 @@ export function creerActions({ regles, store, reglages, meteo, wiki, ecran, conf
     },
 
     stats() {
-      const s = regles.statistiques();
-      const ligne = (libelle, n, classe = '') => `<span class="dim">${esc(libelle.padEnd(24, '.'))}</span> <span class="${classe}">${n}</span>`;
-      info(`<b>${pluriel(s.total, 'dossier', 'dossiers')}</b>`);
-      TYPES.forEach(t => info(ligne(t.libelle, s.parType[t.code], `ty-${t.code}`)));
-      STATUTS.forEach(st => info(ligne(st.libelle, s.parStatut[st.code], `st-${st.code}`)));
-      info(ligne('Relances en retard', s.retard, s.retard ? 'retard' : ''));
-      info(ligne('Relances proches', s.proche, s.proche ? 'proche' : ''));
-      info(ligne('Sans FCI', s.sansFci));
+      // Tableau de bord dessiné en caractères (voir dessin.js)
+      ecran.ligne(`<pre class="dessin">${dessinerStats(regles.statistiques(), regles.aujourdhui()).html}</pre>`);
     },
 
     annule() {

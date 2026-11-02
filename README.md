@@ -76,6 +76,7 @@ js/jarvis/grammaire.js   les commandes, sous forme de tableau (source unique)
 js/jarvis/analyse.js     comprend la ligne tapée (ne modifie rien)
 js/jarvis/completion.js  propositions, texte grisé, aperçu (ne modifie rien)
 js/jarvis/actions.js     exécute une commande via les règles
+js/jarvis/dessin.js      tableaux de bord en caractères (stats)
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   134 tests : règles, analyse, autocomplétion, collage, relances, météo et wiki (services simulés)
+tests/                   143 tests : règles, analyse, autocomplétion, collage, relances, dessin ASCII, météo et wiki (services simulés)
 ```

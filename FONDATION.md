@@ -93,6 +93,7 @@ js/
     analyse.js             texte tapé → commande comprise + ce qui manque (ne modifie rien)
     completion.js          propositions classées, texte fantôme, aperçu de l'effet
     actions.js             commande validée → appel aux règles de dossiers.js
+    dessin.js              tableaux de bord en caractères (stats), sans accès aux données
     invite.js              la ligne de saisie, la liste de propositions, le fil
     lumiere.js             la lumière : ses états et ses transitions
 tests/
@@ -144,6 +145,7 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 | Ouvrir | `ouvre ‹dossier›` | `ouvre 501404` |
 | Compter | `combien [‹type›] [‹statut›]` | `combien de refusés` |
 | Point du jour | `jour` (aussi affiché à l'ouverture) | `jour` |
+| Tableau de bord | `stats` : cadre dessiné en caractères (barres par type et statut, avancement, alertes, relances des 7 jours), 38 colonnes pour tenir sur téléphone | `stats` |
 | Destinataires | `email [‹type›] [‹adresse›\|aucun]` | `email air jean.dupont@exemple.fr` |
 | Météo | `meteo ‹ville› [jour\|demain\|semaine]` | `meteo le taillan medoc semaine` |
 | Définition | `wiki ‹mot ou expression›` (aussi `def`) | `wiki "fibre optique"`, `wiki GPON` |
@@ -274,3 +276,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 02/11/2026 | Point du jour (R8), collage d'une liste (R9), relance groupée et destinataires par type (R4) |
 | 02/11/2026 | Commande `meteo` (Open-Meteo), villes consultées proposées en complétion |
 | 02/11/2026 | Commande `wiki` : début de l'article Wikipédia (fr), pages d'homonymie signalées avec les autres sens |
+| 02/11/2026 | `stats` redessiné en ASCII (`js/jarvis/dessin.js`) ; `statistiques()` compte aussi les relances des 7 prochains jours |
