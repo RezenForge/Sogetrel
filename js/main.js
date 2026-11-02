@@ -80,7 +80,7 @@ const e = invite.ecran;
 e.ligne('<b>Registre GCBLO</b> <span class="dim">v2 · terminal</span>', 'titre');
 if (reprise?.dossiers.length) e.ligne(`✓ ${reprise.dossiers.length} dossiers repris de la version 1${reprise.ignores ? ` (${reprise.ignores} ignorés)` : ''}`, 'ok');
 if (!stockageOk) e.ligne('✗ ce navigateur bloque l\'enregistrement : les données seront perdues à la fermeture', 'err');
-e.ligne(`<span class="dim">${store.tous().length} dossiers · commencez à taper, les propositions suivent · <span class="c-verbe">aide</span> liste les commandes · collez une liste copiée d'Excel pour l'ajouter</span>`, 'info');
+e.ligne(`<span class="dim">${store.tous().length} dossiers · commencez à taper, les propositions suivent (Tab sur une ligne vide : toutes les commandes) · <span class="c-verbe">aide</span> · collez une liste copiée d'Excel pour l'ajouter</span>`, 'info');
 e.ligne('', 'info');
 actions.point();
 invite.rafraichir();

@@ -208,13 +208,13 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
     const section = (titre, liste, classe, detail) => {
       if (!liste.length) return;
       const lignes = liste.slice(0, 8).map(d =>
-        `  <span class="c-dossier">${esc(d.gcblo)}</span>  <span class="ty-${d.type}">${esc(typeParCode(d.type).libelle.padEnd(8))}</span> <span class="dim">${esc(detail(d))}</span>`);
+        `  <span class="c-dossier">${esc(d.gcblo)}</span> <span class="ty-${d.type}">${esc(typeParCode(d.type).libelle.padEnd(8))}</span> <span class="dim">${esc(detail(d))}</span>`);
       if (liste.length > 8) lignes.push(`  <span class="dim">… et ${liste.length - 8} autres</span>`);
       ecran.ligne(`<span class="${classe}">${esc(titre)} (${liste.length})</span>\n${lignes.join('\n')}`);
     };
     const quand = d => {
       const ecart = ecartJours(d.dateRelance, regles.aujourdhui());
-      return ecart < 0 ? `relance du ${formater(d.dateRelance).slice(0, 5)} · ${-ecart} j de retard` : `relance le ${formater(d.dateRelance).slice(0, 5)}`;
+      return ecart < 0 ? `${formater(d.dateRelance).slice(0, 5)} · ${-ecart} j` : formater(d.dateRelance).slice(0, 5);
     };
     section('en retard', p.retard, 'retard', quand);
     section('à relancer aujourd\'hui', p.aujourdhui, 'proche', d => statutParCode(d.statutDft).libelle);

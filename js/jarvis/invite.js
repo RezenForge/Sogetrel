@@ -32,6 +32,7 @@ export function creerInvite({ racine, contexte }) {
   let attente = null;            // question en cours : { resoudre, choix: null (oui/non) | ['…', …] }
   let executer = async () => {};
   let surCollage = null;         // reçoit le texte d'une liste collée
+  let listeDemandee = false;     // Tab sur une ligne vide : afficher toutes les commandes
 
   /* ---------------- Zone de sortie ---------------- */
 
@@ -110,7 +111,9 @@ export function creerInvite({ racine, contexte }) {
     const texte = champ.value, curseur = champ.selectionStart ?? texte.length;
     const ctx = contexte();
     const analyse = analyser(texte, curseur, ctx);
-    const prop = texte.trim() || document.activeElement === champ ? proposer(analyse, ctx) : { propositions: [] };
+    // Ligne vide : pas de liste (elle masquerait l'écran), sauf si on la demande avec Tab
+    const prop = texte.trim() || listeDemandee ? proposer(analyse, ctx) : { propositions: [] };
+    listeDemandee = false;
     etat = { analyse, prop, choisi: -1 };
     // Couleurs + texte fantôme (affiché seulement si le curseur est en fin de ligne)
     const fantome = curseur === texte.length ? prop.fantome : '';
@@ -196,8 +199,10 @@ export function creerInvite({ racine, contexte }) {
     const ouvert = !listeEl.hidden && n > 0;
     if (e.key === 'Tab') {
       e.preventDefault();
-      // Tab insère la proposition sélectionnée, ou la meilleure (↑ ↓ servent à choisir)
+      // Tab insère la proposition sélectionnée, ou la meilleure (↑ ↓ servent à choisir) ;
+      // sur une ligne vide, Tab affiche toutes les commandes
       if (ouvert) accepter(etat.choisi >= 0 ? etat.choisi : 0);
+      else if (!champ.value.trim() && !attente) { listeDemandee = true; rafraichir(); }
     } else if (e.key === 'ArrowRight' && champ.selectionStart === champ.value.length && etat.prop.fantome) {
       e.preventDefault(); accepter(0);
     } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
