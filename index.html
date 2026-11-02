@@ -379,6 +379,11 @@ svg.px.lg { width: 24px; height: 24px; }
 .row.row-overdue { background: var(--row-overdue); box-shadow: inset 4px 0 0 var(--row-overdue-edge); }
 .row.row-soon { background: var(--row-soon); box-shadow: inset 4px 0 0 var(--row-soon-edge); }
 .row.row-done .c-gcblo, .row.row-done .c-fci { color: var(--subtle); }
+/* Suppression : la ligne s'aplatit sous celles du dessus (voir CrushFx) */
+#rows .row.crushing { transform-origin: 50% 100%; background: var(--row-overdue); overflow: hidden; pointer-events: none; }
+.row.falling { z-index: 2; pointer-events: none; }
+.fx-layer { position: fixed; z-index: 40; overflow: hidden; pointer-events: none; }
+.fx-layer i { position: absolute; left: 0; top: 0; display: block; }
 .c-gcblo { font-size: 20px; white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .c-fci .data, .c-aff, .c-rel .data { font-size: 18px; }
 .d-short { display: none; }
@@ -1699,6 +1704,118 @@ const ListView = {
   }
 };
 
+/**
+ * Animation de suppression « écrasement » (style pixel, images saccadées) :
+ *   1. les lignes du dessus tombent avec la gravité (y = h·t²),
+ *   2. la ligne supprimée s'aplatit sous elles au même rythme,
+ *   3. impact : petit rebond + poussière de pixels,
+ *   4. la donnée est supprimée et la liste garde sa position à l'écran
+ *      (compensation du défilement, sinon la liste se recale d'un bloc).
+ * Désactivée (simple fondu) si l'utilisateur a demandé moins d'animations.
+ */
+const CrushFx = {
+  busy: false,
+  FRAMES: 10,        // nombre d'images de la chute (aspect rétro)
+  FALL_MS: 380,
+  reduced: () => matchMedia('(prefers-reduced-motion: reduce)').matches,
+
+  /** Images clés « en escalier » : chaque position est tenue jusqu'à la suivante. */
+  stepped(n, fn) {
+    return Array.from({ length: n + 1 }, (_, i) => ({ ...fn(i / n), offset: i / n, easing: 'steps(1, end)' }));
+  },
+
+  /** Une ligne est-elle visible dans la zone de défilement ? */
+  isVisible(row, list) {
+    const r = row.getBoundingClientRect(), l = list.getBoundingClientRect();
+    return r.bottom > l.top && r.top < l.bottom && r.height > 0;
+  },
+
+  /** Poussière de pixels projetée le long de la ligne d'impact. */
+  dust(rowRect, list) {
+    const box = list.getBoundingClientRect();
+    const layer = document.createElement('div');
+    layer.className = 'fx-layer';
+    Object.assign(layer.style, { left: box.left + 'px', top: box.top + 'px', width: box.width + 'px', height: box.height + 'px' });
+    document.body.appendChild(layer);
+    const colors = ['--stroke', '--muted', '--subtle', '--accent'].map(v => `var(${v})`);
+    const floor = rowRect.bottom - box.top - 2;
+    const anims = Array.from({ length: 16 }, (_, k) => {
+      const p = document.createElement('i');
+      const size = k % 3 ? 4 : 6;
+      Object.assign(p.style, { width: size + 'px', height: size + 'px', background: colors[k % colors.length] });
+      layer.appendChild(p);
+      const x0 = (rowRect.left - box.left) + Math.random() * rowRect.width;
+      const vx = (Math.random() - .5) * 180, vy = -(50 + Math.random() * 90), g = 520, T = .46;
+      return p.animate(CrushFx.stepped(8, t => {
+        const s = t * T;
+        return { transform: `translate(${Math.round(x0 + vx * s)}px, ${Math.round(floor + vy * s + .5 * g * s * s)}px)`, opacity: t < .7 ? 1 : 0 };
+      }), { duration: T * 1000, fill: 'forwards' }).finished;
+    });
+    Promise.all(anims).finally(() => layer.remove());
+  },
+
+  /**
+   * Joue l'animation puis appelle `commit` (la vraie suppression).
+   * Si la ligne n'est pas à l'écran, la suppression est immédiate.
+   */
+  async crush(id, commit) {
+    const list = $('#list');
+    const row = [...$$('#rows .row')].find(r => r.dataset.id === id);
+    if (!row || CrushFx.busy || !CrushFx.isVisible(row, list)) { commit(); return; }
+
+    if (CrushFx.reduced()) {
+      await row.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 150, fill: 'forwards' }).finished;
+      commit(); return;
+    }
+
+    CrushFx.busy = true;
+    try {
+      const h = row.offsetHeight;
+      const rowRect = row.getBoundingClientRect();
+      // Lignes du dessus encore visibles (ou juste au-dessus) : ce sont elles qui tombent
+      const above = [];
+      for (let el = row.previousElementSibling; el; el = el.previousElementSibling) {
+        if (el.getBoundingClientRect().bottom < list.getBoundingClientRect().top - h) break;
+        above.push(el);
+      }
+      row.classList.add('crushing');
+      above.forEach(el => el.classList.add('falling'));
+
+      // 1–2. Chute + écrasement, parfaitement synchronisés
+      const opts = { duration: CrushFx.FALL_MS, fill: 'forwards' };
+      await Promise.all([
+        row.animate(CrushFx.stepped(CrushFx.FRAMES, t => ({ transform: `scaleY(${(1 - t * t).toFixed(3)})` })), opts).finished,
+        ...above.map(el => el.animate(CrushFx.stepped(CrushFx.FRAMES, t => ({ transform: `translateY(${Math.round(h * t * t)}px)` })), opts).finished)
+      ]);
+
+      // 3. Impact : rebond des lignes tombées + tremblement du sol + poussière
+      CrushFx.dust(rowRect, list);
+      const below = row.nextElementSibling;
+      await Promise.all([
+        ...above.map(el => el.animate([
+          { transform: `translateY(${h}px)` }, { transform: `translateY(${h + 3}px)` },
+          { transform: `translateY(${h - 2}px)` }, { transform: `translateY(${h}px)` }
+        ], { duration: 150, easing: 'steps(4, end)', fill: 'forwards' }).finished),
+        below ? below.animate([{ transform: 'translateY(0)' }, { transform: 'translateY(2px)' }, { transform: 'translateY(0)' }],
+          { duration: 120, easing: 'steps(3, end)' }).finished : Promise.resolve()
+      ]);
+
+      // 4. Suppression réelle, puis on garde la liste à l'endroit où l'animation l'a laissée
+      const before = list.scrollTop;
+      commit();
+      list.scrollTop = before - h;
+      const deficit = h - (before - list.scrollTop);     // part non compensable (haut de liste)
+      if (deficit > 0) {
+        $$('#rows .row').forEach(el => el.animate(
+          CrushFx.stepped(5, t => ({ transform: `translateY(${Math.round(deficit * (1 - t))}px)` })),
+          { duration: 160 }));
+      }
+    } finally {
+      CrushFx.busy = false;
+    }
+  }
+};
+
 /** Dialogue de confirmation (window.confirm n'est pas utilisé). */
 const ConfirmDialog = {
   ask({ title, text, ok = 'Supprimer' }) {
@@ -1903,8 +2020,8 @@ const App = {
     const ok = await ConfirmDialog.ask({ title: `Supprimer ${d.gcblo} ?`, text: 'Le dossier et son historique seront supprimés de ce navigateur.' });
     if (!ok) return;
     const backup = JSON.parse(JSON.stringify(d));
-    DossierService.remove(id);
     if (DetailDialog.currentId === id && $('#dlgDetail').open) $('#dlgDetail').close();
+    await CrushFx.crush(id, () => DossierService.remove(id));
     Toast.show(`${d.gcblo} supprimé.`, { action: 'Annuler', onAction: () => DossierRepository.insert(backup) });
   },
 
