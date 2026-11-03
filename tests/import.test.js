@@ -1,7 +1,7 @@
 /**
  * import.test.js — R10, import d'un classeur Excel.
  * Le classeur d'essai (donnees/import-essai.xlsx) est fictif : il reprend la
- * forme du vrai (onglets 33, 16, 17, 79, colonnes D, E, I, J) avec des cas pièges.
+ * forme du vrai (onglets 33, 16, 17, 79, colonnes D, E, G, H, I, J) avec des cas pièges.
  */
 import { groupe, test, egal, vrai } from './outil.js';
 import { lireClasseur } from '../js/xlsx.js';
@@ -55,23 +55,36 @@ groupe('R10 — Ce qui est importé', () => {
     egal(r.nouveaux.find(n => n.gcblo === 'NIO800001-THF040').typeLu, 'Fibre');
   });
   test('écritures du type tolérées', () => egal(['NUM21', 'num 21', 'Numérus 21', 'Air', 'AIR ', 'Sogetrel', 'SOGE', 'fibre', ''].map(lireType), ['NUM21', 'NUM21', 'NUM21', 'AIR', 'AIR', 'SOGETREL', 'SOGETREL', null, null]));
-  test('dossier existant : seul le FCI manquant est ajouté', async () => {
+  test('dossier existant : on complète ce qui manque (FCI, commune, valorisation)', async () => {
     const r = extraireDossiers(await classeur, existants().store.tous());
-    egal(r.completes.map(c => [c.dossier.gcblo, c.fci]), [['SBA501404-THF010', ['F33333333333']]]);
+    egal(r.completes.map(c => [c.dossier.gcblo, c.changements]), [['SBA501404-THF010', { fci: ['F26154200726', 'F33333333333'], commune: 'Mérignac', valorisation: 1250.5 }]]);
+  });
+  test('dossier existant : une commune déjà remplie n\'est pas remplacée', async () => {
+    const { store, regles } = existants();
+    regles.modifier(store.tous()[0].id, { commune: 'Bordeaux', valorisation: 10 });
+    const r = extraireDossiers(await classeur, store.tous());
+    egal(r.completes[0].changements, { fci: ['F26154200726', 'F33333333333'] });
+  });
+  test('commune (G) et valorisation (H) des nouveaux, texte « 1 234,56 € » compris', async () => {
+    const r = extraireDossiers(await classeur, existants().store.tous());
+    egal(r.nouveaux.map(n => [n.gcblo, n.commune, n.valorisation]), [
+      ['SBA501423-THF010', 'Blanquefort', 1234.56], ['POI500553-THF010', '', null], ['BRD600001-THF020', 'Talence', null],
+      ['ANG700001-THF030', 'Bègles', 300], ['NIO800001-THF040', 'Cenon', 0]]);
   });
   test('lignes refusées avec onglet et numéro de ligne', async () => {
     const r = extraireDossiers(await classeur, existants().store.tous());
-    egal(r.refuses.map(x => [x.onglet, x.ligne, x.valeur]), [['33', 5, 'XYZ'], ['16', 3, '12345']]);
+    egal(r.refuses.map(x => [x.onglet, x.ligne, x.valeur, x.motif]), [['33', 5, 'XYZ', 'GCBLO non reconnu'], ['16', 3, '12345', 'FCI non reconnu'], ['16', 3, 'abc', 'valorisation non reconnue']]);
   });
   test('onglet absent signalé', async () => egal(extraireDossiers(await classeur, []).ongletsAbsents, ['86']));
   test('un second import n\'ajoute rien', async () => {
     const { store, regles } = existants();
     const r = extraireDossiers(await classeur, store.tous());
-    regles.creerPlusieurs(r.nouveaux.map(n => ({ gcblo: n.gcblo, type: n.type || 'AIR', fci: n.fci })), { origine: 'import Excel' });
-    r.completes.forEach(c => regles.modifier(c.dossier.id, { fci: [...c.dossier.fci, ...c.fci] }));
+    regles.creerPlusieurs(r.nouveaux.map(n => ({ gcblo: n.gcblo, type: n.type || 'AIR', fci: n.fci, commune: n.commune, valorisation: n.valorisation })), { origine: 'import Excel' });
+    r.completes.forEach(c => regles.modifier(c.dossier.id, c.changements));
     const r2 = extraireDossiers(await classeur, store.tous());
     egal([r2.nouveaux.length, r2.completes.length, r2.deja], [0, 0, 6]);
     egal(store.parGcblo('NIO800001-THF040').historique[0].detail, 'Dossier créé (import Excel)');
     egal(store.parGcblo('BRD600001-THF020').type, 'SOGETREL');
+    egal([store.parGcblo('SBA501423-THF010').commune, store.parGcblo('SBA501423-THF010').valorisation], ['Blanquefort', 1234.56]);
   });
 });

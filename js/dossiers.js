@@ -44,6 +44,24 @@ export function lireFci(saisie) {
  * R2 / R3 — état d'alerte de relance d'un dossier, au jour donné : 'retard', 'proche' ou null.
  * Fonction pure, exportée : l'invite s'en sert aussi pour les groupes « retard » et « proches ».
  */
+/**
+ * Lit un montant en euros : nombre, ou texte comme « 1 234,56 € ».
+ * Vide → null ; illisible → NaN.
+ */
+export function lireMontant(saisie) {
+  if (saisie === null || saisie === undefined || saisie === '') return null;
+  if (typeof saisie === 'number') return Number.isFinite(saisie) ? Math.round(saisie * 100) / 100 : NaN;
+  const texte = String(saisie).replace(/[\s\u00a0\u202f€]/g, '').replace(',', '.');
+  if (!texte) return null;
+  return /^-?\d+(\.\d+)?$/.test(texte) ? Math.round(Number(texte) * 100) / 100 : NaN;
+}
+
+/** 1234.5 → « 1 234,50 € ». */
+export const formaterMontant = v => (v === null || v === undefined ? '' : new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(v));
+
+/** Champs ajoutés après coup : un dossier plus ancien les reçoit vides. */
+const PAR_DEFAUT = Object.freeze({ commune: '', valorisation: null });
+
 export function etatRelance(dossier, jour) {
   if (!dossier.dateRelance || statutParCode(dossier.statutDft)?.clos) return null;
   const ecart = ecartJours(dossier.dateRelance, jour);
@@ -72,6 +90,8 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
     const statutDft = saisie.statutDft || STATUT_PAR_DEFAUT;
     const dateAffectation = saisie.dateAffectation || jour();
     const dateRelance = saisie.dateRelance || null;
+    const commune = String(saisie.commune ?? '').trim();
+    const valorisation = lireMontant(saisie.valorisation);
 
     if (!typeParCode(saisie.type)) erreurs.type = `Type inconnu. Choisir parmi : ${TYPES.map(t => t.libelle).join(', ')}.`;
     if (!gcblo) erreurs.gcblo = 'Le GCBLO est obligatoire.';
@@ -85,8 +105,9 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
     if (!statutParCode(statutDft)) erreurs.statutDft = `Statut inconnu. Choisir parmi : ${STATUTS.map(s => s.libelle).join(', ')}.`;
     if (!estJour(dateAffectation)) erreurs.dateAffectation = 'Date d\'affectation invalide.';
     if (dateRelance !== null && !estJour(dateRelance)) erreurs.dateRelance = 'Date de relance invalide.';
+    if (Number.isNaN(valorisation)) erreurs.valorisation = 'Valorisation invalide : un montant en euros est attendu.';
 
-    const valeur = { type: saisie.type, gcblo, fci, dateAffectation, dateRelance, statutDft, commentaire: String(saisie.commentaire ?? '').trim() };
+    const valeur = { type: saisie.type, gcblo, fci, dateAffectation, dateRelance, statutDft, commune, valorisation, commentaire: String(saisie.commentaire ?? '').trim() };
     return { ok: Object.keys(erreurs).length === 0, erreurs, valeur };
   }
 
@@ -99,6 +120,8 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
       dateAffectation: ['Affectation', formater],
       dateRelance: ['Relance', v => (v ? formater(v) : 'aucune')],
       statutDft: ['Statut DFT', v => statutParCode(v)?.libelle],
+      commune: ['Commune', v => v || 'vide'],
+      valorisation: ['Valorisation', v => (v === null ? 'aucune' : formaterMontant(v))],
       commentaire: ['Commentaire', v => (v ? `« ${v.length > 40 ? v.slice(0, 40) + '…' : v} »` : 'vide')]
     };
     return Object.entries(libelles)
@@ -108,16 +131,17 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
 
   /** Prépare la nouvelle version d'un dossier, sans l'enregistrer. */
   function preparerModification(id, changements) {
-    const actuel = store.parId(id);
-    if (!actuel) return { ok: false, erreurs: { id: 'Dossier introuvable.' } };
+    const enregistre = store.parId(id);
+    if (!enregistre) return { ok: false, erreurs: { id: 'Dossier introuvable.' } };
+    const actuel = { ...PAR_DEFAUT, ...enregistre };
     const { ok, erreurs, valeur } = valider({ ...actuel, ...changements }, { idExclu: id });
     if (!ok) return { ok: false, erreurs };
     const liste = differences(actuel, valeur);
-    if (!liste.length) return { ok: true, inchange: true, dossier: actuel };
+    if (!liste.length) return { ok: true, inchange: true, dossier: enregistre };
     const date = instant();
     // R6 — chaque changement ajoute une ligne d'historique
     const dossier = { ...actuel, ...valeur, modifieLe: date, historique: [...actuel.historique, { date, action: 'modification', detail: liste.join(' · ') }] };
-    return { ok: true, dossier, avant: actuel };
+    return { ok: true, dossier, avant: enregistre };
   }
 
   return {
@@ -256,7 +280,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
         (!statut || d.statutDft === statut) &&
         (!retard || etatRelance(d, ref) === 'retard') &&
         (!sansFci || d.fci.length === 0) &&
-        mots.every(m => plat(`${d.gcblo} ${d.fci.join(' ')} ${d.commentaire}`).includes(m)));
+        mots.every(m => plat(`${d.gcblo} ${d.fci.join(' ')} ${d.commune || ''} ${d.commentaire}`).includes(m)));
     },
 
     /**

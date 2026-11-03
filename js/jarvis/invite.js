@@ -16,6 +16,7 @@ import { proposer, apercu } from './completion.js';
 import { esc } from './actions.js';
 import { typeParCode, statutParCode } from '../config.js';
 import { formater } from '../dates.js';
+import { formaterMontant } from '../dossiers.js';
 import { ressembleAUneListe } from '../collage.js';
 import { plat } from './grammaire.js';
 import { optionsDossier } from './menus.js';
@@ -94,6 +95,8 @@ export function creerInvite({ racine, contexte }) {
         champ('type', `<span class="ty-${d.type}">${esc(typeParCode(d.type).libelle)}</span>`),
         champ('statut DFT', `<span class="st-${d.statutDft}">${esc(statutParCode(d.statutDft).libelle)}</span>`),
         champ('FCI', esc(d.fci.join(', ') || 'aucun')),
+        champ('commune', esc(d.commune || '—')),
+        champ('valorisation', d.valorisation !== null && d.valorisation !== undefined ? esc(formaterMontant(d.valorisation)) : '—'),
         champ('affectation', esc(formater(d.dateAffectation))),
         champ('relance', d.dateRelance ? `<span class="${alerte || ''}">${esc(formater(d.dateRelance))}${alerte === 'retard' ? ' (en retard)' : alerte === 'proche' ? ' (proche)' : ''}</span>` : 'aucune'),
         champ('commentaire', esc(d.commentaire || '—').replace(/\n/g, '<br>' + ' '.repeat(14))),

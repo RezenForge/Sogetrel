@@ -9,15 +9,16 @@
  *
  *   extraireDossiers(classeur, existants) → {
  *     lus,                                  lignes « GCBLO » trouvées
- *     nouveaux:  [{ gcblo, type (code, ou null si illisible), fci: [], onglet, ligne }],
- *     completes: [{ dossier, fci: [manquants] }],      dossiers existants à qui il manque un FCI
+ *     nouveaux:  [{ gcblo, type (code, ou null si illisible), fci: [], commune, valorisation, onglet, ligne }],
+ *     completes: [{ dossier, changements: { fci?, commune?, valorisation? } }],
+ *                dossiers existants à compléter : FCI manquants, commune ou valorisation vides
  *     deja:      nombre de dossiers existants sans rien à ajouter,
  *     refuses:   [{ onglet, ligne, valeur, motif }],
  *     ongletsAbsents: ['17', …]
  *   }
  */
 import { IMPORT_EXCEL, FORMATS } from './config.js';
-import { normaliserGcblo } from './dossiers.js';
+import { normaliserGcblo, lireMontant } from './dossiers.js';
 
 /** Échappe un texte pour l'utiliser dans une expression régulière. */
 const motif = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s*');
@@ -63,11 +64,17 @@ export function extraireDossiers(classeur, existants = [], reglages = IMPORT_EXC
       const fci = lireFciApresRepere(cellules[colonnes.fci], reglages.reperFci);
       if (fci && !FORMATS.fci.test(fci)) refuses.push({ onglet, ligne: numero, valeur: fci, motif: 'FCI non reconnu' });   // le dossier est quand même importé, sans ce FCI
       // Le même dossier sur plusieurs lignes ou onglets : un seul dossier, tous ses FCI
-      const t = trouves.get(gcblo) || { gcblo, type: null, typeLu: '', fci: [], onglet, ligne: numero };
+      const t = trouves.get(gcblo) || { gcblo, type: null, typeLu: '', fci: [], commune: '', valorisation: null, onglet, ligne: numero };
       // Type : le premier lisible l'emporte ; un type illisible est signalé, le type sera demandé
       const typeLu = String(cellules[colonnes.type] ?? '').trim();
       if (!t.type) { t.type = lireType(typeLu); if (!t.type && typeLu) t.typeLu = typeLu; }
       if (fci && FORMATS.fci.test(fci) && !t.fci.includes(fci)) t.fci.push(fci);
+      // Commune (G) et valorisation (H, en euros) : la première valeur non vide l'emporte
+      const commune = String(cellules[colonnes.commune] ?? '').trim();
+      if (!t.commune && commune) t.commune = commune;
+      const valorisation = lireMontant(cellules[colonnes.valorisation]);
+      if (Number.isNaN(valorisation)) refuses.push({ onglet, ligne: numero, valeur: String(cellules[colonnes.valorisation]), motif: 'valorisation non reconnue' });
+      else if (t.valorisation === null && valorisation !== null) t.valorisation = valorisation;
       trouves.set(gcblo, t);
     }
   }
@@ -76,9 +83,14 @@ export function extraireDossiers(classeur, existants = [], reglages = IMPORT_EXC
   let deja = 0;
   for (const t of trouves.values()) {
     const d = parGcblo.get(t.gcblo);
-    if (!d) { nouveaux.push({ gcblo: t.gcblo, type: t.type, typeLu: t.typeLu, fci: t.fci, onglet: t.onglet, ligne: t.ligne }); continue; }
+    if (!d) { nouveaux.push(t); continue; }
+    // Dossier déjà présent : on complète ce qui manque, on ne remplace rien
+    const changements = {};
     const manquants = t.fci.filter(f => !d.fci.includes(f));
-    if (manquants.length) completes.push({ dossier: d, fci: manquants }); else deja++;
+    if (manquants.length) changements.fci = [...d.fci, ...manquants];
+    if (!d.commune && t.commune) changements.commune = t.commune;
+    if ((d.valorisation ?? null) === null && t.valorisation !== null) changements.valorisation = t.valorisation;
+    if (Object.keys(changements).length) completes.push({ dossier: d, changements }); else deja++;
   }
   return { lus, nouveaux, completes, deja, refuses, ongletsAbsents: onglets.filter(o => !classeur.feuilles[o]) };
 }

@@ -7,7 +7,7 @@
  */
 import { groupe, test, egal, vrai } from './outil.js';
 import { creerStore, supportMemoire } from '../js/store.js';
-import { creerDossiers, lireFci, normaliserGcblo } from '../js/dossiers.js';
+import { creerDossiers, lireFci, normaliserGcblo, lireMontant, formaterMontant } from '../js/dossiers.js';
 import { ajouterJours, ecartJours, estJour, formater, versJour } from '../js/dates.js';
 
 const MAINTENANT = new Date(2026, 10, 2, 10, 0);       // 02/11/2026 10:00, heure locale
@@ -269,5 +269,40 @@ groupe('Statistiques — relances à venir', () => {
     mk('SBA000004-THF001', '2026-11-08'); mk('SBA000005-THF001', '2026-11-09'); mk('SBA000006-THF001', '2026-10-30');
     mk('SBA000007-THF001', '2026-11-03', 'MAD');
     egal(r.statistiques().aVenir, [1, 0, 2, 0, 0, 0, 1]);
+  });
+});
+
+groupe('Commune et valorisation', () => {
+  test('montants : nombre, texte français, vide, illisible', () => {
+    egal([lireMontant(1250.456), lireMontant('1 234,56 €'), lireMontant('99'), lireMontant(''), lireMontant(null)], [1250.46, 1234.56, 99, null, null]);
+    vrai(Number.isNaN(lireMontant('abc')));
+  });
+  test('affichage en euros', () => egal(formaterMontant(1234.5).replace(/\s/g, ' '), '1 234,50 €'));
+  test('création avec commune et valorisation', () => {
+    const r = creerDossiers(creerStore(supportMemoire()), { horloge: () => new Date(2026, 10, 3, 9) });
+    const c = r.creer({ type: 'AIR', gcblo: 'SBA501404-THF010', commune: ' Mérignac ', valorisation: '1 250,50' });
+    egal([c.dossier.commune, c.dossier.valorisation], ['Mérignac', 1250.5]);
+  });
+  test('valorisation illisible refusée', () => {
+    const r = creerDossiers(creerStore(supportMemoire()));
+    vrai(!r.creer({ type: 'AIR', gcblo: 'SBA501404-THF010', valorisation: 'beaucoup' }).ok);
+  });
+  test('modification notée dans l\'historique', () => {
+    const r = creerDossiers(creerStore(supportMemoire()));
+    const d = r.creer({ type: 'AIR', gcblo: 'SBA501404-THF010' }).dossier;
+    egal(r.modifier(d.id, { commune: 'Pessac', valorisation: 80 }).dossier.historique.at(-1).detail.replace(/\s/g, ' '), 'Commune : vide → Pessac · Valorisation : aucune → 80,00 €');
+  });
+  test('un dossier plus ancien, sans ces champs, ne reçoit pas de fausse ligne d\'historique', () => {
+    const store = creerStore(supportMemoire());
+    const r = creerDossiers(store);
+    const d = r.creer({ type: 'AIR', gcblo: 'SBA501404-THF010' }).dossier;
+    const ancien = { ...d }; delete ancien.commune; delete ancien.valorisation;
+    store.remplacer(ancien);
+    egal(r.modifier(d.id, { statutDft: 'REFUSE' }).dossier.historique.at(-1).detail, 'Statut DFT : À faire → Refusé');
+  });
+  test('la recherche trouve la commune', () => {
+    const r = creerDossiers(creerStore(supportMemoire()));
+    r.creer({ type: 'AIR', gcblo: 'SBA501404-THF010', commune: 'Le Haillan' });
+    egal(r.filtrer({ texte: 'haillan' }).length, 1);
   });
 });

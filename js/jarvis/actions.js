@@ -80,7 +80,7 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       if (r.ongletsAbsents.length === IMPORT_EXCEL.onglets.length) return erreur(`aucun onglet ${IMPORT_EXCEL.onglets.join(', ')} dans ${esc(fichier.name)}`);
 
       const bilan = [pluriel(r.lus, 'ligne GCBLO', 'lignes GCBLO'), r.nouveaux.length && pluriel(r.nouveaux.length, 'nouveau', 'nouveaux'),
-        r.completes.length && `${r.completes.length} FCI à ajouter`, r.deja && `${r.deja} déjà à jour`].filter(Boolean);
+        r.completes.length && `${r.completes.length} à compléter`, r.deja && `${r.deja} déjà à jour`].filter(Boolean);
       info(`${esc(fichier.name)} : ${bilan.join(' · ')}`);
       if (r.ongletsAbsents.length) info(`<span class="dim">onglets absents : ${esc(r.ongletsAbsents.join(', '))}</span>`);
       r.refuses.slice(0, 10).forEach(x => erreur(`onglet ${esc(x.onglet)}, ligne ${x.ligne} : ${esc(x.valeur)} : ${esc(x.motif)}`));
@@ -97,10 +97,10 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
         if (!choix) return info('import abandonné');
         typeParDefaut = MOTS_TYPE[choix];
       }
-      const creation = r.nouveaux.length ? regles.creerPlusieurs(r.nouveaux.map(n => ({ gcblo: n.gcblo, type: n.type || typeParDefaut, fci: n.fci })), { origine: 'import Excel' }) : { crees: [], refuses: [] };
+      const creation = r.nouveaux.length ? regles.creerPlusieurs(r.nouveaux.map(n => ({ gcblo: n.gcblo, type: n.type || typeParDefaut, fci: n.fci, commune: n.commune, valorisation: n.valorisation })), { origine: 'import Excel' }) : { crees: [], refuses: [] };
       const avant = [];
       for (const c of r.completes) {
-        const m = regles.modifier(c.dossier.id, { fci: [...c.dossier.fci, ...c.fci] });
+        const m = regles.modifier(c.dossier.id, c.changements);
         if (m.ok && m.avant) avant.push(m.avant);
       }
       if (creation.crees.length || avant.length) {
@@ -108,7 +108,7 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
         annulation = { libelle: 'import', faire: () => { if (ids.length) regles.supprimer(...ids); if (avant.length) regles.restaurer(avant); } };
       }
       creation.refuses.forEach(x => erreur(`${esc(x.saisie.gcblo)} : ${esc(x.erreur)}`));
-      ok(`${pluriel(creation.crees.length, 'dossier créé', 'dossiers créés')}${avant.length ? ` · ${pluriel(avant.length, 'FCI ajouté', 'FCI ajoutés')}` : ''} <span class="dim">·</span> ${LIEN_ANNULE}`);
+      ok(`${pluriel(creation.crees.length, 'dossier créé', 'dossiers créés')}${avant.length ? ` · ${pluriel(avant.length, 'complété', 'complétés')}` : ''} <span class="dim">·</span> ${LIEN_ANNULE}`);
     },
 
     cancel() {

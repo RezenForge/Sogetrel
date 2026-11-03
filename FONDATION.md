@@ -35,6 +35,8 @@ L'application s'ouvre par le lien GitHub Pages. Elle fonctionne sans serveur : l
 | `dateAffectation` | date | obligatoire, aujourd'hui par défaut |
 | `dateRelance` | date ou vide | facultative |
 | `statutDft` | voir ci-dessous | `A_FAIRE` par défaut |
+| `commune` | ex. `Mérignac` | facultative ; reprise de l'import (colonne G) |
+| `valorisation` | montant en euros, ex. `1250.5` | facultative ; reprise de l'import (colonne H) ; servira à la commande `attachement` |
 | `commentaire` | texte libre | facultatif |
 | `historique` | liste de `{ date, action, détail }` | rempli automatiquement à chaque changement |
 | `creeLe`, `modifieLe` | date et heure | automatiques |
@@ -64,10 +66,10 @@ Un dossier **clos** n'a plus d'alerte de relance.
 7. **Suppression** : toujours confirmée et annulable juste après.
 8. **Point du jour** : à l'ouverture et sur demande, quatre listes : relances en retard, relances du jour, relances dans les 3 jours, dossiers refusés (à reprendre). Les dossiers clos n'y figurent jamais.
 9. **Création en lot** (collage d'une liste) : chaque ligne est validée comme une création normale (R1 à R6). Les lignes valides sont créées ensemble, les autres sont listées avec leur motif. Tout le lot s'annule d'un coup.
-10. **Import Excel** (commande `import`) : on choisit un classeur (.xlsx ou .xlsm). Dans les onglets **33, 16, 17, 79 et 86**, chaque ligne dont la **colonne E** vaut `GCBLO` donne un dossier : son GCBLO est en **colonne D**, son type (NUM21, AIR, Sogetrel) en **colonne I**, son FCI est ce qui suit `Numéro de commande FCI :` dans la **colonne J**.
+10. **Import Excel** (commande `import`) : on choisit un classeur (.xlsx ou .xlsm). Dans les onglets **33, 16, 17, 79 et 86**, chaque ligne dont la **colonne E** vaut `GCBLO` donne un dossier : son GCBLO est en **colonne D**, sa **commune en G**, sa **valorisation en H** (euros, nombre ou texte « 1 234,56 € »), son type (NUM21, AIR, Sogetrel) en **colonne I**, son FCI est ce qui suit `Numéro de commande FCI :` dans la **colonne J**.
     - Si le type est vide ou non reconnu, il est demandé **une fois** pour ces dossiers-là. Le type d'un dossier déjà présent n'est pas changé.
-    - Un dossier déjà présent n'est pas recréé ; s'il lui manque ce FCI, il lui est ajouté.
-    - Les lignes refusées (GCBLO mal formé, FCI non reconnu) sont listées avec leur onglet et leur numéro de ligne.
+    - Un dossier déjà présent n'est pas recréé : on **complète** ce qui manque (FCI absent, commune ou valorisation vides), on ne remplace rien.
+    - Les lignes refusées (GCBLO mal formé, FCI ou valorisation non reconnus) sont listées avec leur onglet et leur numéro de ligne.
     - Tout l'import s'annule d'un coup (`cancel`).
     - Le fichier est lu dans le navigateur : il n'est envoyé nulle part. Onglets, colonnes et texte repère sont réglés dans `config.js` (`IMPORT_EXCEL`).
 
@@ -307,3 +309,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 03/11/2026 | Style « shell Linux » au lieu de « hacker » : fond gris de terminal GNOME, palette Tango, police Ubuntu Mono, invite bash `dylan@gcblo:~$`, ligne de saisie fondue dans l'écran, messages façon outils Linux (`gcblo: lsx : commande introuvable`, succès sans ✓) |
 | 03/11/2026 | Commande `import` (R10) : classeur Excel lu dans le navigateur, sans bibliothèque extérieure (`js/xlsx.js`) |
 | 03/11/2026 | `import` : type lu en colonne I (demandé seulement s'il manque) |
+| 03/11/2026 | Dossier : champs `commune` et `valorisation` (import colonnes G et H, fiche, recherche) ; prévus pour la future commande `attachement` |
