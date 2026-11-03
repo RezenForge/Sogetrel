@@ -81,21 +81,24 @@ export function creerInvite({ racine, contexte }) {
         const fci = d.fci.length ? d.fci[0] + (d.fci.length > 1 ? `+${d.fci.length - 1}` : '') : '';
         const commune = d.commune || '';
         const valo = d.valorisation !== null && d.valorisation !== undefined ? formaterMontant(d.valorisation).replace(/\s/g, ' ') : '';
-        // Grand écran : FCI, commune et valo en colonnes sur la même ligne
-        const large = `<span class="col-large"> <span class="dim">${col(fci || '—', 16)}</span>${col(coupe(commune, 22) || '—', 23)}<span class="valo">${esc((valo || '—').padStart(11))}</span> </span>`;
-        // Téléphone : les mêmes informations sur une seconde ligne, en retrait
-        const infos = [fci, commune, valo].filter(Boolean);
+        // Ordre des colonnes : AFFECT GCBLO COMMUNE VALO FCI RELANCE STATUT
+        // Grand écran : commune, valo et FCI en colonnes au milieu de la ligne
+        const large = `<span class="col-large">${col(coupe(commune, 22) || '—', 23)}<span class="valo">${esc((valo || '—').padStart(11))}</span>  <span class="dim">${col(fci || '—', 16)}</span></span>`;
+        // Téléphone : les mêmes informations, dans le même ordre, sur une seconde ligne en retrait
+        const infos = [commune, valo, fci].filter(Boolean);
         const etroit = infos.length ? `<span class="col-etroit dim">${esc(infos.join(' · '))}</span>` : '';
         return `<span class="ty-${d.type}">${col(TYPE_COURT[d.type] || d.type, 7)}</span>`
           + `${lienDossier(d)} `
-          + `<span class="st-${d.statutDft}">${col(STATUT_COURT[d.statutDft] || d.statutDft, 11)}</span>`
-          + `<span class="${alerte || 'dim'}">${col(relance, 6)}</span>`
+          + large
+          + `<span class="${alerte || 'dim'}">${col(relance, 7)}</span>`
+          + `<span class="st-${d.statutDft}">${col(STATUT_COURT[d.statutDft] || d.statutDft, 10)}</span>`
           // Fin de ligne : sur téléphone, la seconde ligne (bloc) termine déjà la ligne
-          + large + boutonMenu(d) + (etroit ? `${etroit}<span class="col-large">\n</span>` : '\n');
+          + boutonMenu(d) + (etroit ? `${etroit}<span class="col-large">\n</span>` : '\n');
       });
       // L'en-tête reste visible en haut de l'écran tant que la liste défile (CSS : sticky)
-      const entete = `<span class="entete dim">${'AFFECT'.padEnd(7)}${'GCBLO'.padEnd(17)}${'STATUT'.padEnd(11)}${'RELANCE'.padEnd(6)}`
-        + `<span class="col-large"> ${'FCI'.padEnd(16)}${'COMMUNE'.padEnd(23)}${'VALO'.padStart(11)}</span></span>`;
+      const entete = `<span class="entete dim">${'AFFECT'.padEnd(7)}${'GCBLO'.padEnd(17)}`
+        + `<span class="col-large">${'COMMUNE'.padEnd(23)}${'VALO'.padStart(11)}  ${'FCI'.padEnd(16)}</span>`
+        + `${'RELANCE'.padEnd(8)}STATUT</span>`;
       ecran.ligne(`<pre class="tableau">${entete}${lignes.join('').replace(/\n$/, '')}</pre>`, 'vue');
     },
     fiche(d) {

@@ -325,3 +325,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 03/11/2026 | À l'écran, « type » devient « affect » (liste, fiche, `set … to ‹statut\|affect›`, import) ; le champ s'appelle toujours `type` dans les données |
 | 03/11/2026 | En-tête des listes collé en haut de l'écran pendant le défilement |
 | 03/11/2026 | `ls` affiche aussi FCI, commune et valo : en colonnes sur grand écran, sur une seconde ligne sur téléphone |
+| 03/11/2026 | Ordre des colonnes de `ls` : AFFECT GCBLO COMMUNE VALO FCI RELANCE STATUT (sur téléphone : commune · valo · FCI en seconde ligne) |
