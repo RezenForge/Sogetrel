@@ -1,11 +1,11 @@
 /**
  * import.test.js — R10, import d'un classeur Excel.
  * Le classeur d'essai (donnees/import-essai.xlsx) est fictif : il reprend la
- * forme du vrai (onglets 33, 16, 17, 79, colonnes D, E, J) avec des cas pièges.
+ * forme du vrai (onglets 33, 16, 17, 79, colonnes D, E, I, J) avec des cas pièges.
  */
 import { groupe, test, egal, vrai } from './outil.js';
 import { lireClasseur } from '../js/xlsx.js';
-import { extraireDossiers, lireFciApresRepere } from '../js/import-excel.js';
+import { extraireDossiers, lireFciApresRepere, lireType } from '../js/import-excel.js';
 import { creerStore, supportMemoire } from '../js/store.js';
 import { creerDossiers } from '../js/dossiers.js';
 
@@ -49,6 +49,12 @@ groupe('R10 — Ce qui est importé', () => {
       ['SBA501423-THF010', ['F09075260926']], ['POI500553-THF010', []], ['BRD600001-THF020', []],
       ['ANG700001-THF030', ['F44444444444']], ['NIO800001-THF040', ['F55555555555']]]);
   });
+  test('type lu en colonne I ; vide ou inconnu → null (sera demandé)', async () => {
+    const r = extraireDossiers(await classeur, existants().store.tous());
+    egal(r.nouveaux.map(n => [n.gcblo, n.type]), [['SBA501423-THF010', 'AIR'], ['POI500553-THF010', 'NUM21'], ['BRD600001-THF020', 'SOGETREL'], ['ANG700001-THF030', null], ['NIO800001-THF040', null]]);
+    egal(r.nouveaux.find(n => n.gcblo === 'NIO800001-THF040').typeLu, 'Fibre');
+  });
+  test('écritures du type tolérées', () => egal(['NUM21', 'num 21', 'Numérus 21', 'Air', 'AIR ', 'Sogetrel', 'SOGE', 'fibre', ''].map(lireType), ['NUM21', 'NUM21', 'NUM21', 'AIR', 'AIR', 'SOGETREL', 'SOGETREL', null, null]));
   test('dossier existant : seul le FCI manquant est ajouté', async () => {
     const r = extraireDossiers(await classeur, existants().store.tous());
     egal(r.completes.map(c => [c.dossier.gcblo, c.fci]), [['SBA501404-THF010', ['F33333333333']]]);
@@ -61,10 +67,11 @@ groupe('R10 — Ce qui est importé', () => {
   test('un second import n\'ajoute rien', async () => {
     const { store, regles } = existants();
     const r = extraireDossiers(await classeur, store.tous());
-    regles.creerPlusieurs(r.nouveaux.map(n => ({ gcblo: n.gcblo, type: 'AIR', fci: n.fci })), { origine: 'import Excel' });
+    regles.creerPlusieurs(r.nouveaux.map(n => ({ gcblo: n.gcblo, type: n.type || 'AIR', fci: n.fci })), { origine: 'import Excel' });
     r.completes.forEach(c => regles.modifier(c.dossier.id, { fci: [...c.dossier.fci, ...c.fci] }));
     const r2 = extraireDossiers(await classeur, store.tous());
     egal([r2.nouveaux.length, r2.completes.length, r2.deja], [0, 0, 6]);
     egal(store.parGcblo('NIO800001-THF040').historique[0].detail, 'Dossier créé (import Excel)');
+    egal(store.parGcblo('BRD600001-THF020').type, 'SOGETREL');
   });
 });

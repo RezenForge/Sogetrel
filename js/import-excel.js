@@ -9,7 +9,7 @@
  *
  *   extraireDossiers(classeur, existants) → {
  *     lus,                                  lignes « GCBLO » trouvées
- *     nouveaux:  [{ gcblo, fci: [] , onglet, ligne }],
+ *     nouveaux:  [{ gcblo, type (code, ou null si illisible), fci: [], onglet, ligne }],
  *     completes: [{ dossier, fci: [manquants] }],      dossiers existants à qui il manque un FCI
  *     deja:      nombre de dossiers existants sans rien à ajouter,
  *     refuses:   [{ onglet, ligne, valeur, motif }],
@@ -21,6 +21,18 @@ import { normaliserGcblo } from './dossiers.js';
 
 /** Échappe un texte pour l'utiliser dans une expression régulière. */
 const motif = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s*');
+
+/**
+ * Le type écrit en colonne I → code (NUM21, AIR, SOGETREL), ou null s'il n'est pas reconnu.
+ * Tolère « num21 », « NUM 21 », « Numérus 21 », « Air », « SOGETREL »…
+ */
+export function lireType(texte) {
+  const t = String(texte ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().replace(/[\s_-]+/g, '');
+  if (/^NUM(ERUS)?21$/.test(t)) return 'NUM21';
+  if (t === 'AIR') return 'AIR';
+  if (t.startsWith('SOGE')) return 'SOGETREL';
+  return null;
+}
 
 /** Sans accents, pour tolérer « Numero » comme « Numéro ». */
 const sansAccents = t => String(t ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -51,7 +63,10 @@ export function extraireDossiers(classeur, existants = [], reglages = IMPORT_EXC
       const fci = lireFciApresRepere(cellules[colonnes.fci], reglages.reperFci);
       if (fci && !FORMATS.fci.test(fci)) refuses.push({ onglet, ligne: numero, valeur: fci, motif: 'FCI non reconnu' });   // le dossier est quand même importé, sans ce FCI
       // Le même dossier sur plusieurs lignes ou onglets : un seul dossier, tous ses FCI
-      const t = trouves.get(gcblo) || { gcblo, fci: [], onglet, ligne: numero };
+      const t = trouves.get(gcblo) || { gcblo, type: null, typeLu: '', fci: [], onglet, ligne: numero };
+      // Type : le premier lisible l'emporte ; un type illisible est signalé, le type sera demandé
+      const typeLu = String(cellules[colonnes.type] ?? '').trim();
+      if (!t.type) { t.type = lireType(typeLu); if (!t.type && typeLu) t.typeLu = typeLu; }
       if (fci && FORMATS.fci.test(fci) && !t.fci.includes(fci)) t.fci.push(fci);
       trouves.set(gcblo, t);
     }
@@ -61,7 +76,7 @@ export function extraireDossiers(classeur, existants = [], reglages = IMPORT_EXC
   let deja = 0;
   for (const t of trouves.values()) {
     const d = parGcblo.get(t.gcblo);
-    if (!d) { nouveaux.push(t); continue; }
+    if (!d) { nouveaux.push({ gcblo: t.gcblo, type: t.type, typeLu: t.typeLu, fci: t.fci, onglet: t.onglet, ligne: t.ligne }); continue; }
     const manquants = t.fci.filter(f => !d.fci.includes(f));
     if (manquants.length) completes.push({ dossier: d, fci: manquants }); else deja++;
   }

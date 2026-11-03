@@ -72,11 +72,12 @@ export const EMAIL = Object.freeze({
 /**
  * R10 — Import Excel : où lire les dossiers dans le classeur.
  * Une ligne est prise si sa colonne `filtre` vaut `valeurFiltre` ;
+ * le type (NUM21, AIR, Sogetrel) est dans la colonne `type` ;
  * le FCI est le mot qui suit `reperFci` dans la colonne `fci`.
  */
 export const IMPORT_EXCEL = Object.freeze({
   onglets: Object.freeze(['33', '16', '17', '79', '86']),
-  colonnes: Object.freeze({ dossier: 'D', filtre: 'E', fci: 'J' }),
+  colonnes: Object.freeze({ dossier: 'D', filtre: 'E', type: 'I', fci: 'J' }),
   valeurFiltre: 'GCBLO',
   reperFci: 'Numéro de commande FCI :'
 });

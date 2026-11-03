@@ -87,14 +87,17 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       if (r.refuses.length > 10) erreur(`… et ${r.refuses.length - 10} autres lignes refusées`);
       if (!r.nouveaux.length && !r.completes.length) return info('rien à importer');
 
-      // Le type n'est pas dans le classeur : demandé une fois pour tous les nouveaux
-      let type = null;
-      if (r.nouveaux.length) {
-        const choix = await demander(`type des ${pluriel(r.nouveaux.length, 'nouveau', 'nouveaux')} ?`, Object.keys(MOTS_TYPE));
+      // Type lu en colonne I ; s'il manque ou n'est pas reconnu, il est demandé une fois pour ces dossiers-là
+      const sansType = r.nouveaux.filter(n => !n.type);
+      let typeParDefaut = null;
+      if (sansType.length) {
+        const exemples = [...new Set(sansType.map(n => n.typeLu).filter(Boolean))].slice(0, 3);
+        if (exemples.length) info(`<span class="dim">type non reconnu : ${esc(exemples.join(', '))}</span>`);
+        const choix = await demander(`type des ${pluriel(sansType.length, 'dossier', 'dossiers')} sans type ?`, Object.keys(MOTS_TYPE));
         if (!choix) return info('import abandonné');
-        type = MOTS_TYPE[choix];
+        typeParDefaut = MOTS_TYPE[choix];
       }
-      const creation = r.nouveaux.length ? regles.creerPlusieurs(r.nouveaux.map(n => ({ gcblo: n.gcblo, type, fci: n.fci })), { origine: 'import Excel' }) : { crees: [], refuses: [] };
+      const creation = r.nouveaux.length ? regles.creerPlusieurs(r.nouveaux.map(n => ({ gcblo: n.gcblo, type: n.type || typeParDefaut, fci: n.fci })), { origine: 'import Excel' }) : { crees: [], refuses: [] };
       const avant = [];
       for (const c of r.completes) {
         const m = regles.modifier(c.dossier.id, { fci: [...c.dossier.fci, ...c.fci] });
