@@ -60,12 +60,12 @@ invite.brancher(analyse => actions.executer(analyse));
 
 /* 5. Prévenir si l'enregistrement échoue. */
 store.ecouter(() => invite.ecran.marquerPerime());
-store.ecouter(e => { if (!e.enregistre) invite.ecran.ligne('✗ enregistrement impossible : les dernières modifications ne sont pas gardées', 'err'); });
+store.ecouter(e => { if (!e.enregistre) invite.ecran.ligne('gcblo: enregistrement impossible : les dernières modifications ne sont pas gardées', 'err'); });
 
 /* 6. Écran de départ : vide, seulement les avertissements utiles. */
 const e = invite.ecran;
-if (reprise?.dossiers.length) e.ligne(`✓ ${reprise.dossiers.length} dossiers repris de la version 1${reprise.ignores ? ` (${reprise.ignores} ignorés)` : ''}`, 'ok');
-if (!stockageOk) e.ligne('✗ ce navigateur bloque l\'enregistrement : les données seront perdues à la fermeture', 'err');
+if (reprise?.dossiers.length) e.ligne(`${reprise.dossiers.length} dossiers repris de la version 1${reprise.ignores ? ` (${reprise.ignores} ignorés)` : ''}`, 'ok');
+if (!stockageOk) e.ligne('gcblo: ce navigateur bloque l\'enregistrement : les données seront perdues à la fermeture', 'err');
 invite.rafraichir();
 invite.focus();
 

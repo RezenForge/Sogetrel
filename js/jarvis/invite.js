@@ -21,6 +21,8 @@ import { plat } from './grammaire.js';
 import { optionsDossier } from './menus.js';
 
 const CLE_HISTORIQUE = 'gcblo.v2.historique';
+/** L'invite, façon bash : utilisateur@machine:chemin$ */
+const INVITE = '<span class="pr-hote">dylan@gcblo</span>:<span class="pr-chemin">~</span>$';
 const TYPE_COURT = { NUM21: 'NUM21', AIR: 'AIR', SOGETREL: 'SOGE' };
 const STATUT_COURT = { A_FAIRE: 'À faire', EN_VALIDATION: 'En valid.', MAD: 'Mis à disp', REFUSE: 'Refusé' };
 
@@ -77,7 +79,7 @@ export function creerInvite({ racine, contexte }) {
         return `<span class="ty-${d.type}">${col(TYPE_COURT[d.type] || d.type, 6)}</span>`
           + `${lienDossier(d)} `
           + `<span class="st-${d.statutDft}">${col(STATUT_COURT[d.statutDft] || d.statutDft, 11)}</span>`
-          + `<span class="${alerte || 'dim'}">${col(relance, 7)}</span>`
+          + `<span class="${alerte || 'dim'}">${col(relance, 6)}</span>`
           + boutonMenu(d);
       });
       const entete = `<span class="dim">${'TYPE'.padEnd(6)}${'GCBLO'.padEnd(17)}${'STATUT'.padEnd(11)}RELANCE</span>`;
@@ -135,7 +137,7 @@ export function creerInvite({ racine, contexte }) {
     // Ligne d'aide : erreur sur le mot courant, sinon erreur, sinon aperçu
     const msg = analyse.erreurs[0] || (texte.trim() && analyse.erreurCourante && curseur < texte.length ? analyse.erreurCourante : null);
     aideEl.className = `aide-ligne ${msg ? 'err' : ''}`;
-    aideEl.textContent = msg ? `✗ ${msg}` : (texte.trim() ? apercu(analyse, ctx) || '' : '');
+    aideEl.textContent = msg ? msg : (texte.trim() ? apercu(analyse, ctx) || '' : '');
     poserIndice();
   }
 
@@ -207,23 +209,23 @@ export function creerInvite({ racine, contexte }) {
     if (attente) return;
     fermerMenu();
     const analyse = analyser(texte, texte.length, contexte());
-    ecran.ligne(`<span class="invite-echo">gcblo:~$</span> ${colorer(texte, analyse)}`, 'echo');
+    ecran.ligne(`<span class="invite-echo">${INVITE}</span> ${colorer(texte, analyse)}`, 'echo');
     historique = [texte, ...historique.filter(h => h !== texte)].slice(0, 100);
     try { localStorage.setItem(CLE_HISTORIQUE, JSON.stringify(historique)); } catch { /* facultatif */ }
     posHistorique = -1;
     rafraichir();
 
-    if (!analyse.commande) return ecran.ligne(`✗ ${esc(analyse.erreurs[0] || `commande inconnue : « ${texte.split(/\s+/)[0]} »`)}`, 'err');
+    if (!analyse.commande) return ecran.ligne(`gcblo: ${esc(analyse.erreurs[0] || `${texte.split(/\s+/)[0]} : commande introuvable`)}`, 'err');
     if (!analyse.complet) {
       const pb = analyse.erreurs[0] || analyse.erreurCourante || `il manque : ${analyse.manquants.join(', ')}`;
-      return ecran.ligne(`✗ ${esc(pb)}<br><span class="dim">forme : ${esc(analyse.commande.forme)}</span>`, 'err');
+      return ecran.ligne(`${esc(analyse.commande.verbes[0])}: ${esc(pb)}<br><span class="dim">usage : ${esc(analyse.commande.forme)}</span>`, 'err');
     }
     contexte().memoriser?.(analyse.commande.id);
     await executer(analyse);
     rafraichir();
   }
 
-  function remettreInvite() { inviteEl.textContent = 'gcblo:~$'; inviteEl.classList.remove('question'); }
+  function remettreInvite() { inviteEl.innerHTML = INVITE; inviteEl.classList.remove('question'); }
 
   /* ---------------- Événements ---------------- */
 
@@ -274,7 +276,7 @@ export function creerInvite({ racine, contexte }) {
     if (attente || !surCollage || !ressembleAUneListe(texte)) return;
     e.preventDefault();
     const lignes = texte.split(/\r?\n/).filter(l => l.trim()).length;
-    ecran.ligne(`<span class="invite-echo">gcblo:~$</span> <span class="dim">(liste collée : ${lignes} ligne${lignes > 1 ? 's' : ''})</span>`, 'echo');
+    ecran.ligne(`<span class="invite-echo">${INVITE}</span> <span class="dim">(liste collée : ${lignes} ligne${lignes > 1 ? 's' : ''})</span>`, 'echo');
     await surCollage(texte);
     rafraichir();
   });
@@ -287,7 +289,7 @@ export function creerInvite({ racine, contexte }) {
   function ouvrirMenu(bouton, id) {
     fermerMenu();
     const d = contexte().dossiers.find(x => x.id === id);
-    if (!d) return ecran.ligne('✗ ce dossier n\'existe plus', 'err');
+    if (!d) return ecran.ligne('gcblo: ce dossier n\'existe plus', 'err');
     menuEl = document.createElement('div');
     menuEl.className = 'menu';
     menuEl.setAttribute('role', 'menu');

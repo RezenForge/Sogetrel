@@ -131,7 +131,7 @@ export function accepter(sorte, mot, ctx, { multiple = false } = {}) {
       if (p === 'aucun' || p === 'aucune') return { ok: true, valeur: '' };
       return estEmail(mot) ? { ok: true, valeur: mot } : { ok: false, erreur: `« ${mot} » n'est pas une adresse email` };
     case 'commande':
-      return commandeParVerbe(mot) ? { ok: true, valeur: commandeParVerbe(mot) } : { ok: false, erreur: `commande inconnue : « ${mot} »` };
+      return commandeParVerbe(mot) ? { ok: true, valeur: commandeParVerbe(mot) } : { ok: false, erreur: `${mot} : commande introuvable` };
     case 'texte':
       return { ok: true, valeur: mot };
     default:
@@ -178,7 +178,7 @@ export function analyser(texte, curseur = texte.length, ctx = { dossiers: [], au
       // Verbe en cours de frappe (« rel » → « relance ») : pas encore une erreur
       const enFrappe = iCur === 0 && debutPossible('commande', premier.texte);
       premier.role = enFrappe ? 'brut' : 'erreur';
-      if (iCur !== 0) res.erreurs.push(`commande inconnue : « ${premier.texte} » (tapez help)`);
+      if (iCur !== 0) res.erreurs.push(`${premier.texte} : commande introuvable`);
     }
     return res;
   }

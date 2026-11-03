@@ -3,42 +3,51 @@
  *
  * Aucun composant n'écrit de couleur en dur : base.css utilise ces variables.
  * Un autre thème = un autre fichier qui redéfinit les mêmes variables.
+ *
+ * Thème « shell Linux » (03/11/2026) : fond gris anthracite d'un terminal
+ * GNOME, palette Tango (les couleurs ANSI de beaucoup de distributions),
+ * invite bash classique « utilisateur@machine:~$ » vert et bleu.
  */
 :root {
   /* Fond et texte */
-  --fond: #040807;
-  --fond-saisie: #07100c;
-  --trait: #123b24;
-  --texte: #c6f7d4;
-  --pale: #4f8f66;          /* informations secondaires */
-  --accent: #39ff88;        /* invite, réussite */
-  --erreur: #ff4f5e;
-  --question: #ffb347;
+  --fond: #1e1e1e;
+  --fond-saisie: #1e1e1e;      /* la ligne de saisie se fond dans l'écran, comme dans un vrai terminal */
+  --fond-menu: #2b2b2b;
+  --trait: #3a3a3a;
+  --texte: #d3d7cf;            /* Tango : blanc cassé */
+  --pale: #888a85;             /* Tango : gris (informations secondaires) */
+  --accent: #8ae234;           /* Tango : vert clair */
+  --erreur: #ef2929;           /* Tango : rouge */
+  --question: #fce94f;         /* Tango : jaune */
+
+  /* Invite bash : utilisateur@machine en vert, chemin en bleu */
+  --invite-hote: #8ae234;
+  --invite-chemin: #729fcf;
 
   /* Rôles des mots dans la ligne de commande */
-  --mot-verbe: #39ff88;
-  --mot-dossier: #e9fff0;
-  --mot-valeur: #3ce7ff;
-  --mot-liaison: #4f8f66;
-  --mot-texte: #ffd75f;
-  --mot-erreur: #ff4f5e;
-  --fantome: #2f5c40;
+  --mot-verbe: #eeeeec;
+  --mot-dossier: #d3d7cf;
+  --mot-valeur: #34e2e2;
+  --mot-liaison: #888a85;
+  --mot-texte: #fce94f;
+  --mot-erreur: #ef2929;
+  --fantome: #5c5f5a;
 
   /* Types */
-  --type-NUM21: #59a8ff;
-  --type-AIR: #ffd75f;
-  --type-SOGETREL: #ff6ad5;
+  --type-NUM21: #729fcf;
+  --type-AIR: #fce94f;
+  --type-SOGETREL: #ad7fa8;
 
   /* Statuts DFT */
-  --statut-A_FAIRE: #b9c7bf;
-  --statut-EN_VALIDATION: #3ce7ff;
-  --statut-MAD: #39ff88;
-  --statut-REFUSE: #ff4f5e;
+  --statut-A_FAIRE: #d3d7cf;
+  --statut-EN_VALIDATION: #34e2e2;
+  --statut-MAD: #8ae234;
+  --statut-REFUSE: #ef2929;
 
   /* Alertes de relance */
-  --retard: #ff4f5e;
-  --proche: #ffb347;
+  --retard: #ef2929;
+  --proche: #fcaf3e;           /* Tango : orange */
 
-  --police: "JetBrains Mono", "Cascadia Mono", Consolas, "Lucida Console", monospace;
+  --police: "Ubuntu Mono", "DejaVu Sans Mono", "Liberation Mono", Consolas, monospace;
   color-scheme: dark;
 }

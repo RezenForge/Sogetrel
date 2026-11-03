@@ -29,8 +29,9 @@ const LIEN_ANNULE = '<button type="button" class="lien c-verbe" data-commande="c
 export function creerActions({ regles, store, reglages, ecran, confirmer, demander }) {
   let annulation = null;       // { libelle, faire() } : de quoi défaire la dernière modification
 
-  const ok = html => ecran.ligne(`✓ ${html}`, 'ok');
-  const erreur = html => ecran.ligne(`✗ ${html}`, 'err');
+  // Comme les outils Linux : un succès s'écrit simplement, une erreur est préfixée du nom du programme
+  const ok = html => ecran.ligne(html, 'ok');
+  const erreur = html => ecran.ligne(`gcblo: ${html}`, 'err');
   const info = html => ecran.ligne(html, 'info');
   const premiereErreur = r => Object.values(r.erreurs || {})[0] || 'action refusée';
 

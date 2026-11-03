@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-<meta name="theme-color" content="#040807">
+<meta name="theme-color" content="#1e1e1e">
 <!-- La page est déjà sombre : on demande aux navigateurs (mode sombre forcé, extension Dark Reader) de ne pas recolorer -->
 <meta name="color-scheme" content="dark">
 <meta name="darkreader-lock">
 <title>Registre GCBLO</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu+Mono:wght@400;700&display=swap">
 <link rel="stylesheet" href="css/terminal.css">
 <link rel="stylesheet" href="css/base.css">
 </head>
@@ -22,7 +22,7 @@
   <footer class="saisie-zone">
     <ul class="propositions" id="propositions" role="listbox" aria-label="Propositions" hidden></ul>
     <form class="ligne" id="formulaire" onsubmit="return false">
-      <label class="invite" id="invite" for="saisie">gcblo:~$</label>
+      <label class="invite" id="invite" for="saisie"><span class="pr-hote">dylan@gcblo</span>:<span class="pr-chemin">~</span>$</label>
       <div class="champ">
         <div class="miroir" id="miroir" aria-hidden="true"></div>
         <input id="saisie" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send" aria-describedby="aideLigne">

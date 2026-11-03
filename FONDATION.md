@@ -238,8 +238,9 @@ Toutes les transitions passent par une seule fonction de `lumiere.js`.
 ## 6. Le thème Terminal
 
 - **Une seule source de couleurs** : `terminal.css` ne contient que des variables (`--fond`, `--texte`, `--accent`, `--statut-refuse`…). Aucun composant n'écrit une couleur en dur. Un futur thème sera un autre fichier de variables, sans « corriger » celui-ci.
-- Police JetBrains Mono, couleurs façon console Linux, léger balayage d'écran.
-- Les informations s'affichent comme des sorties de commandes : `gcblo stats` pour les compteurs, `gcblo ls --type=AIR --dft=refuse` qui reflète les filtres actifs.
+- **Style shell Linux**, sobre (pas « hacker ») : fond gris anthracite d'un terminal GNOME, palette Tango, police Ubuntu Mono, pas d'effet lumineux.
+- Invite bash classique `dylan@gcblo:~$` (utilisateur@machine en vert, chemin en bleu). La ligne de saisie se fond dans l'écran, sans bandeau.
+- Messages comme les outils Linux : un succès s'écrit simplement ; une erreur est préfixée du programme (`gcblo: lsx : commande introuvable`) ; une commande incomplète rappelle son `usage`.
 - **Écran unique** sur téléphone : la page ne défile jamais, seule la liste défile.
 
 ---
@@ -294,3 +295,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 03/11/2026 | Principe « un clic = une commande » ; commandes `ls`, `ouvre`, `passe`, `annule` ; GCBLO et menu `⋯` cliquables ; listes anciennes grisées |
 | 03/11/2026 | Commandes en anglais : `ls`, `open`, `set … to …`, `delete`, `cancel`, `clear`, `help` ; « Supprimer » dans le menu ⋯ |
 | 03/11/2026 | Textes de la console raccourcis : plus d'indications à rallonge (résultats, aide, menu ⋯, propositions) |
+| 03/11/2026 | Style « shell Linux » au lieu de « hacker » : fond gris de terminal GNOME, palette Tango, police Ubuntu Mono, invite bash `dylan@gcblo:~$`, ligne de saisie fondue dans l'écran, messages façon outils Linux (`gcblo: lsx : commande introuvable`, succès sans ✓) |
