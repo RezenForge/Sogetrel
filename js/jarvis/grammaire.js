@@ -31,6 +31,7 @@ export const COMMANDES = Object.freeze([
   { id: 'delete', verbes: ['delete', 'rm'], resume: 'supprime',
     forme: 'delete ‹dossiers›',
     emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }] },
+  { id: 'import', verbes: ['import'], resume: 'importe un classeur Excel', forme: 'import', emplacements: [] },
   { id: 'cancel', verbes: ['cancel', 'undo'], resume: 'annule la dernière action', forme: 'cancel', emplacements: [] },
   { id: 'clear', verbes: ['clear', 'cls'], resume: 'vide l\'écran', forme: 'clear', emplacements: [] },
   { id: 'help', verbes: ['help', '?'], resume: 'aide',

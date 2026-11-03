@@ -14,9 +14,13 @@
  *   ecran                    { ligne(html, classe), tableau(dossiers), fiche(dossier), vider() }
  *   confirmer(question)      → Promise<boolean>  (l'invite pose la question o/n)
  *   demander(question, choix) → Promise<choix|null>
+ *   choisirFichier(types)    → Promise<File|null>  (ouvre l'explorateur de fichiers)
  */
 import { criteresListe } from './analyse.js';
-import { COMMANDES, SORTES } from './grammaire.js';
+import { COMMANDES, SORTES, MOTS_TYPE } from './grammaire.js';
+import { IMPORT_EXCEL } from '../config.js';
+import { lireClasseur } from '../xlsx.js';
+import { extraireDossiers } from '../import-excel.js';
 import { typeParCode, statutParCode } from '../config.js';
 
 /** Échappe un texte avant de l'insérer dans du HTML. */
@@ -26,7 +30,7 @@ const SEUIL_CONFIRMATION = 3;
 /** Le mot « cancel », cliquable : un clic lance la commande. */
 const LIEN_ANNULE = '<button type="button" class="lien c-verbe" data-commande="cancel">cancel</button>';
 
-export function creerActions({ regles, store, reglages, ecran, confirmer, demander }) {
+export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier }) {
   let annulation = null;       // { libelle, faire() } : de quoi défaire la dernière modification
 
   // Comme les outils Linux : un succès s'écrit simplement, une erreur est préfixée du nom du programme
@@ -64,6 +68,44 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       if (!r.ok) return erreur(esc(premiereErreur(r)));
       annulation = { libelle: pluriel(r.retires.length, 'suppression', 'suppressions'), faire: () => regles.restaurer(r.retires) };
       ok(`${pluriel(r.retires.length, 'dossier supprimé', 'dossiers supprimés')} <span class="dim">·</span> ${LIEN_ANNULE}`);
+    },
+
+    /** R10 — importe les dossiers d'un classeur Excel (onglets et colonnes : IMPORT_EXCEL). */
+    async import() {
+      const fichier = await choisirFichier('.xlsx,.xlsm');
+      if (!fichier) return info('aucun fichier choisi');
+      let classeur;
+      try { classeur = await lireClasseur(await fichier.arrayBuffer(), { onglets: IMPORT_EXCEL.onglets }); } catch (e) { return erreur(esc(e.message)); }
+      const r = extraireDossiers(classeur, store.tous());
+      if (r.ongletsAbsents.length === IMPORT_EXCEL.onglets.length) return erreur(`aucun onglet ${IMPORT_EXCEL.onglets.join(', ')} dans ${esc(fichier.name)}`);
+
+      const bilan = [pluriel(r.lus, 'ligne GCBLO', 'lignes GCBLO'), r.nouveaux.length && pluriel(r.nouveaux.length, 'nouveau', 'nouveaux'),
+        r.completes.length && `${r.completes.length} FCI à ajouter`, r.deja && `${r.deja} déjà à jour`].filter(Boolean);
+      info(`${esc(fichier.name)} : ${bilan.join(' · ')}`);
+      if (r.ongletsAbsents.length) info(`<span class="dim">onglets absents : ${esc(r.ongletsAbsents.join(', '))}</span>`);
+      r.refuses.slice(0, 10).forEach(x => erreur(`onglet ${esc(x.onglet)}, ligne ${x.ligne} : ${esc(x.valeur)} : ${esc(x.motif)}`));
+      if (r.refuses.length > 10) erreur(`… et ${r.refuses.length - 10} autres lignes refusées`);
+      if (!r.nouveaux.length && !r.completes.length) return info('rien à importer');
+
+      // Le type n'est pas dans le classeur : demandé une fois pour tous les nouveaux
+      let type = null;
+      if (r.nouveaux.length) {
+        const choix = await demander(`type des ${pluriel(r.nouveaux.length, 'nouveau', 'nouveaux')} ?`, Object.keys(MOTS_TYPE));
+        if (!choix) return info('import abandonné');
+        type = MOTS_TYPE[choix];
+      }
+      const creation = r.nouveaux.length ? regles.creerPlusieurs(r.nouveaux.map(n => ({ gcblo: n.gcblo, type, fci: n.fci })), { origine: 'import Excel' }) : { crees: [], refuses: [] };
+      const avant = [];
+      for (const c of r.completes) {
+        const m = regles.modifier(c.dossier.id, { fci: [...c.dossier.fci, ...c.fci] });
+        if (m.ok && m.avant) avant.push(m.avant);
+      }
+      if (creation.crees.length || avant.length) {
+        const ids = creation.crees.map(d => d.id);
+        annulation = { libelle: 'import', faire: () => { if (ids.length) regles.supprimer(...ids); if (avant.length) regles.restaurer(avant); } };
+      }
+      creation.refuses.forEach(x => erreur(`${esc(x.saisie.gcblo)} : ${esc(x.erreur)}`));
+      ok(`${pluriel(creation.crees.length, 'dossier créé', 'dossiers créés')}${avant.length ? ` · ${pluriel(avant.length, 'FCI ajouté', 'FCI ajoutés')}` : ''} <span class="dim">·</span> ${LIEN_ANNULE}`);
     },
 
     cancel() {

@@ -17,6 +17,7 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `open ‹dossier›` | la fiche complète |
 | `set ‹dossiers› to ‹statut\|type›` | change le statut DFT ou le type (ex. `set 501404 to refuse`) |
 | `delete ‹dossiers›` | supprime, après confirmation |
+| `import` | lit un classeur Excel : onglets 33, 16, 17, 79, 86, lignes `GCBLO` en colonne E, dossier en D, FCI en J |
 | `cancel` | défait la dernière modification |
 | `clear` | vide l'écran |
 | `help [commande]` | la liste des commandes, ou le détail d'une commande |
@@ -66,11 +67,13 @@ js/dossiers.js           les règles : seul module autorisé à modifier les dos
 js/reprise-v1.js         relit les dossiers et sauvegardes de la version 1
 js/reglages.js           destinataires des emails par type
 js/collage.js            lit une liste collée (Excel, mail, classeur robot)
+js/xlsx.js               lit un classeur Excel (.xlsx, .xlsm) dans le navigateur, sans bibliothèque
+js/import-excel.js       quels dossiers et FCI prendre dans le classeur (commande import)
 js/jarvis/grammaire.js   les commandes, sous forme de tableau (vide : en refonte)
 js/jarvis/analyse.js     comprend la ligne tapée (ne modifie rien)
 js/jarvis/completion.js  propositions, texte grisé, aperçu (ne modifie rien)
 js/jarvis/actions.js     exécute une commande via les règles
 js/jarvis/menus.js       le menu ⋯ d'un dossier : des commandes écrites à l'avance
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   97 tests : règles, dates, commandes, menu ⋯, collage, relances
+tests/                   108 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
 ```

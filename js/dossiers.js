@@ -140,7 +140,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
      * validée comme une création normale ; un GCBLO présent deux fois dans le lot
      * n'est créé qu'une fois. Renvoie { crees, refuses: [{ saisie, erreur }] }.
      */
-    creerPlusieurs(saisies) {
+    creerPlusieurs(saisies, { origine = 'liste collée' } = {}) {
       const date = instant();
       const crees = [], refuses = [], vus = new Set();
       for (const saisie of saisies) {
@@ -148,7 +148,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
         if (!ok) { refuses.push({ saisie, erreur: Object.values(erreurs)[0] }); continue; }
         if (vus.has(valeur.gcblo)) { refuses.push({ saisie, erreur: `${valeur.gcblo} est en double dans la liste` }); continue; }
         vus.add(valeur.gcblo);
-        crees.push({ id: identifiant(), ...valeur, creeLe: date, modifieLe: date, historique: [{ date, action: 'creation', detail: 'Dossier créé (liste collée)' }] });
+        crees.push({ id: identifiant(), ...valeur, creeLe: date, modifieLe: date, historique: [{ date, action: 'creation', detail: `Dossier créé (${origine})` }] });
       }
       if (crees.length) store.ajouter(...crees);
       return { crees: crees.map(d => store.parId(d.id)), refuses };

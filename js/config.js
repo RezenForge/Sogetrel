@@ -69,6 +69,18 @@ export const EMAIL = Object.freeze({
   ].join('\n')
 });
 
+/**
+ * R10 — Import Excel : où lire les dossiers dans le classeur.
+ * Une ligne est prise si sa colonne `filtre` vaut `valeurFiltre` ;
+ * le FCI est le mot qui suit `reperFci` dans la colonne `fci`.
+ */
+export const IMPORT_EXCEL = Object.freeze({
+  onglets: Object.freeze(['33', '16', '17', '79', '86']),
+  colonnes: Object.freeze({ dossier: 'D', filtre: 'E', fci: 'J' }),
+  valeurFiltre: 'GCBLO',
+  reperFci: 'Numéro de commande FCI :'
+});
+
 /** Où et sous quelle version les données sont enregistrées dans le navigateur. */
 export const STOCKAGE = Object.freeze({
   cle: 'gcblo.v2.dossiers',

@@ -54,7 +54,15 @@ const actions = creerActions({
   reglages,
   ecran: invite.ecran,
   confirmer: question => invite.confirmer(question),
-  demander: (question, choix) => invite.demander(question, choix)
+  demander: (question, choix) => invite.demander(question, choix),
+  // Ouvre l'explorateur de fichiers ; renvoie le fichier choisi, ou null
+  choisirFichier: types => new Promise(resoudre => {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = types;
+    input.addEventListener('change', () => resoudre(input.files[0] || null));
+    input.addEventListener('cancel', () => resoudre(null));
+    input.click();
+  })
 });
 invite.brancher(analyse => actions.executer(analyse));
 

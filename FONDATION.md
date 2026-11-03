@@ -64,6 +64,12 @@ Un dossier **clos** n'a plus d'alerte de relance.
 7. **Suppression** : toujours confirmée et annulable juste après.
 8. **Point du jour** : à l'ouverture et sur demande, quatre listes : relances en retard, relances du jour, relances dans les 3 jours, dossiers refusés (à reprendre). Les dossiers clos n'y figurent jamais.
 9. **Création en lot** (collage d'une liste) : chaque ligne est validée comme une création normale (R1 à R6). Les lignes valides sont créées ensemble, les autres sont listées avec leur motif. Tout le lot s'annule d'un coup.
+10. **Import Excel** (commande `import`) : on choisit un classeur (.xlsx ou .xlsm). Dans les onglets **33, 16, 17, 79 et 86**, chaque ligne dont la **colonne E** vaut `GCBLO` donne un dossier : son GCBLO est en **colonne D**, son FCI est ce qui suit `Numéro de commande FCI :` dans la **colonne J**.
+    - Le type n'est pas dans le classeur : il est demandé **une fois** pour tous les nouveaux dossiers.
+    - Un dossier déjà présent n'est pas recréé ; s'il lui manque ce FCI, il lui est ajouté.
+    - Les lignes refusées (GCBLO mal formé, FCI non reconnu) sont listées avec leur onglet et leur numéro de ligne.
+    - Tout l'import s'annule d'un coup (`cancel`).
+    - Le fichier est lu dans le navigateur : il n'est envoyé nulle part. Onglets, colonnes et texte repère sont réglés dans `config.js` (`IMPORT_EXCEL`).
 
 Toutes ces règles vivent dans **un seul fichier** (`js/dossiers.js`), et chacune a un test.
 
@@ -82,6 +88,8 @@ js/
   dates.js                 calculs de dates « jour » (sans heure, sans fuseau)
   store.js                 lecture et écriture des données (localStorage)
   dossiers.js              les règles du §3 : créer, modifier, valider, filtrer, alertes
+  xlsx.js                  lit un classeur Excel (.xlsx, .xlsm) dans le navigateur, sans bibliothèque
+  import-excel.js          R10 : quels dossiers et FCI prendre dans le classeur
   ui/
     registre.js            la liste des dossiers
     filtres.js             recherche, filtres, tri, compteurs
@@ -140,6 +148,7 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 | Changer le statut ou le type | `set ‹dossiers› to ‹statut\|type›` | `set 501404 to refuse` |
 | Supprimer | `delete ‹dossiers›` (aussi `rm`), confirmation demandée | `delete 501404` |
 | Annuler | `cancel` (aussi `undo`) : défait la dernière modification | `cancel` |
+| Importer | `import` : ouvre l'explorateur de fichiers, lit un classeur Excel (R10) | `import` |
 | Vider l'écran | `clear` | `clear` |
 | Aide | `help [commande]` (aussi `?`) ; chaque commande de la liste est cliquable | `help set` |
 
@@ -296,3 +305,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 03/11/2026 | Commandes en anglais : `ls`, `open`, `set … to …`, `delete`, `cancel`, `clear`, `help` ; « Supprimer » dans le menu ⋯ |
 | 03/11/2026 | Textes de la console raccourcis : plus d'indications à rallonge (résultats, aide, menu ⋯, propositions) |
 | 03/11/2026 | Style « shell Linux » au lieu de « hacker » : fond gris de terminal GNOME, palette Tango, police Ubuntu Mono, invite bash `dylan@gcblo:~$`, ligne de saisie fondue dans l'écran, messages façon outils Linux (`gcblo: lsx : commande introuvable`, succès sans ✓) |
+| 03/11/2026 | Commande `import` (R10) : classeur Excel lu dans le navigateur, sans bibliothèque extérieure (`js/xlsx.js`) |

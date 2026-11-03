@@ -11,7 +11,7 @@
  * ctx = { dossiers, aujourdhui, regles, recents: [verbes récents] }
  */
 import { COMMANDES, MOTS_STATUT, MOTS_TYPE, GROUPES, PERIODES, JOURS, plat, motPourCode } from './grammaire.js';
-import { STATUTS, TYPES, statutParCode, typeParCode } from '../config.js';
+import { STATUTS, TYPES, IMPORT_EXCEL, statutParCode, typeParCode } from '../config.js';
 import { formater } from '../dates.js';
 import { etatRelance } from '../dossiers.js';
 import { chercherDossiers, lireDate, criteresListe } from './analyse.js';
@@ -136,6 +136,7 @@ export function apercu(analyse, ctx) {
   switch (c.id) {
     case 'ls': return `→ ${n(ctx.regles.filtrer(criteresListe(v)))}`;
     case 'open': return `→ fiche de ${v.cible.gcblo}`;
+    case 'import': return `→ onglets ${IMPORT_EXCEL.onglets.join(', ')}`;
     case 'delete': return `→ suppression de ${v.cibles.length === 1 ? v.cibles[0].gcblo : n(v.cibles)} (confirmation)`;
     case 'set': {
       const quoi = v.valeur.statut ? `statut → ${statutParCode(v.valeur.statut).libelle}` : `type → ${typeParCode(v.valeur.type).libelle}`;
