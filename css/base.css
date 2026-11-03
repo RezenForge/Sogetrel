@@ -38,6 +38,13 @@ body {
 pre { margin: 0; font: inherit; white-space: pre; }
 /* Les tableaux défilent dans leur propre zone sur petit écran, jamais la page */
 .l:has(> pre) { overflow-x: auto; white-space: normal; }
+/* Listes : pas de zone de défilement propre, pour que l'en-tête puisse rester collé en haut de l'écran */
+.l:has(> pre.tableau) { overflow-x: visible; }
+.tableau .entete {
+  display: block; position: sticky; top: 0; z-index: 1; background: var(--fond);
+  /* masque aussi la marge du haut de l'écran, et un trait fin sous l'en-tête */
+  box-shadow: 0 -14px 0 var(--fond), 0 1px 0 var(--trait);
+}
 
 /* Couleurs des types, statuts et alertes (tableaux, fiches, stats) */
 .ty-NUM21 { color: var(--type-NUM21); } .ty-AIR { color: var(--type-AIR); } .ty-SOGETREL { color: var(--type-SOGETREL); }

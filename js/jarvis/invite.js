@@ -83,8 +83,9 @@ export function creerInvite({ racine, contexte }) {
           + `<span class="${alerte || 'dim'}">${col(relance, 6)}</span>`
           + boutonMenu(d);
       });
-      const entete = `<span class="dim">${'AFFECT'.padEnd(7)}${'GCBLO'.padEnd(17)}${'STATUT'.padEnd(11)}RELANCE</span>`;
-      ecran.ligne(`<pre class="tableau">${[entete, ...lignes].join('\n')}</pre>`, 'vue');
+      // L'en-tête reste visible en haut de l'écran tant que la liste défile (CSS : sticky)
+      const entete = `<span class="entete dim">${'AFFECT'.padEnd(7)}${'GCBLO'.padEnd(17)}${'STATUT'.padEnd(11)}RELANCE</span>`;
+      ecran.ligne(`<pre class="tableau">${entete}${lignes.join('\n')}</pre>`, 'vue');
     },
     fiche(d) {
       const regles = contexte().regles;
