@@ -105,6 +105,7 @@ export function creerInvite({ racine, contexte }) {
       const fantome = choix.length && champ.value ? choix[0].slice(champ.value.length) : '';
       etat = { analyse: null, choisi: -1, prop: { propositions: choix.map(c => ({ inserer: c, libelle: c, detail: '', sorte: 'valeur' })), fantome, remplace: { debut: 0, fin: champ.value.length } } };
       miroir.innerHTML = esc(champ.value) + (fantome ? `<span class="fantome">${esc(fantome)}</span>` : '');
+      poserIndice();
       dessinerPropositions();
       return;
     }
@@ -124,6 +125,22 @@ export function creerInvite({ racine, contexte }) {
     const msg = analyse.erreurs[0] || (texte.trim() && analyse.erreurCourante && curseur < texte.length ? analyse.erreurCourante : null);
     aideEl.className = `aide-ligne ${msg ? 'err' : ''}`;
     aideEl.textContent = msg ? `✗ ${msg}` : (texte.trim() ? apercu(analyse, ctx) || '' : 'tapez une commande, ou « aide »');
+    poserIndice();
+  }
+
+  /**
+   * L'aide (aperçu, erreur, consigne) s'affiche en gris sur la ligne de saisie elle-même,
+   * juste après le texte tapé : la zone de saisie tient sur une seule ligne.
+   * #aideLigne garde le texte pour les lecteurs d'écran.
+   */
+  function poserIndice() {
+    miroir.querySelector('.indice')?.remove();
+    const texte = aideEl.textContent;
+    if (!texte) return;
+    const span = document.createElement('span');
+    span.className = `indice${aideEl.classList.contains('err') ? ' err' : ''}`;
+    span.textContent = (champ.value ? '   ' : '') + texte;
+    miroir.append(span);
   }
 
   function synchroniserDefilement() { miroir.style.transform = `translateX(${-champ.scrollLeft}px)`; }
@@ -252,7 +269,7 @@ export function creerInvite({ racine, contexte }) {
         attente = { resoudre };
         inviteEl.textContent = `${question} [o/n]`;
         inviteEl.classList.add('question');
-        listeEl.hidden = true; miroir.innerHTML = ''; aideEl.textContent = 'o = oui · n ou Entrée = non';
+        listeEl.hidden = true; miroir.innerHTML = ''; aideEl.className = 'aide-ligne'; aideEl.textContent = 'o = oui · n ou Entrée = non'; poserIndice();
         champ.value = ''; champ.focus();
       });
     },

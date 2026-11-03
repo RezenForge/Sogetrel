@@ -183,7 +183,7 @@ Pendant la frappe, l'invite **analyse la ligne** et sait quel emplacement on est
 
 **Ce qui s'affiche autour de la ligne** :
 - **Couleurs** : le verbe, les dossiers, les valeurs et les erreurs ont chacun leur couleur. On voit tout de suite si un mot n'est pas compris.
-- **Aperçu** : sous la ligne, par exemple `→ SBA501404-THF010 : À faire → Refusé` ou `→ 3 dossiers supprimés (confirmation demandée)`.
+- **Aperçu** : en gris sur la ligne de saisie elle-même, après le texte tapé (la zone de saisie tient sur une seule ligne), par exemple `→ SBA501404-THF010 : À faire → Refusé` ou `→ 3 dossiers supprimés (confirmation demandée)`.
 - **Sur téléphone** : les propositions s'affichent en boutons au-dessus du clavier, assez grands pour le doigt.
 
 ### Comment c'est construit
@@ -278,3 +278,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 02/11/2026 | Commande `wiki` : début de l'article Wikipédia (fr), pages d'homonymie signalées avec les autres sens |
 | 02/11/2026 | `stats` redessiné en ASCII (`js/jarvis/dessin.js`) ; `statistiques()` compte aussi les relances des 7 prochains jours |
 | 03/11/2026 | Page déclarée sombre (`color-scheme`, `darkreader-lock`) pour que le mode sombre forcé des navigateurs ne recolore pas le texte |
+| 03/11/2026 | Zone de saisie sur une seule ligne : l'aperçu, les erreurs et les consignes s'affichent en gris après le texte tapé |

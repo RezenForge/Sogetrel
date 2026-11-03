@@ -74,8 +74,10 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .miroir { pointer-events: none; right: auto; }
 .fantome { color: var(--fantome); }
 
-.aide-ligne { min-height: 1.55em; padding-top: 2px; color: var(--pale); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.aide-ligne.err { color: var(--erreur); }
+/* L'aide s'affiche dans la ligne de saisie (.indice) ; #aideLigne reste pour les lecteurs d'écran */
+.aide-ligne { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.indice { color: var(--pale); font-size: 12px; }
+.indice.err { color: var(--erreur); }
 
 /* Propositions : au-dessus de la ligne de saisie */
 .propositions {
