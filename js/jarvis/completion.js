@@ -51,7 +51,7 @@ function dossiers(mot, ctx, enCours, analyse) {
   const groupes = !enCours.slot?.multiple ? [] : Object.entries(GROUPES)
     .map(([mot_, etat]) => ({ mot_, n: ctx.dossiers.filter(d => etatRelance(d, ctx.aujourdhui) === etat).length, etat }))
     .filter(g => g.n && g.mot_.startsWith(plat(mot)))
-    .map(g => ({ inserer: g.mot_ + ' ', libelle: g.mot_, detail: `groupe · ${g.n} dossier${g.n > 1 ? 's' : ''} ${g.etat === 'retard' ? 'en retard' : 'à relancer sous 3 jours'}`, sorte: 'valeur', alerte: g.etat === 'retard' ? 'retard' : null }));
+    .map(g => ({ inserer: g.mot_ + ' ', libelle: g.mot_, detail: `${g.n} ${g.etat === 'retard' ? 'en retard' : 'sous 3 j'}`, sorte: 'valeur', alerte: g.etat === 'retard' ? 'retard' : null }));
   return [...groupes, ...base.filter(d => !deja.has(d.id))
     .sort((a, b) => score(a) - score(b) || a.gcblo.localeCompare(b.gcblo))
     .slice(0, MAX)
@@ -62,8 +62,8 @@ function dossiers(mot, ctx, enCours, analyse) {
     })];
 }
 
-const statuts = () => STATUTS.map(s => ({ inserer: motPourCode(MOTS_STATUT, s.code) + ' ', libelle: motPourCode(MOTS_STATUT, s.code), detail: `statut : ${s.libelle}`, sorte: 'valeur' }));
-const types = () => TYPES.map(t => ({ inserer: motPourCode(MOTS_TYPE, t.code) + ' ', libelle: motPourCode(MOTS_TYPE, t.code), detail: `type : ${t.libelle}`, sorte: 'valeur' }));
+const statuts = () => STATUTS.map(s => ({ inserer: motPourCode(MOTS_STATUT, s.code) + ' ', libelle: motPourCode(MOTS_STATUT, s.code), detail: s.libelle, sorte: 'valeur' }));
+const types = () => TYPES.map(t => ({ inserer: motPourCode(MOTS_TYPE, t.code) + ' ', libelle: motPourCode(MOTS_TYPE, t.code), detail: t.libelle, sorte: 'valeur' }));
 
 const periodes = () => [['jour', 'aujourd\'hui, heure par heure'], ['demain', 'demain, heure par heure'], ['semaine', '7 jours']]
   .map(([m, d]) => ({ inserer: m + ' ', libelle: m, detail: d, sorte: 'valeur' }));
@@ -87,7 +87,7 @@ export function proposer(analyse, ctx) {
 
   switch (ec.sorte) {
     case 'verbe': liste = verbes(mot, ctx); break;
-    case 'mot': liste = [{ inserer: ec.slot.mot + ' ', libelle: ec.slot.mot, detail: 'puis la valeur', sorte: 'mot' }]; break;
+    case 'mot': liste = [{ inserer: ec.slot.mot + ' ', libelle: ec.slot.mot, detail: '', sorte: 'mot' }]; break;
     case 'dossier': liste = dossiers(mot, ctx, ec, analyse); break;
     case 'statut-ou-type': liste = commencePar([...statuts(), ...types()], mot); break;
     case 'type': liste = commencePar(types(), mot); break;
@@ -114,9 +114,9 @@ export function proposer(analyse, ctx) {
   }
 
   // « set 501404 t… » : le mot peut être le début du mot de liaison comme d'une valeur ; la liaison d'abord
-  if (ec.liaison) liste = [{ inserer: ec.liaison + ' ', libelle: ec.liaison, detail: 'puis la valeur', sorte: 'mot' }, ...liste];
+  if (ec.liaison) liste = [{ inserer: ec.liaison + ' ', libelle: ec.liaison, detail: '', sorte: 'mot' }, ...liste];
   // Liste déjà commencée (« set 501404 … ») : proposer aussi de passer à la suite (« to »)
-  if (ec.suivant?.mot && !mot) liste = [{ inserer: ec.suivant.mot + ' ', libelle: ec.suivant.mot, detail: 'puis la valeur', sorte: 'mot' }, ...liste];
+  if (ec.suivant?.mot && !mot) liste = [{ inserer: ec.suivant.mot + ' ', libelle: ec.suivant.mot, detail: '', sorte: 'mot' }, ...liste];
 
   liste = liste.slice(0, MAX);
   const meilleure = liste[0];

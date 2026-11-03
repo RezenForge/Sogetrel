@@ -19,21 +19,21 @@
  * Chaque commande a sa fonction du même id dans actions.js.
  */
 export const COMMANDES = Object.freeze([
-  { id: 'ls', verbes: ['ls', 'list'], resume: 'affiche les dossiers (filtres facultatifs)',
+  { id: 'ls', verbes: ['ls', 'list'], resume: 'liste les dossiers',
     forme: 'ls [type] [statut] [retard] [sans-fci] [texte]',
     emplacements: [{ nom: 'filtres', sorte: 'filtre', optionnel: true, multiple: true }] },
-  { id: 'open', verbes: ['open'], resume: 'affiche la fiche complète d\'un dossier',
+  { id: 'open', verbes: ['open'], resume: 'fiche d\'un dossier',
     forme: 'open ‹dossier›',
     emplacements: [{ nom: 'cible', sorte: 'dossier' }] },
-  { id: 'set', verbes: ['set'], resume: 'change le statut DFT ou le type',
+  { id: 'set', verbes: ['set'], resume: 'change statut ou type',
     forme: 'set ‹dossiers› to ‹statut|type›',
     emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }, { mot: 'to' }, { nom: 'valeur', sorte: 'statut-ou-type' }] },
-  { id: 'delete', verbes: ['delete', 'rm'], resume: 'supprime des dossiers (confirmation demandée)',
+  { id: 'delete', verbes: ['delete', 'rm'], resume: 'supprime',
     forme: 'delete ‹dossiers›',
     emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }] },
-  { id: 'cancel', verbes: ['cancel', 'undo'], resume: 'annule la dernière modification', forme: 'cancel', emplacements: [] },
+  { id: 'cancel', verbes: ['cancel', 'undo'], resume: 'annule la dernière action', forme: 'cancel', emplacements: [] },
   { id: 'clear', verbes: ['clear', 'cls'], resume: 'vide l\'écran', forme: 'clear', emplacements: [] },
-  { id: 'help', verbes: ['help', '?'], resume: 'liste les commandes, ou détaille l\'une d\'elles',
+  { id: 'help', verbes: ['help', '?'], resume: 'aide',
     forme: 'help [commande]',
     emplacements: [{ nom: 'sujet', sorte: 'commande', optionnel: true }] }
 ]);
@@ -62,18 +62,18 @@ export const JOURS = Object.freeze(['dimanche', 'lundi', 'mardi', 'mercredi', 'j
 
 /** Ce que veut dire chaque « sorte » d'emplacement (affiché dans l'aide). */
 export const SORTES = Object.freeze({
-  dossier: 'un GCBLO complet ou un morceau (ex. 501404) ; là où plusieurs sont permis : retard, proches',
-  adresse: 'une adresse email, ou « aucun » pour l\'effacer',
-  ville: 'un nom de ville (plusieurs mots possibles : le taillan medoc)',
-  periode: 'jour (par défaut), demain ou semaine',
-  'nouveau-gcblo': 'un GCBLO au format AAA000000-AAA000',
+  dossier: 'GCBLO ou morceau (501404), retard, proches',
+  adresse: 'email ou aucun',
+  ville: 'nom de ville',
+  periode: 'jour, demain, semaine',
+  'nouveau-gcblo': 'AAA000000-AAA000',
   type: 'num21, air ou sogetrel',
-  'statut-ou-type': 'a-faire, en-validation, mis-a-dispo, refuse — ou un type',
-  filtre: 'un type, un statut, retard, sans-fci ou un texte à chercher',
-  date: 'demain, lundi…, +3 (dans 3 jours), 12/11 ou 12/11/2026',
-  fci: 'F suivi de 11 chiffres',
-  texte: 'du texte libre',
-  commande: 'le nom d\'une commande'
+  'statut-ou-type': 'a-faire, en-validation, mis-a-dispo, refuse, ou un type',
+  filtre: 'type, statut, retard, sans-fci, texte',
+  date: 'demain, lundi, +3, 12/11',
+  fci: 'F + 11 chiffres',
+  texte: 'texte libre',
+  commande: 'une commande'
 });
 
 /* ---------------- Aides de lecture ---------------- */

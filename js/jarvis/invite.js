@@ -292,8 +292,8 @@ export function creerInvite({ racine, contexte }) {
     menuEl.className = 'menu';
     menuEl.setAttribute('role', 'menu');
     menuEl.innerHTML = `<div class="menu-titre"><span class="c-dossier">${esc(d.gcblo)}</span> <span class="st-${d.statutDft}">${esc(statutParCode(d.statutDft).libelle)}</span></div>`
-      + optionsDossier(d).map(o => `<button type="button" role="menuitem" class="menu-choix" data-commande="${esc(o.commande)}">`
-        + `<span class="${o.classe || ''}">${esc(o.libelle)}</span><span class="menu-cmd">${esc(o.commande)}</span></button>`).join('');
+      + optionsDossier(d).map(o => `<button type="button" role="menuitem" class="menu-choix" data-commande="${esc(o.commande)}" title="${esc(o.commande)}">`
+        + `<span class="${o.classe || ''}">${esc(o.libelle)}</span></button>`).join('');
     racine.body.appendChild(menuEl);
     menuBouton = bouton; bouton.setAttribute('aria-expanded', 'true');
     // Sur grand écran, le menu s'ouvre contre le bouton ; sur téléphone, en bas (CSS)
@@ -333,7 +333,7 @@ export function creerInvite({ racine, contexte }) {
         attente = { resoudre };
         inviteEl.textContent = `${question} [o/n]`;
         inviteEl.classList.add('question');
-        listeEl.hidden = true; miroir.innerHTML = ''; aideEl.className = 'aide-ligne'; aideEl.textContent = 'o = oui · n ou Entrée = non'; poserIndice();
+        listeEl.hidden = true; miroir.innerHTML = ''; aideEl.className = 'aide-ligne'; aideEl.textContent = ''; poserIndice();
         champ.value = ''; champ.focus();
       });
     },
@@ -343,7 +343,7 @@ export function creerInvite({ racine, contexte }) {
         attente = { resoudre, choix };
         inviteEl.textContent = `${question} [${choix.join('/')}]`;
         inviteEl.classList.add('question');
-        aideEl.className = 'aide-ligne'; aideEl.textContent = 'Tab complète · Entrée valide · réponse vide = annuler';
+        aideEl.className = 'aide-ligne'; aideEl.textContent = '';
         champ.value = ''; champ.focus(); rafraichir();
       });
     },

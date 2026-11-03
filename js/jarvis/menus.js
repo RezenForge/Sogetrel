@@ -14,9 +14,9 @@ import { MOTS_STATUT, motPourCode } from './grammaire.js';
 
 export function optionsDossier(d) {
   return [
-    { libelle: 'Ouvrir la fiche', commande: `open ${d.gcblo}` },
+    { libelle: 'Ouvrir', commande: `open ${d.gcblo}` },
     ...STATUTS.filter(s => s.code !== d.statutDft).map(s => ({
-      libelle: `Passer en « ${s.libelle} »`,
+      libelle: `→ ${s.libelle}`,
       commande: `set ${d.gcblo} to ${motPourCode(MOTS_STATUT, s.code)}`,
       classe: `st-${s.code}`
     })),

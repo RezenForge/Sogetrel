@@ -155,13 +155,15 @@ Ce que la console affiche est cliquable, pour le quotidien, mais **un clic ne fa
 
 Ce qui est cliquable :
 - **le GCBLO** d'un dossier, dans une liste ou une fiche → `open ‹gcblo›` ;
-- **`⋯`** à côté d'un dossier → un menu court, construit selon l'état du dossier au moment du clic (`js/jarvis/menus.js`) : Ouvrir, puis les statuts où il peut passer, et Supprimer en dernier (en rouge, avec confirmation). Chaque choix affiche la commande qu'il va lancer. Sur téléphone, le menu s'ouvre en bas de l'écran avec de grands boutons ;
+- **`⋯`** à côté d'un dossier → un menu court, construit selon l'état du dossier au moment du clic (`js/jarvis/menus.js`) : Ouvrir, puis les statuts où il peut passer (`→ Refusé`), et Supprimer en dernier (en rouge, avec confirmation). Sur téléphone, le menu s'ouvre en bas de l'écran avec de grands boutons ;
 - **`cancel`** dans le message qui suit une modification ;
 - **chaque commande** dans la liste de `help` → `help ‹commande›`.
 
 **Lignes anciennes** : quand un dossier change, les listes et fiches déjà affichées passent en grisé (elles ne sont plus à jour). Un clic dessus agit toujours sur l'état actuel du dossier.
 
 Pas de barre d'outils fixe : les clics restent à l'intérieur de ce que la console affiche.
+
+**Textes courts** (03/11/2026) : la console n'explique pas ce que fait chaque chose. Pas de phrase d'aide sous les résultats, des libellés de quelques mots (`6 dossiers`, `annulé : 1 modification`), une aide (`help`) en une ligne par commande. Le détail reste dans ce document.
 
 Les **sortes de valeurs** que le moteur sait déjà lire, utilisables dans les nouvelles commandes : `dossier` (GCBLO complet ou morceau ; groupes `retard` et `proches` là où plusieurs sont permis), `nouveau-gcblo`, `type`, `statut-ou-type`, `filtre`, `date` (`demain`, `lundi`, `+3`, `12/11`), `fci`, `adresse`, `ville`, `periode`, `texte`, `commande`.
 
@@ -291,3 +293,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 03/11/2026 | Toutes les commandes retirées pour être refaites (ancienne version : branche `v2-commandes`) ; écran de départ vide ; `meteo.js`, `wiki.js`, `dessin.js` retirés |
 | 03/11/2026 | Principe « un clic = une commande » ; commandes `ls`, `ouvre`, `passe`, `annule` ; GCBLO et menu `⋯` cliquables ; listes anciennes grisées |
 | 03/11/2026 | Commandes en anglais : `ls`, `open`, `set … to …`, `delete`, `cancel`, `clear`, `help` ; « Supprimer » dans le menu ⋯ |
+| 03/11/2026 | Textes de la console raccourcis : plus d'indications à rallonge (résultats, aide, menu ⋯, propositions) |
