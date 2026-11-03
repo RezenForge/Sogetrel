@@ -40,6 +40,14 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .l:has(> pre) { overflow-x: auto; white-space: normal; }
 /* Listes : pas de zone de défilement propre, pour que l'en-tête puisse rester collé en haut de l'écran */
 .l:has(> pre.tableau) { overflow-x: visible; }
+/* Liste : FCI, commune et valo en colonnes sur grand écran, sur une seconde ligne sur téléphone */
+.tableau .col-etroit { display: none; }
+@media (max-width: 760px) {
+  .tableau .col-large { display: none; }
+  /* seconde ligne en retrait sous le GCBLO ; si elle est trop longue, elle revient à la ligne au même retrait */
+  .tableau .col-etroit { display: block; padding-left: 7ch; white-space: normal; line-height: 1.35; margin-bottom: .35em; }
+}
+.tableau .valo { color: var(--texte); }
 .tableau .entete {
   display: block; position: sticky; top: 0; z-index: 1; background: var(--fond);
   /* masque aussi la marge du haut de l'écran, et un trait fin sous l'en-tête */
@@ -70,7 +78,7 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .vue.perime { opacity: .5; }
 .vue.perime:hover { opacity: .8; }
 /* Doigt : lignes plus hautes pour viser sans se tromper */
-@media (pointer: coarse) { .tableau { line-height: 2.2; } .points { padding: 4px 4px; } }
+@media (pointer: coarse) { .tableau { line-height: 1.9; } .points { padding: 4px 4px; } }
 
 .menu {
   position: fixed; z-index: 20; min-width: 240px; max-width: calc(100vw - 16px); padding: 4px 0;

@@ -13,7 +13,7 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 
 | Commande | Effet |
 | --- | --- |
-| `ls [affect] [statut] [retard] [sans-fci] [texte]` | affiche les dossiers |
+| `ls [affect] [statut] [retard] [sans-fci] [texte]` | affiche les dossiers, avec FCI, commune et valo |
 | `open ‹dossier›` | la fiche complète |
 | `set ‹dossiers› to ‹statut\|affect›` | change le statut DFT ou l'affect (ex. `set 501404 to refuse`, `set 501404 to air`) |
 | `delete ‹dossiers›` | supprime, après confirmation |

@@ -74,18 +74,29 @@ export function creerInvite({ racine, contexte }) {
      */
     tableau(dossiers) {
       const col = (t, n) => esc(String(t).padEnd(n).slice(0, n));
+      const coupe = (t, n) => (t.length > n ? t.slice(0, n - 1) + '…' : t);
       const lignes = dossiers.map(d => {
         const alerte = contexte().regles.etatRelance(d);
         const relance = d.dateRelance ? formater(d.dateRelance).slice(0, 5) + (alerte === 'retard' ? '!' : alerte === 'proche' ? '·' : '') : '—';
+        const fci = d.fci.length ? d.fci[0] + (d.fci.length > 1 ? `+${d.fci.length - 1}` : '') : '';
+        const commune = d.commune || '';
+        const valo = d.valorisation !== null && d.valorisation !== undefined ? formaterMontant(d.valorisation).replace(/\s/g, ' ') : '';
+        // Grand écran : FCI, commune et valo en colonnes sur la même ligne
+        const large = `<span class="col-large"> <span class="dim">${col(fci || '—', 16)}</span>${col(coupe(commune, 22) || '—', 23)}<span class="valo">${esc((valo || '—').padStart(11))}</span> </span>`;
+        // Téléphone : les mêmes informations sur une seconde ligne, en retrait
+        const infos = [fci, commune, valo].filter(Boolean);
+        const etroit = infos.length ? `<span class="col-etroit dim">${esc(infos.join(' · '))}</span>` : '';
         return `<span class="ty-${d.type}">${col(TYPE_COURT[d.type] || d.type, 7)}</span>`
           + `${lienDossier(d)} `
           + `<span class="st-${d.statutDft}">${col(STATUT_COURT[d.statutDft] || d.statutDft, 11)}</span>`
           + `<span class="${alerte || 'dim'}">${col(relance, 6)}</span>`
-          + boutonMenu(d);
+          // Fin de ligne : sur téléphone, la seconde ligne (bloc) termine déjà la ligne
+          + large + boutonMenu(d) + (etroit ? `${etroit}<span class="col-large">\n</span>` : '\n');
       });
       // L'en-tête reste visible en haut de l'écran tant que la liste défile (CSS : sticky)
-      const entete = `<span class="entete dim">${'AFFECT'.padEnd(7)}${'GCBLO'.padEnd(17)}${'STATUT'.padEnd(11)}RELANCE</span>`;
-      ecran.ligne(`<pre class="tableau">${entete}${lignes.join('\n')}</pre>`, 'vue');
+      const entete = `<span class="entete dim">${'AFFECT'.padEnd(7)}${'GCBLO'.padEnd(17)}${'STATUT'.padEnd(11)}${'RELANCE'.padEnd(6)}`
+        + `<span class="col-large"> ${'FCI'.padEnd(16)}${'COMMUNE'.padEnd(23)}${'VALO'.padStart(11)}</span></span>`;
+      ecran.ligne(`<pre class="tableau">${entete}${lignes.join('').replace(/\n$/, '')}</pre>`, 'vue');
     },
     fiche(d) {
       const regles = contexte().regles;
