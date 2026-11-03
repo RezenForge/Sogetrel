@@ -19,7 +19,8 @@
  *   coffre                   fichiers gardés dans le navigateur (la référence d'attachement)
  */
 import { criteresListe } from './analyse.js';
-import { COMMANDES, SORTES, MOTS_TYPE } from './grammaire.js';
+import { COMMANDES, SORTES, MOTS_TYPE, MOTS_STATUT, CHAMPS, plat } from './grammaire.js';
+import { lireDate } from './analyse.js';
 import { IMPORT_EXCEL } from '../config.js';
 import { lireClasseur, modifierClasseur, contientMacros } from '../xlsx.js';
 import { cellulesAttachement } from '../attachement.js';
@@ -61,6 +62,29 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       if (!r.modifies) return info(`${v.cibles.length === 1 ? esc(v.cibles[0].gcblo) + ' est' : 'ces dossiers sont'} déjà à jour`);
       annulation = { libelle: pluriel(r.modifies, 'modification', 'modifications'), faire: () => regles.restaurer(r.avant) };
       ok(`${v.cibles.length === 1 ? esc(v.cibles[0].gcblo) : pluriel(r.modifies, 'dossier modifié', 'dossiers modifiés')} : ${esc(libelle)}${r.inchanges ? ` (${r.inchanges} déjà à jour)` : ''} <span class="dim">·</span> ${LIEN_ANNULE}`);
+    },
+
+    /** Modifie un champ d'un dossier (aussi lancé par le double-clic dans une fiche). */
+    edit(v) {
+      const brut = v.valeur.trim().replace(/^"(.*)"$/, '$1');
+      const vide = ['-', 'aucun', 'aucune', 'vide'].includes(plat(brut));
+      const nom = Object.keys(CHAMPS).find(k => CHAMPS[k] === v.champ);
+      let valeur;
+      switch (v.champ) {
+        case 'type': valeur = MOTS_TYPE[plat(brut)]; if (!valeur) return erreur(`affect inconnu : « ${esc(brut)} » (num21, air, sogetrel)`); break;
+        case 'statutDft': valeur = MOTS_STATUT[plat(brut)]; if (!valeur) return erreur(`statut inconnu : « ${esc(brut)} »`); break;
+        case 'dateAffectation': valeur = lireDate(brut, regles.aujourdhui()); if (!valeur) return erreur(`date non comprise : « ${esc(brut)} »`); break;
+        case 'dateRelance': valeur = vide ? null : lireDate(brut, regles.aujourdhui()); if (!vide && !valeur) return erreur(`date non comprise : « ${esc(brut)} »`); break;
+        case 'valorisation': valeur = vide ? null : brut; break;
+        case 'fci': valeur = vide ? [] : brut; break;
+        case 'gcblo': valeur = brut; break;
+        default: valeur = vide ? '' : brut;          // commune, commentaire
+      }
+      const r = regles.modifier(v.cible.id, { [v.champ]: valeur });
+      if (!r.ok) return erreur(esc(premiereErreur(r)));
+      if (r.inchange) return info(`${esc(nom)} déjà à jour`);
+      annulation = { libelle: `${nom} de ${r.dossier.gcblo}`, faire: () => regles.restaurer([r.avant]) };
+      ok(`${esc(r.dossier.gcblo)} : ${esc(r.dossier.historique.at(-1).detail)} <span class="dim">·</span> ${LIEN_ANNULE}`);
     },
 
     async delete(v) {

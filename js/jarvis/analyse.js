@@ -16,7 +16,7 @@
  *
  * Elle est appelée à chaque touche : elle doit rester rapide et sans effet.
  */
-import { COMMANDES, MOTS_STATUT, MOTS_TYPE, MOTS_FILTRE, GROUPES, PERIODES, JOURS, plat, commandeParVerbe } from './grammaire.js';
+import { COMMANDES, MOTS_STATUT, MOTS_TYPE, MOTS_FILTRE, GROUPES, PERIODES, JOURS, CHAMPS, plat, commandeParVerbe } from './grammaire.js';
 import { FORMATS, typeParCode } from '../config.js';
 import { normaliserGcblo, etatRelance } from '../dossiers.js';
 import { estEmail } from '../reglages.js';
@@ -134,6 +134,8 @@ export function accepter(sorte, mot, ctx, { multiple = false } = {}) {
     case 'adresse':
       if (p === 'aucun' || p === 'aucune') return { ok: true, valeur: '' };
       return estEmail(mot) ? { ok: true, valeur: mot } : { ok: false, erreur: `« ${mot} » n'est pas une adresse email` };
+    case 'champ':
+      return CHAMPS[p] ? { ok: true, valeur: CHAMPS[p] } : { ok: false, erreur: `champ inconnu : « ${mot} »` };
     case 'commande':
       return commandeParVerbe(mot) ? { ok: true, valeur: commandeParVerbe(mot) } : { ok: false, erreur: `${mot} : commande introuvable` };
     case 'texte':
@@ -151,6 +153,7 @@ const MOTS_CONNUS = {
   date: ['demain', 'apres-demain', 'aujourdhui', ...JOURS],
   dossier: Object.keys(GROUPES),
   'dossier-ou-fichier': ['fichier'],
+  champ: Object.keys(CHAMPS),
   periode: Object.keys(PERIODES),
   commande: COMMANDES.flatMap(c => c.verbes)
 };

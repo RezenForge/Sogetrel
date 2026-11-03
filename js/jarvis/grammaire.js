@@ -28,6 +28,9 @@ export const COMMANDES = Object.freeze([
   { id: 'set', verbes: ['set'], resume: 'change statut ou affect',
     forme: 'set ‹dossiers› to ‹statut|affect›',
     emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }, { mot: 'to' }, { nom: 'valeur', sorte: 'statut-ou-type' }] },
+  { id: 'edit', verbes: ['edit'], resume: 'modifie un champ d\'un dossier',
+    forme: 'edit ‹dossier› ‹champ› ‹valeur›',
+    emplacements: [{ nom: 'cible', sorte: 'dossier' }, { nom: 'champ', sorte: 'champ' }, { nom: 'valeur', sorte: 'texte' }] },
   { id: 'delete', verbes: ['delete', 'rm'], resume: 'supprime',
     forme: 'delete ‹dossiers›',
     emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }] },
@@ -61,6 +64,15 @@ export const PERIODES = Object.freeze({ jour: 'jour', aujourdhui: 'jour', demain
 export const GROUPES = Object.freeze({ retard: 'retard', proches: 'proche' });
 export const MOTS_FILTRE = Object.freeze({ retard: 'retard', 'en-retard': 'retard', 'sans-fci': 'sansFci', sansfci: 'sansFci' });
 
+/**
+ * Champs modifiables avec « edit » (et au double-clic dans une fiche) : mot affiché → champ du dossier.
+ * Pour vider un champ facultatif : « - », « aucun » ou « vide » comme valeur.
+ */
+export const CHAMPS = Object.freeze({
+  affect: 'type', statut: 'statutDft', commune: 'commune', valo: 'valorisation', fci: 'fci',
+  affectation: 'dateAffectation', relance: 'dateRelance', commentaire: 'commentaire', gcblo: 'gcblo'
+});
+
 /** Jours de la semaine, dimanche = 0 (comme Date.getDay). */
 export const JOURS = Object.freeze(['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']);
 
@@ -78,6 +90,7 @@ export const SORTES = Object.freeze({
   fci: 'F + 11 chiffres',
   texte: 'texte libre',
   commande: 'une commande',
+  champ: 'affect, statut, commune, valo, fci, affectation, relance, commentaire, gcblo',
   'dossier-ou-fichier': 'un dossier, ou « fichier » pour choisir la référence'
 });
 

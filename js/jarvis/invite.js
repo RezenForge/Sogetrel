@@ -14,11 +14,11 @@
 import { analyser } from './analyse.js';
 import { proposer, apercu } from './completion.js';
 import { esc } from './actions.js';
-import { typeParCode, statutParCode } from '../config.js';
+import { STATUTS, typeParCode, statutParCode } from '../config.js';
 import { formater } from '../dates.js';
 import { formaterMontant } from '../dossiers.js';
 import { ressembleAUneListe } from '../collage.js';
-import { plat } from './grammaire.js';
+import { plat, MOTS_TYPE, MOTS_STATUT, motPourCode } from './grammaire.js';
 import { optionsDossier } from './menus.js';
 
 const CLE_HISTORIQUE = 'gcblo.v2.historique';
@@ -58,6 +58,44 @@ export function creerInvite({ racine, contexte }) {
       pos = m.fin;
     }
     return html + esc(texte.slice(pos));
+  }
+
+  /**
+   * La fiche d'un dossier. Chaque valeur est éditable au double-clic (data-champ) :
+   * la saisie lance la commande « edit ‹gcblo› ‹champ› ‹valeur› » (un clic = une commande).
+   */
+  function ficheHtml(d) {
+    const alerte = contexte().regles.etatRelance(d);
+    const champ = (nom, cle, valeur) => `<span class="dim">${esc(nom.padEnd(14))}</span><span class="editable" data-champ="${cle}" title="double-clic pour modifier">${valeur}</span>`;
+    const lignes = [
+      `<b>${lienDossier(d)}</b> ${boutonMenu(d)}`,
+      champ('affect', 'affect', `<span class="ty-${d.type}">${esc(typeParCode(d.type).libelle)}</span>`),
+      champ('statut DFT', 'statut', `<span class="st-${d.statutDft}">${esc(statutParCode(d.statutDft).libelle)}</span>`),
+      champ('FCI', 'fci', esc(d.fci.join(', ') || 'aucun')),
+      champ('commune', 'commune', esc(d.commune || '—')),
+      champ('valorisation', 'valo', d.valorisation !== null && d.valorisation !== undefined ? esc(formaterMontant(d.valorisation)) : '—'),
+      champ('affectation', 'affectation', esc(formater(d.dateAffectation))),
+      champ('relance', 'relance', d.dateRelance ? `<span class="${alerte || ''}">${esc(formater(d.dateRelance))}${alerte === 'retard' ? ' (en retard)' : alerte === 'proche' ? ' (proche)' : ''}</span>` : 'aucune'),
+      champ('commentaire', 'commentaire', esc(d.commentaire || '—').replace(/\n/g, '<br>' + ' '.repeat(14))),
+      `<span class="dim">historique</span>`,
+      ...[...d.historique].reverse().slice(0, 8).map(h => `  <span class="dim">${esc(new Date(h.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }))}</span>  ${esc(h.detail)}`)
+    ];
+    return `<pre class="fiche">${lignes.join('\n')}</pre>`;
+  }
+
+  /** La valeur d'un champ telle qu'on la retape (pour pré-remplir la saisie en place). */
+  function valeurBrute(d, cle) {
+    switch (cle) {
+      case 'affect': return motPourCode(MOTS_TYPE, d.type);
+      case 'statut': return motPourCode(MOTS_STATUT, d.statutDft);
+      case 'fci': return d.fci.join(' ');
+      case 'commune': return d.commune || '';
+      case 'valo': return d.valorisation !== null && d.valorisation !== undefined ? String(d.valorisation).replace('.', ',') : '';
+      case 'affectation': return formater(d.dateAffectation);
+      case 'relance': return d.dateRelance ? formater(d.dateRelance) : '';
+      case 'commentaire': return (d.commentaire || '').replace(/\n/g, ' ');
+      default: return '';
+    }
   }
 
   const ecran = {
@@ -102,23 +140,9 @@ export function creerInvite({ racine, contexte }) {
       ecran.ligne(`<pre class="tableau">${entete}${lignes.join('').replace(/\n$/, '')}</pre>`, 'vue');
     },
     fiche(d) {
-      const regles = contexte().regles;
-      const alerte = regles.etatRelance(d);
-      const champ = (nom, valeur) => `<span class="dim">${esc(nom.padEnd(14))}</span>${valeur}`;
-      const lignes = [
-        `<b>${lienDossier(d)}</b> ${boutonMenu(d)}`,
-        champ('affect', `<span class="ty-${d.type}">${esc(typeParCode(d.type).libelle)}</span>`),
-        champ('statut DFT', `<span class="st-${d.statutDft}">${esc(statutParCode(d.statutDft).libelle)}</span>`),
-        champ('FCI', esc(d.fci.join(', ') || 'aucun')),
-        champ('commune', esc(d.commune || '—')),
-        champ('valorisation', d.valorisation !== null && d.valorisation !== undefined ? esc(formaterMontant(d.valorisation)) : '—'),
-        champ('affectation', esc(formater(d.dateAffectation))),
-        champ('relance', d.dateRelance ? `<span class="${alerte || ''}">${esc(formater(d.dateRelance))}${alerte === 'retard' ? ' (en retard)' : alerte === 'proche' ? ' (proche)' : ''}</span>` : 'aucune'),
-        champ('commentaire', esc(d.commentaire || '—').replace(/\n/g, '<br>' + ' '.repeat(14))),
-        `<span class="dim">historique</span>`,
-        ...[...d.historique].reverse().slice(0, 8).map(h => `  <span class="dim">${esc(new Date(h.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }))}</span>  ${esc(h.detail)}`)
-      ];
-      ecran.ligne(`<pre class="fiche">${lignes.join('\n')}</pre>`, 'vue');
+      ecran.ligne(ficheHtml(d), 'vue');
+      const el = ecranEl.lastElementChild;
+      el.dataset.fiche = d.id;
     },
     /** Les listes et fiches déjà affichées ne sont plus à jour : on les grise. */
     marquerPerime() { ecranEl.querySelectorAll('.vue:not(.perime)').forEach(el => el.classList.add('perime')); },
@@ -333,8 +357,52 @@ export function creerInvite({ racine, contexte }) {
     if (points) { e.preventDefault(); menuEl && points.getAttribute('aria-expanded') === 'true' ? fermerMenu() : ouvrirMenu(points, points.dataset.menuDossier); return; }
     if (menuEl && !e.target.closest('.menu')) fermerMenu();
     // Clic ailleurs dans l'écran : on revient à la saisie (sauf sur téléphone : pas de clavier imposé)
-    if (e.target.closest('#ecran') && !getSelection().toString() && matchMedia('(pointer: fine)').matches) champ.focus();
+    if (e.target.closest('#ecran') && !e.target.closest('.edition, .editable') && !getSelection().toString() && matchMedia('(pointer: fine)').matches) champ.focus();
   });
+  /* ---------------- Fiche : double-clic sur un champ pour le modifier ---------------- */
+
+  ecranEl.addEventListener('dblclick', e => {
+    const cible = e.target.closest('.fiche .editable');
+    const vue = cible?.closest('[data-fiche]');
+    if (!cible || !vue || attente || cible.querySelector('.edition')) return;
+    const d = contexte().dossiers.find(x => x.id === vue.dataset.fiche);
+    if (!d) return ecran.ligne('gcblo: ce dossier n\'existe plus', 'err');
+    getSelection()?.removeAllRanges();
+    const cle = cible.dataset.champ, avant = valeurBrute(d, cle);
+    // Affect et statut : une liste ; le reste : une zone de saisie pré-remplie
+    const choix = cle === 'affect' ? Object.keys(MOTS_TYPE) : cle === 'statut' ? STATUTS.map(st => motPourCode(MOTS_STATUT, st.code)) : null;
+    const saisie = document.createElement(choix ? 'select' : 'input');
+    saisie.className = 'edition';
+    if (choix) saisie.innerHTML = choix.map(c => `<option value="${esc(c)}"${c === avant ? ' selected' : ''}>${esc(c)}</option>`).join('');
+    else { saisie.value = avant; saisie.size = Math.max(12, Math.min(40, avant.length + 4)); saisie.spellcheck = false; }
+    const contenu = cible.innerHTML;
+    cible.innerHTML = '';
+    cible.appendChild(saisie);
+    saisie.focus();
+    if (!choix) saisie.select();
+
+    let fini = false;
+    const terminer = async valider => {
+      if (fini) return;
+      fini = true;
+      const valeur = saisie.value.trim();
+      cible.innerHTML = contenu;
+      if (!valider || valeur === avant) return;
+      // Un clic = une commande : la modification passe par « edit », visible dans la console
+      await lancer(`edit ${d.gcblo} ${cle} ${valeur || '-'}`);
+      // La fiche modifiée se met à jour sur place (les autres vues passent en grisé)
+      const maj = contexte().dossiers.find(x => x.id === d.id);
+      if (maj && vue.isConnected) { vue.innerHTML = ficheHtml(maj); vue.classList.remove('perime'); }
+    };
+    saisie.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') { ev.preventDefault(); terminer(true); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); terminer(false); }
+      ev.stopPropagation();
+    });
+    saisie.addEventListener('blur', () => terminer(true));
+    if (choix) saisie.addEventListener('change', () => terminer(true));
+  });
+
   racine.addEventListener('keydown', e => {
     if (!menuEl) return;
     const choix = [...menuEl.querySelectorAll('.menu-choix')], i = choix.indexOf(racine.activeElement);

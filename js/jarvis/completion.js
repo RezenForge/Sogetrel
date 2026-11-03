@@ -10,7 +10,7 @@
  *
  * ctx = { dossiers, aujourdhui, regles, recents: [verbes récents] }
  */
-import { COMMANDES, MOTS_STATUT, MOTS_TYPE, GROUPES, PERIODES, JOURS, plat, motPourCode } from './grammaire.js';
+import { COMMANDES, MOTS_STATUT, MOTS_TYPE, GROUPES, PERIODES, JOURS, CHAMPS, plat, motPourCode } from './grammaire.js';
 import { STATUTS, TYPES, IMPORT_EXCEL, statutParCode, typeParCode } from '../config.js';
 import { formater } from '../dates.js';
 import { etatRelance } from '../dossiers.js';
@@ -104,6 +104,7 @@ export function proposer(analyse, ctx) {
       break;
     }
     case 'periode': liste = commencePar(periodes(), mot); break;
+    case 'champ': liste = commencePar(Object.keys(CHAMPS).map(c => ({ inserer: c + ' ', libelle: c, detail: '', sorte: 'valeur' })), mot); break;
     case 'adresse': {
       const actuel = ctx.reglages?.destinataire(analyse.valeurs.type) || '';
       liste = commencePar([...(actuel ? [{ inserer: actuel + ' ', libelle: actuel, detail: 'adresse actuelle', sorte: 'valeur' }] : []),
@@ -139,6 +140,7 @@ export function apercu(analyse, ctx) {
     case 'open': return `→ fiche de ${v.cible.gcblo}`;
     case 'import': return `→ onglets ${IMPORT_EXCEL.onglets.join(', ')}`;
     case 'attachement': return v.cible.fichier ? '→ choisir la référence' : `→ ${v.cible.dossier.gcblo}.xlsx`;
+    case 'edit': return `→ ${v.cible.gcblo} : ${Object.keys(CHAMPS).find(k => CHAMPS[k] === v.champ)} → ${v.valeur}`;
     case 'delete': return `→ suppression de ${v.cibles.length === 1 ? v.cibles[0].gcblo : n(v.cibles)} (confirmation)`;
     case 'set': {
       const quoi = v.valeur.statut ? `statut → ${statutParCode(v.valeur.statut).libelle}` : `affect → ${typeParCode(v.valeur.type).libelle}`;
