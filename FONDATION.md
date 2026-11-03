@@ -277,3 +277,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 02/11/2026 | Commande `meteo` (Open-Meteo), villes consultées proposées en complétion |
 | 02/11/2026 | Commande `wiki` : début de l'article Wikipédia (fr), pages d'homonymie signalées avec les autres sens |
 | 02/11/2026 | `stats` redessiné en ASCII (`js/jarvis/dessin.js`) ; `statistiques()` compte aussi les relances des 7 prochains jours |
+| 03/11/2026 | Page déclarée sombre (`color-scheme`, `darkreader-lock`) pour que le mode sombre forcé des navigateurs ne recolore pas le texte |
