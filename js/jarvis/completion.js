@@ -89,6 +89,7 @@ export function proposer(analyse, ctx) {
     case 'verbe': liste = verbes(mot, ctx); break;
     case 'mot': liste = [{ inserer: ec.slot.mot + ' ', libelle: ec.slot.mot, detail: '', sorte: 'mot' }]; break;
     case 'dossier': liste = dossiers(mot, ctx, ec, analyse); break;
+    case 'dossier-ou-fichier': liste = [...commencePar([{ inserer: 'fichier ', libelle: 'fichier', detail: 'référence', sorte: 'valeur' }], mot), ...dossiers(mot, ctx, ec, analyse)]; break;
     case 'statut-ou-type': liste = commencePar([...statuts(), ...types()], mot); break;
     case 'type': liste = commencePar(types(), mot); break;
     case 'filtre': liste = commencePar([...types(), ...statuts(),
@@ -137,6 +138,7 @@ export function apercu(analyse, ctx) {
     case 'ls': return `→ ${n(ctx.regles.filtrer(criteresListe(v)))}`;
     case 'open': return `→ fiche de ${v.cible.gcblo}`;
     case 'import': return `→ onglets ${IMPORT_EXCEL.onglets.join(', ')}`;
+    case 'attachement': return v.cible.fichier ? '→ choisir la référence' : `→ ${v.cible.dossier.gcblo}.xlsx`;
     case 'delete': return `→ suppression de ${v.cibles.length === 1 ? v.cibles[0].gcblo : n(v.cibles)} (confirmation)`;
     case 'set': {
       const quoi = v.valeur.statut ? `statut → ${statutParCode(v.valeur.statut).libelle}` : `type → ${typeParCode(v.valeur.type).libelle}`;

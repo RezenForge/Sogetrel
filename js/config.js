@@ -83,6 +83,21 @@ export const IMPORT_EXCEL = Object.freeze({
   reperFci: 'Numéro de commande FCI :'
 });
 
+/**
+ * R11 — Attachement : cellules à remplir dans la copie du classeur de référence
+ * (sur sa première feuille), et paliers cochés selon la valorisation du dossier.
+ * Un palier est retenu si la valorisation est à `ecartMax` au plus de sa cible ;
+ * entre deux paliers, le plus proche l'emporte.
+ */
+export const ATTACHEMENT = Object.freeze({
+  cellules: Object.freeze({ commune: 'X5', date: 'AG5', gcblo: 'U6' }),
+  ecartMax: 15,
+  paliers: Object.freeze([
+    Object.freeze({ cible: 30, nom: 'ANNEX', cellules: Object.freeze({ A30: 'ANNEX', AB30: 1 }) }),
+    Object.freeze({ cible: 60, nom: 'ANNEX + BLOCS', cellules: Object.freeze({ A30: 'ANNEX', AB30: 1, A31: 'BLOCS', AB31: 1 }) })
+  ])
+});
+
 /** Où et sous quelle version les données sont enregistrées dans le navigateur. */
 export const STOCKAGE = Object.freeze({
   cle: 'gcblo.v2.dossiers',

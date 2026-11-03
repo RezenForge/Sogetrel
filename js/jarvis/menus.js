@@ -20,6 +20,7 @@ export function optionsDossier(d) {
       commande: `set ${d.gcblo} to ${motPourCode(MOTS_STATUT, s.code)}`,
       classe: `st-${s.code}`
     })),
+    { libelle: 'Attachement', commande: `attachement ${d.gcblo}` },
     // Toujours en dernier, en rouge ; la commande demande confirmation
     { libelle: 'Supprimer', commande: `delete ${d.gcblo}`, classe: 'err' }
   ];

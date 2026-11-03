@@ -32,6 +32,9 @@ export const COMMANDES = Object.freeze([
     forme: 'delete ‹dossiers›',
     emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }] },
   { id: 'import', verbes: ['import'], resume: 'importe un classeur Excel', forme: 'import', emplacements: [] },
+  { id: 'attachement', verbes: ['attachement'], resume: 'crée l\'attachement d\'un dossier',
+    forme: 'attachement ‹dossier|fichier›',
+    emplacements: [{ nom: 'cible', sorte: 'dossier-ou-fichier' }] },
   { id: 'cancel', verbes: ['cancel', 'undo'], resume: 'annule la dernière action', forme: 'cancel', emplacements: [] },
   { id: 'clear', verbes: ['clear', 'cls'], resume: 'vide l\'écran', forme: 'clear', emplacements: [] },
   { id: 'help', verbes: ['help', '?'], resume: 'aide',
@@ -74,7 +77,8 @@ export const SORTES = Object.freeze({
   date: 'demain, lundi, +3, 12/11',
   fci: 'F + 11 chiffres',
   texte: 'texte libre',
-  commande: 'une commande'
+  commande: 'une commande',
+  'dossier-ou-fichier': 'un dossier, ou « fichier » pour choisir la référence'
 });
 
 /* ---------------- Aides de lecture ---------------- */

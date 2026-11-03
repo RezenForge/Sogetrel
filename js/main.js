@@ -10,6 +10,7 @@
 import { creerStore, supportNavigateur, supportMemoire } from './store.js';
 import { creerDossiers } from './dossiers.js';
 import { creerReglages } from './reglages.js';
+import { creerCoffre } from './coffre.js';
 import { aujourdhui } from './dates.js';
 import { convertirV1, lireV1Navigateur } from './reprise-v1.js';
 import { creerInvite } from './jarvis/invite.js';
@@ -62,7 +63,28 @@ const actions = creerActions({
     input.addEventListener('change', () => resoudre(input.files[0] || null));
     input.addEventListener('cancel', () => resoudre(null));
     input.click();
-  })
+  }),
+  // « Enregistrer sous » : l'explorateur de fichiers si le navigateur le permet (Chrome, Edge sur ordinateur), sinon téléchargement
+  enregistrerFichier: async (nom, octets) => {
+    const xlsm = /\.xlsm$/i.test(nom);
+    const type = xlsm ? 'application/vnd.ms-excel.sheet.macroEnabled.12' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    if (window.showSaveFilePicker) {
+      try {
+        const poignee = await window.showSaveFilePicker({ suggestedName: nom, types: [{ description: 'Classeur Excel', accept: { [type]: [xlsm ? '.xlsm' : '.xlsx'] } }] });
+        const flux = await poignee.createWritable();
+        await flux.write(octets); await flux.close();
+        return 'enregistre';
+      } catch (e) {
+        if (e.name === 'AbortError') return 'annule';
+        // Autre refus (délai dépassé, navigateur réticent) : on télécharge
+      }
+    }
+    const url = URL.createObjectURL(new Blob([octets], { type }));
+    const a = document.createElement('a'); a.href = url; a.download = nom; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    return 'telecharge';
+  },
+  coffre: creerCoffre()
 });
 invite.brancher(analyse => actions.executer(analyse));
 

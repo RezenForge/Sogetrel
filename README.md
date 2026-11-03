@@ -18,6 +18,8 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `set ‹dossiers› to ‹statut\|type›` | change le statut DFT ou le type (ex. `set 501404 to refuse`) |
 | `delete ‹dossiers›` | supprime, après confirmation |
 | `import` | lit un classeur Excel : onglets 33, 16, 17, 79, 86, lignes `GCBLO` en colonne E, dossier en D, commune en G, valorisation en H, type en I, FCI en J |
+| `attachement fichier` | choisit le classeur d'attachement de référence (gardé dans le navigateur) |
+| `attachement ‹dossier›` | remplit une copie de la référence (X5 commune, AG5 date, U6 GCBLO, paliers 30/60 en lignes 30-31) et l'enregistre en `‹GCBLO›.xlsx` |
 | `cancel` | défait la dernière modification |
 | `clear` | vide l'écran |
 | `help [commande]` | la liste des commandes, ou le détail d'une commande |
@@ -67,13 +69,15 @@ js/dossiers.js           les règles : seul module autorisé à modifier les dos
 js/reprise-v1.js         relit les dossiers et sauvegardes de la version 1
 js/reglages.js           destinataires des emails par type
 js/collage.js            lit une liste collée (Excel, mail, classeur robot)
-js/xlsx.js               lit un classeur Excel (.xlsx, .xlsm) dans le navigateur, sans bibliothèque
+js/xlsx.js               lit un classeur Excel (.xlsx, .xlsm) et en écrit une copie modifiée, sans bibliothèque
 js/import-excel.js       quels dossiers et FCI prendre dans le classeur (commande import)
+js/attachement.js        quelles cellules remplir dans l'attachement d'un dossier
+js/coffre.js             garde la référence d'attachement dans le navigateur (IndexedDB)
 js/jarvis/grammaire.js   les commandes, sous forme de tableau (vide : en refonte)
 js/jarvis/analyse.js     comprend la ligne tapée (ne modifie rien)
 js/jarvis/completion.js  propositions, texte grisé, aperçu (ne modifie rien)
 js/jarvis/actions.js     exécute une commande via les règles
 js/jarvis/menus.js       le menu ⋯ d'un dossier : des commandes écrites à l'avance
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   119 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
+tests/                   129 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
 ```

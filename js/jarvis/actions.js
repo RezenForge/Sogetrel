@@ -15,11 +15,14 @@
  *   confirmer(question)      → Promise<boolean>  (l'invite pose la question o/n)
  *   demander(question, choix) → Promise<choix|null>
  *   choisirFichier(types)    → Promise<File|null>  (ouvre l'explorateur de fichiers)
+ *   enregistrerFichier(nom, octets) → Promise<'enregistre'|'telecharge'|'annule'>  (explorateur « Enregistrer sous »)
+ *   coffre                   fichiers gardés dans le navigateur (la référence d'attachement)
  */
 import { criteresListe } from './analyse.js';
 import { COMMANDES, SORTES, MOTS_TYPE } from './grammaire.js';
 import { IMPORT_EXCEL } from '../config.js';
-import { lireClasseur } from '../xlsx.js';
+import { lireClasseur, modifierClasseur, contientMacros } from '../xlsx.js';
+import { cellulesAttachement } from '../attachement.js';
 import { extraireDossiers } from '../import-excel.js';
 import { typeParCode, statutParCode } from '../config.js';
 
@@ -30,7 +33,7 @@ const SEUIL_CONFIRMATION = 3;
 /** Le mot « cancel », cliquable : un clic lance la commande. */
 const LIEN_ANNULE = '<button type="button" class="lien c-verbe" data-commande="cancel">cancel</button>';
 
-export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier }) {
+export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre }) {
   let annulation = null;       // { libelle, faire() } : de quoi défaire la dernière modification
 
   // Comme les outils Linux : un succès s'écrit simplement, une erreur est préfixée du nom du programme
@@ -109,6 +112,31 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       }
       creation.refuses.forEach(x => erreur(`${esc(x.saisie.gcblo)} : ${esc(x.erreur)}`));
       ok(`${pluriel(creation.crees.length, 'dossier créé', 'dossiers créés')}${avant.length ? ` · ${pluriel(avant.length, 'complété', 'complétés')}` : ''} <span class="dim">·</span> ${LIEN_ANNULE}`);
+    },
+
+    /** R11 — « attachement fichier » choisit la référence ; « attachement ‹dossier› » crée l'attachement. */
+    async attachement(v) {
+      if (v.cible.fichier) {
+        const fichier = await choisirFichier('.xlsx,.xlsm');
+        if (!fichier) return info('aucun fichier choisi');
+        const octets = new Uint8Array(await fichier.arrayBuffer());
+        try { await lireClasseur(octets, { onglets: [] }); } catch (e) { return erreur(esc(e.message)); }
+        await coffre.ecrire('attachement-reference', { nom: fichier.name, octets, le: new Date().toISOString() });
+        return ok(`référence : ${esc(fichier.name)}`);
+      }
+      const ref = await coffre.lire('attachement-reference');
+      if (!ref) return erreur('aucune référence · attachement fichier');
+      const d = store.parId(v.cible.dossier.id) || v.cible.dossier;
+      const { cellules, palier, avertissements } = cellulesAttachement(d, regles.aujourdhui());
+      avertissements.forEach(a => info(`<span class="dim">${esc(a)}</span>`));
+      let octets;
+      try { octets = await modifierClasseur(ref.octets, { cellules }); } catch (e) { return erreur(esc(e.message)); }
+      // Avec macros, le fichier doit s'appeler .xlsm, sinon Excel refuse de l'ouvrir
+      const nom = `${d.gcblo}.${contientMacros(ref.octets) ? 'xlsm' : 'xlsx'}`;
+      const r = await enregistrerFichier(nom, octets);
+      if (r === 'annule') return info('non enregistré');
+      regles.noterAttachement(d.id, palier?.nom);
+      ok(`${esc(nom)} ${r === 'telecharge' ? 'téléchargé' : 'enregistré'}${palier ? ` <span class="dim">· ${esc(palier.nom)}</span>` : ''}`);
     },
 
     cancel() {

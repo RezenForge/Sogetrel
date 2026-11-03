@@ -178,6 +178,15 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
       return { crees: crees.map(d => store.parId(d.id)), refuses };
     },
 
+    /** R11 — note dans l'historique qu'un attachement a été créé. */
+    noterAttachement(id, detail = '') {
+      const d = store.parId(id);
+      if (!d) return { ok: false, erreurs: { id: 'Dossier introuvable.' } };
+      const date = instant();
+      store.remplacer({ ...d, modifieLe: date, historique: [...d.historique, { date, action: 'attachement', detail: `Attachement créé${detail ? ` (${detail})` : ''}` }] });
+      return { ok: true, dossier: store.parId(id) };
+    },
+
     /** Modifie un dossier. `changements` ne contient que les champs à changer. */
     modifier(id, changements) {
       const r = preparerModification(id, changements);

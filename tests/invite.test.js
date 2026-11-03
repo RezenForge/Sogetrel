@@ -59,12 +59,17 @@ groupe('Menu ⋯ : un clic = une commande', () => {
   const d = contexte().dossiers.find(x => x.gcblo === 'LRO500767-THF010');      // refusé
   const options = optionsDossier(d);
   test('ouvrir en premier', () => egal(options[0].commande, 'open LRO500767-THF010'));
-  test('pas de « passer en Refusé » pour un dossier déjà refusé', () => egal(options.slice(1, -1).map(o => o.libelle), ['→ À faire', '→ En cours de validation', '→ Mis à disposition']));
+  test('pas de « passer en Refusé » pour un dossier déjà refusé', () => egal(options.slice(1, -2).map(o => o.libelle), ['→ À faire', '→ En cours de validation', '→ Mis à disposition']));
   test('chaque choix est une commande complète et comprise', () => {
     const ctx = contexte();
     egal(options.filter(o => !analyser(o.commande, o.commande.length, ctx).complet).map(o => o.commande), []);
   });
-  test('supprimer en dernier', () => egal(options.at(-1).commande, 'delete LRO500767-THF010'));
+  test('attachement puis supprimer en dernier', () => egal(options.slice(-2).map(o => o.commande), ['attachement LRO500767-THF010', 'delete LRO500767-THF010']));
+  test('attachement : fichier ou dossier', () => {
+    egal(A('attachement fichier').a.valeurs.cible, { fichier: true });
+    egal(A('attachement 501404').a.valeurs.cible.dossier.gcblo, 'SBA501404-THF010');
+    egal(P('attachement f').propositions[0].libelle, 'fichier');
+  });
   test('le choix vise bien le statut annoncé', () => {
     const ctx = contexte(), o = options.find(x => x.libelle.includes('Mis à disposition'));
     egal(analyser(o.commande, o.commande.length, ctx).valeurs.valeur, { statut: 'MAD' });

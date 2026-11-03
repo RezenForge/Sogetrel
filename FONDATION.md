@@ -72,6 +72,13 @@ Un dossier **clos** n'a plus d'alerte de relance.
     - Les lignes refusées (GCBLO mal formé, FCI ou valorisation non reconnus) sont listées avec leur onglet et leur numéro de ligne.
     - Tout l'import s'annule d'un coup (`cancel`).
     - Le fichier est lu dans le navigateur : il n'est envoyé nulle part. Onglets, colonnes et texte repère sont réglés dans `config.js` (`IMPORT_EXCEL`).
+11. **Attachement** (commande `attachement`) :
+    - `attachement fichier` : on choisit le classeur d'attachement **de référence** (.xlsx ou .xlsm). Il est gardé dans le navigateur (IndexedDB) et resservira à chaque attachement, jusqu'au prochain `attachement fichier`.
+    - `attachement ‹dossier›` : une copie de la référence est remplie, sur sa **première feuille** : **X5** = commune du dossier, **AG5** = date du jour (format date si la cellule en a un), **U6** = GCBLO.
+    - Selon la **valorisation**, le palier le plus proche est coché : proche de **30** → `ANNEX` en A30 et `1` en AB30 ; proche de **60** → en plus `BLOCS` en A31 et `1` en AB31. « Proche » = à 15 au plus du palier (réglable). Sans valorisation, ou trop loin des deux paliers, les lignes 30-31 restent vides et c'est signalé.
+    - L'explorateur de fichiers s'ouvre pour choisir **où enregistrer** le fichier, nommé `‹GCBLO›.xlsx` (ou `.xlsm` si la référence contient des macros). Les navigateurs qui ne savent pas ouvrir cet explorateur (téléphones, Firefox) le téléchargent.
+    - Le reste du classeur (mise en forme, formules, macros) n'est pas touché ; Excel recalcule les formules à l'ouverture. Une ligne « Attachement créé » s'ajoute à l'historique du dossier.
+    - Cellules et paliers sont réglés dans `config.js` (`ATTACHEMENT`).
 
 Toutes ces règles vivent dans **un seul fichier** (`js/dossiers.js`), et chacune a un test.
 
@@ -90,8 +97,10 @@ js/
   dates.js                 calculs de dates « jour » (sans heure, sans fuseau)
   store.js                 lecture et écriture des données (localStorage)
   dossiers.js              les règles du §3 : créer, modifier, valider, filtrer, alertes
-  xlsx.js                  lit un classeur Excel (.xlsx, .xlsm) dans le navigateur, sans bibliothèque
+  xlsx.js                  lit un classeur Excel (.xlsx, .xlsm) et en écrit une copie modifiée, sans bibliothèque
   import-excel.js          R10 : quels dossiers et FCI prendre dans le classeur
+  attachement.js           R11 : quelles cellules remplir pour un dossier
+  coffre.js                garde des fichiers dans le navigateur (IndexedDB) : la référence d'attachement
   ui/
     registre.js            la liste des dossiers
     filtres.js             recherche, filtres, tri, compteurs
@@ -151,6 +160,7 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 | Supprimer | `delete ‹dossiers›` (aussi `rm`), confirmation demandée | `delete 501404` |
 | Annuler | `cancel` (aussi `undo`) : défait la dernière modification | `cancel` |
 | Importer | `import` : ouvre l'explorateur de fichiers, lit un classeur Excel (R10) | `import` |
+| Attachement | `attachement fichier` (choisir la référence) · `attachement ‹dossier›` (créer, R11) | `attachement 501404` |
 | Vider l'écran | `clear` | `clear` |
 | Aide | `help [commande]` (aussi `?`) ; chaque commande de la liste est cliquable | `help set` |
 
@@ -310,3 +320,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 03/11/2026 | Commande `import` (R10) : classeur Excel lu dans le navigateur, sans bibliothèque extérieure (`js/xlsx.js`) |
 | 03/11/2026 | `import` : type lu en colonne I (demandé seulement s'il manque) |
 | 03/11/2026 | Dossier : champs `commune` et `valorisation` (import colonnes G et H, fiche, recherche) ; prévus pour la future commande `attachement` |
+| 03/11/2026 | Commande `attachement` (R11) : référence gardée dans le navigateur, copie remplie (X5, AG5, U6, paliers 30/60), enregistrée où l'on veut |
