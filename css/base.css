@@ -37,10 +37,6 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .l:has(> pre) { overflow-x: auto; white-space: normal; }
 
 /* Couleurs des types, statuts et alertes (tableaux, fiches, stats) */
-/* Dessins en caractères (stats) */
-.dessin .cadre { color: var(--pale); } .dessin .cadre-titre { color: var(--accent); font-weight: 700; }
-.dessin .vide { color: var(--pale); opacity: .35; } .dessin .fort { color: var(--texte, inherit); font-weight: 700; }
-.dessin { line-height: 1.2; }
 .ty-NUM21 { color: var(--type-NUM21); } .ty-AIR { color: var(--type-AIR); } .ty-SOGETREL { color: var(--type-SOGETREL); }
 .st-A_FAIRE { color: var(--statut-A_FAIRE); } .st-EN_VALIDATION { color: var(--statut-EN_VALIDATION); }
 .st-MAD { color: var(--statut-MAD); } .st-REFUSE { color: var(--statut-REFUSE); }
@@ -53,6 +49,36 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .c-mot { color: var(--mot-liaison); }
 .c-texte { color: var(--mot-texte); }
 .c-erreur { color: var(--mot-erreur); text-decoration: underline wavy; text-underline-offset: 3px; }
+
+/* ---------------- Clics : GCBLO, ⋯, annule ---------------- */
+.lien, .points { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; }
+.lien { text-decoration: underline dotted 1px; text-underline-offset: 3px; }
+.lien:hover { text-decoration-style: solid; color: var(--accent); }
+.points { color: var(--pale); padding: 0 6px; border-radius: 3px; }
+.points:hover, .points[aria-expanded="true"] { color: var(--accent); background: var(--trait); }
+/* Listes et fiches qui ne sont plus à jour (un dossier a changé depuis) */
+.vue.perime { opacity: .5; }
+.vue.perime:hover { opacity: .8; }
+/* Doigt : lignes plus hautes pour viser sans se tromper */
+@media (pointer: coarse) { .tableau { line-height: 2.2; } .points { padding: 4px 10px; } }
+
+.menu {
+  position: fixed; z-index: 20; min-width: 240px; max-width: calc(100vw - 16px); padding: 4px 0;
+  background: var(--fond-saisie); box-shadow: 0 0 0 1px var(--trait), 0 8px 24px rgba(0, 0, 0, .6);
+}
+.menu-titre { padding: 6px 12px 8px; border-bottom: 1px solid var(--trait); font-size: 12px; }
+.menu-choix {
+  display: flex; flex-direction: column; gap: 1px; width: 100%; padding: 7px 12px; text-align: left;
+  font: inherit; color: var(--texte); background: none; border: 0; cursor: pointer;
+}
+.menu-choix:hover, .menu-choix:focus-visible { background: var(--trait); outline: none; box-shadow: inset 2px 0 0 var(--accent); }
+.menu-cmd { color: var(--pale); font-size: 11px; }
+/* Téléphone : le menu s'ouvre en bas de l'écran, grands boutons */
+@media (max-width: 640px) {
+  .menu { left: 0; right: 0; bottom: 0; max-width: none; padding: 6px 0 max(10px, env(safe-area-inset-bottom, 0px)); }
+  .menu-choix { padding: 12px max(16px, env(safe-area-inset-left, 0px)); }
+  .menu-titre { padding: 8px 16px 10px; }
+}
 
 /* ---------------- Zone de saisie ---------------- */
 .saisie-zone {

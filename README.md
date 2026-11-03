@@ -9,7 +9,16 @@ Suivi des affectations de dossiers GCBLO (NUM21, AIR, Sogetrel), piloté depuis 
 
 Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 
-**Les commandes sont en cours de refonte** : elles ont toutes été retirées le 03/11/2026 pour être refaites une par une. L'ancienne version est gardée dans la branche `v2-commandes`. Les dossiers enregistrés dans le navigateur ne sont pas touchés.
+**Les commandes sont en cours de refonte**, une par une (l'ancienne version est gardée dans la branche `v2-commandes`). Déjà refaites :
+
+| Commande | Effet |
+| --- | --- |
+| `ls [type] [statut] [retard] [sans-fci] [texte]` | affiche les dossiers |
+| `ouvre ‹dossier›` | la fiche complète |
+| `passe ‹dossiers› en ‹statut\|type›` | change le statut DFT ou le type |
+| `annule` | défait la dernière modification |
+
+**Les clics** : dans une liste, cliquer un GCBLO l'ouvre, `⋯` affiche les actions du dossier. Un clic ne fait rien de plus qu'une commande : il l'écrit dans la console et l'exécute, on peut donc toujours faire `annule`.
 
 | Touche | Effet |
 | --- | --- |
@@ -58,6 +67,7 @@ js/jarvis/grammaire.js   les commandes, sous forme de tableau (vide : en refonte
 js/jarvis/analyse.js     comprend la ligne tapée (ne modifie rien)
 js/jarvis/completion.js  propositions, texte grisé, aperçu (ne modifie rien)
 js/jarvis/actions.js     exécute une commande via les règles
+js/jarvis/menus.js       le menu ⋯ d'un dossier : des commandes écrites à l'avance
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   79 tests : règles, dates, lecture des mots, collage, relances
+tests/                   92 tests : règles, dates, commandes, menu ⋯, collage, relances
 ```

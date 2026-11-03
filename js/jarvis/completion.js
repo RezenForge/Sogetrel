@@ -126,9 +126,20 @@ export function proposer(analyse, ctx) {
   return { propositions: liste, fantome, remplace: { debut: ec.debut, fin: ec.fin } };
 }
 
-/** Une phrase qui dit ce que la commande va faire (sa forme tant qu'elle est incomplète, puis son résumé). */
-export function apercu(analyse) {
+/** Une phrase qui dit ce que la commande va faire (sa forme tant qu'elle est incomplète). */
+export function apercu(analyse, ctx) {
   const c = analyse.commande;
   if (!c) return null;
-  return analyse.complet ? `→ ${c.resume}` : c.forme;
+  if (!analyse.complet) return c.forme;
+  const v = analyse.valeurs;
+  const n = liste => `${liste.length} dossier${liste.length > 1 ? 's' : ''}`;
+  switch (c.id) {
+    case 'ls': return `→ ${n(ctx.regles.filtrer(criteresListe(v)))}`;
+    case 'ouvre': return `→ fiche de ${v.cible.gcblo}`;
+    case 'passe': {
+      const quoi = v.valeur.statut ? `statut → ${statutParCode(v.valeur.statut).libelle}` : `type → ${typeParCode(v.valeur.type).libelle}`;
+      return `→ ${v.cibles.length === 1 ? v.cibles[0].gcblo : n(v.cibles)} : ${quoi}${v.cibles.length > 3 ? ' (confirmation)' : ''}`;
+    }
+    default: return `→ ${c.resume}`;
+  }
 }

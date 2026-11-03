@@ -14,13 +14,21 @@
  */
 
 /*
- * Vide depuis le 03/11/2026 : les commandes sont refaites une par une.
- * Exemple d'une commande :
- *   { id: 'passe', verbes: ['passe'], resume: 'change le statut DFT',
- *     forme: 'passe ‹dossiers› en ‹statut›',
- *     emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }, { mot: 'en' }, { nom: 'valeur', sorte: 'statut-ou-type' }] }
+ * Refaites une par une depuis le 03/11/2026 (l'ancienne liste est dans la branche « v2-commandes »).
+ * Chaque commande a sa fonction du même id dans actions.js.
  */
-export const COMMANDES = Object.freeze([]);
+export const COMMANDES = Object.freeze([
+  { id: 'ls', verbes: ['ls', 'liste', 'montre'], resume: 'affiche les dossiers (filtres facultatifs)',
+    forme: 'ls [type] [statut] [retard] [sans-fci] [texte]',
+    emplacements: [{ nom: 'filtres', sorte: 'filtre', optionnel: true, multiple: true }] },
+  { id: 'ouvre', verbes: ['ouvre', 'cat'], resume: 'affiche la fiche complète d\'un dossier',
+    forme: 'ouvre ‹dossier›',
+    emplacements: [{ nom: 'cible', sorte: 'dossier' }] },
+  { id: 'passe', verbes: ['passe'], resume: 'change le statut DFT ou le type',
+    forme: 'passe ‹dossiers› en ‹statut|type›',
+    emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }, { mot: 'en' }, { nom: 'valeur', sorte: 'statut-ou-type' }] },
+  { id: 'annule', verbes: ['annule', 'undo'], resume: 'annule la dernière modification', forme: 'annule', emplacements: [] }
+]);
 
 /**
  * Mots acceptés pour les statuts DFT et les types. La clé est la forme

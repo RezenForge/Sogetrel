@@ -59,6 +59,7 @@ const actions = creerActions({
 invite.brancher(analyse => actions.executer(analyse));
 
 /* 5. Prévenir si l'enregistrement échoue. */
+store.ecouter(() => invite.ecran.marquerPerime());
 store.ecouter(e => { if (!e.enregistre) invite.ecran.ligne('✗ enregistrement impossible : les dernières modifications ne sont pas gardées', 'err'); });
 
 /* 6. Écran de départ : vide, seulement les avertissements utiles. */

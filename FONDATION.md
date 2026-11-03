@@ -91,6 +91,7 @@ js/
     analyse.js             texte tapé → commande comprise + ce qui manque (ne modifie rien)
     completion.js          propositions classées, texte fantôme, aperçu de l'effet
     actions.js             commande validée → appel aux règles de dossiers.js
+    menus.js               le menu ⋯ d'un dossier : des commandes écrites à l'avance
     invite.js              la ligne de saisie, la liste de propositions, le fil
     lumiere.js             la lumière : ses états et ses transitions
 tests/
@@ -134,7 +135,27 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 
 | Commande | Forme | Exemple |
 | --- | --- | --- |
-| *(aucune pour l'instant)* | | |
+| Afficher | `ls [type] [statut] [retard] [sans-fci] [texte]` (aussi `liste`, `montre`) | `ls air retard` |
+| Ouvrir | `ouvre ‹dossier›` | `ouvre 501404` |
+| Changer le statut ou le type | `passe ‹dossiers› en ‹statut\|type›` | `passe 501404 en refuse` |
+| Annuler | `annule` : défait la dernière modification | `annule` |
+
+### Console + clics : un clic = une commande
+
+Ce que la console affiche est cliquable, pour le quotidien, mais **un clic ne fait rien de plus qu'une commande** : il écrit la commande dans la console et l'exécute, exactement comme si on l'avait tapée.
+
+- Un seul chemin dans le code : chaque action existe une fois, dans `actions.js`.
+- `annule` et l'historique (`↑`) marchent aussi pour les clics.
+- On apprend les commandes en les voyant passer.
+
+Ce qui est cliquable :
+- **le GCBLO** d'un dossier, dans une liste ou une fiche → `ouvre ‹gcblo›` ;
+- **`⋯`** à côté d'un dossier → un menu court, construit selon l'état du dossier au moment du clic (`js/jarvis/menus.js`) : Ouvrir, puis les statuts où il peut passer. Chaque choix affiche la commande qu'il va lancer. Sur téléphone, le menu s'ouvre en bas de l'écran avec de grands boutons ;
+- **`annule`** dans le message qui suit une modification.
+
+**Lignes anciennes** : quand un dossier change, les listes et fiches déjà affichées passent en grisé (elles ne sont plus à jour). Un clic dessus agit toujours sur l'état actuel du dossier.
+
+Pas de barre d'outils fixe : les clics restent à l'intérieur de ce que la console affiche.
 
 Les **sortes de valeurs** que le moteur sait déjà lire, utilisables dans les nouvelles commandes : `dossier` (GCBLO complet ou morceau ; groupes `retard` et `proches` là où plusieurs sont permis), `nouveau-gcblo`, `type`, `statut-ou-type`, `filtre`, `date` (`demain`, `lundi`, `+3`, `12/11`), `fci`, `adresse`, `ville`, `periode`, `texte`, `commande`.
 
@@ -262,3 +283,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 03/11/2026 | Page déclarée sombre (`color-scheme`, `darkreader-lock`) pour que le mode sombre forcé des navigateurs ne recolore pas le texte |
 | 03/11/2026 | Zone de saisie sur une seule ligne : l'aperçu, les erreurs et les consignes s'affichent en gris après le texte tapé |
 | 03/11/2026 | Toutes les commandes retirées pour être refaites (ancienne version : branche `v2-commandes`) ; écran de départ vide ; `meteo.js`, `wiki.js`, `dessin.js` retirés |
+| 03/11/2026 | Principe « un clic = une commande » ; commandes `ls`, `ouvre`, `passe`, `annule` ; GCBLO et menu `⋯` cliquables ; listes anciennes grisées |

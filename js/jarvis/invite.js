@@ -18,8 +18,16 @@ import { typeParCode, statutParCode } from '../config.js';
 import { formater } from '../dates.js';
 import { ressembleAUneListe } from '../collage.js';
 import { plat } from './grammaire.js';
+import { optionsDossier } from './menus.js';
 
 const CLE_HISTORIQUE = 'gcblo.v2.historique';
+const TYPE_COURT = { NUM21: 'NUM21', AIR: 'AIR', SOGETREL: 'SOGE' };
+const STATUT_COURT = { A_FAIRE: 'À faire', EN_VALIDATION: 'En valid.', MAD: 'Mis à disp', REFUSE: 'Refusé' };
+
+/** Le GCBLO cliquable : un clic lance « ouvre ‹gcblo› ». */
+const lienDossier = d => `<button type="button" class="lien c-dossier" data-commande="ouvre ${esc(d.gcblo)}" title="ouvre ${esc(d.gcblo)}">${esc(d.gcblo)}</button>`;
+/** Le bouton ⋯ : ouvre le menu d'actions du dossier (menus.js). */
+const boutonMenu = d => `<button type="button" class="points" data-menu-dossier="${esc(d.id)}" aria-label="Actions pour ${esc(d.gcblo)}" aria-haspopup="menu">⋯</button>`;
 
 export function creerInvite({ racine, contexte }) {
   const $ = sel => racine.querySelector(sel);
@@ -57,29 +65,30 @@ export function creerInvite({ racine, contexte }) {
       ecranEl.appendChild(div);
       defiler();
     },
-    /** Un tableau aligné (police à chasse fixe) ; il défile horizontalement sur petit écran. */
+    /**
+     * Liste de dossiers, alignée (police à chasse fixe), courte pour tenir sur téléphone.
+     * Le GCBLO est cliquable (→ « ouvre ») ; ⋯ ouvre le menu d'actions du dossier.
+     */
     tableau(dossiers) {
       const col = (t, n) => esc(String(t).padEnd(n).slice(0, n));
       const lignes = dossiers.map(d => {
         const alerte = contexte().regles.etatRelance(d);
-        const fci = d.fci.length ? d.fci[0] + (d.fci.length > 1 ? `+${d.fci.length - 1}` : '') : '—';
-        const relance = d.dateRelance ? formater(d.dateRelance).slice(0, 8) + (alerte === 'retard' ? ' !' : alerte === 'proche' ? ' ·' : '') : '—';
-        return `<span class="ty-${d.type}">${col(typeParCode(d.type).libelle, 9)}</span>`
-          + `<span class="c-dossier">${col(d.gcblo, 18)}</span>`
-          + `<span class="dim">${col(fci, 16)}</span>`
-          + `<span class="dim">${col(formater(d.dateAffectation).slice(0, 8), 10)}</span>`
-          + `<span class="${alerte || 'dim'}">${col(relance, 11)}</span>`
-          + `<span class="st-${d.statutDft}">${esc(statutParCode(d.statutDft).libelle)}</span>`;
+        const relance = d.dateRelance ? formater(d.dateRelance).slice(0, 5) + (alerte === 'retard' ? '!' : alerte === 'proche' ? '·' : '') : '—';
+        return `<span class="ty-${d.type}">${col(TYPE_COURT[d.type] || d.type, 6)}</span>`
+          + `${lienDossier(d)} `
+          + `<span class="st-${d.statutDft}">${col(STATUT_COURT[d.statutDft] || d.statutDft, 11)}</span>`
+          + `<span class="${alerte || 'dim'}">${col(relance, 7)}</span>`
+          + boutonMenu(d);
       });
-      const entete = `<span class="dim">${'TYPE'.padEnd(9)}${'GCBLO'.padEnd(18)}${'FCI'.padEnd(16)}${'AFFECT.'.padEnd(10)}${'RELANCE'.padEnd(11)}STATUT DFT</span>`;
-      ecran.ligne(`<pre class="tableau">${[entete, ...lignes].join('\n')}</pre>`);
+      const entete = `<span class="dim">${'TYPE'.padEnd(6)}${'GCBLO'.padEnd(17)}${'STATUT'.padEnd(11)}RELANCE</span>`;
+      ecran.ligne(`<pre class="tableau">${[entete, ...lignes].join('\n')}</pre>`, 'vue');
     },
     fiche(d) {
       const regles = contexte().regles;
       const alerte = regles.etatRelance(d);
       const champ = (nom, valeur) => `<span class="dim">${esc(nom.padEnd(14))}</span>${valeur}`;
       const lignes = [
-        `<span class="c-dossier"><b>${esc(d.gcblo)}</b></span>`,
+        `<b>${lienDossier(d)}</b> ${boutonMenu(d)}`,
         champ('type', `<span class="ty-${d.type}">${esc(typeParCode(d.type).libelle)}</span>`),
         champ('statut DFT', `<span class="st-${d.statutDft}">${esc(statutParCode(d.statutDft).libelle)}</span>`),
         champ('FCI', esc(d.fci.join(', ') || 'aucun')),
@@ -89,8 +98,10 @@ export function creerInvite({ racine, contexte }) {
         `<span class="dim">historique</span>`,
         ...[...d.historique].reverse().slice(0, 8).map(h => `  <span class="dim">${esc(new Date(h.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }))}</span>  ${esc(h.detail)}`)
       ];
-      ecran.ligne(`<pre class="fiche">${lignes.join('\n')}</pre>`);
+      ecran.ligne(`<pre class="fiche">${lignes.join('\n')}</pre>`, 'vue');
     },
+    /** Les listes et fiches déjà affichées ne sont plus à jour : on les grise. */
+    marquerPerime() { ecranEl.querySelectorAll('.vue:not(.perime)').forEach(el => el.classList.add('perime')); },
     vider() { ecranEl.innerHTML = ''; }
   };
 
@@ -184,12 +195,22 @@ export function creerInvite({ racine, contexte }) {
       return;
     }
     if (!texte) return;
+    champ.value = '';
+    await lancer(texte);
+  }
+
+  /**
+   * Recopie une commande à l'écran puis l'exécute. Sert à la saisie (Entrée)
+   * ET aux clics : un clic = une commande, avec écho, historique et « annule ».
+   */
+  async function lancer(texte) {
+    if (attente) return;
+    fermerMenu();
     const analyse = analyser(texte, texte.length, contexte());
     ecran.ligne(`<span class="invite-echo">gcblo:~$</span> ${colorer(texte, analyse)}`, 'echo');
     historique = [texte, ...historique.filter(h => h !== texte)].slice(0, 100);
     try { localStorage.setItem(CLE_HISTORIQUE, JSON.stringify(historique)); } catch { /* facultatif */ }
     posHistorique = -1;
-    champ.value = '';
     rafraichir();
 
     if (!analyse.commande) return ecran.ligne(`✗ ${esc(analyse.erreurs[0] || `commande inconnue : « ${texte.split(/\s+/)[0]} »`)}`, 'err');
@@ -257,7 +278,50 @@ export function creerInvite({ racine, contexte }) {
     await surCollage(texte);
     rafraichir();
   });
-  racine.querySelector('#ecran').addEventListener('click', () => { if (!getSelection().toString()) champ.focus(); });
+  /* ---------------- Clics : un clic = une commande ---------------- */
+
+  let menuEl = null, menuBouton = null;
+  function fermerMenu() { menuEl?.remove(); menuEl = null; menuBouton?.setAttribute('aria-expanded', 'false'); menuBouton = null; }
+
+  /** Ouvre le menu ⋯ d'un dossier, construit selon son état actuel. */
+  function ouvrirMenu(bouton, id) {
+    fermerMenu();
+    const d = contexte().dossiers.find(x => x.id === id);
+    if (!d) return ecran.ligne('✗ ce dossier n\'existe plus', 'err');
+    menuEl = document.createElement('div');
+    menuEl.className = 'menu';
+    menuEl.setAttribute('role', 'menu');
+    menuEl.innerHTML = `<div class="menu-titre"><span class="c-dossier">${esc(d.gcblo)}</span> <span class="st-${d.statutDft}">${esc(statutParCode(d.statutDft).libelle)}</span></div>`
+      + optionsDossier(d).map(o => `<button type="button" role="menuitem" class="menu-choix" data-commande="${esc(o.commande)}">`
+        + `<span class="${o.classe || ''}">${esc(o.libelle)}</span><span class="menu-cmd">${esc(o.commande)}</span></button>`).join('');
+    racine.body.appendChild(menuEl);
+    menuBouton = bouton; bouton.setAttribute('aria-expanded', 'true');
+    // Sur grand écran, le menu s'ouvre contre le bouton ; sur téléphone, en bas (CSS)
+    if (!matchMedia('(max-width: 640px)').matches) {
+      const r = bouton.getBoundingClientRect(), h = menuEl.offsetHeight, w = menuEl.offsetWidth;
+      const haut = r.bottom + h + 8 > innerHeight ? Math.max(8, r.top - h - 4) : r.bottom + 4;
+      menuEl.style.top = `${haut}px`;
+      menuEl.style.left = `${Math.max(8, Math.min(r.right - w, innerWidth - w - 8))}px`;
+    }
+    menuEl.querySelector('.menu-choix')?.focus();
+  }
+
+  racine.addEventListener('click', e => {
+    const cmd = e.target.closest('[data-commande]');
+    const points = e.target.closest('[data-menu-dossier]');
+    if (cmd) { e.preventDefault(); lancer(cmd.dataset.commande); return; }
+    if (points) { e.preventDefault(); menuEl && points.getAttribute('aria-expanded') === 'true' ? fermerMenu() : ouvrirMenu(points, points.dataset.menuDossier); return; }
+    if (menuEl && !e.target.closest('.menu')) fermerMenu();
+    // Clic ailleurs dans l'écran : on revient à la saisie (sauf sur téléphone : pas de clavier imposé)
+    if (e.target.closest('#ecran') && !getSelection().toString() && matchMedia('(pointer: fine)').matches) champ.focus();
+  });
+  racine.addEventListener('keydown', e => {
+    if (!menuEl) return;
+    const choix = [...menuEl.querySelectorAll('.menu-choix')], i = choix.indexOf(racine.activeElement);
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fermerMenu(); champ.focus(); }
+    else if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && i >= 0) { e.preventDefault(); choix[(i + (e.key === 'ArrowDown' ? 1 : -1) + choix.length) % choix.length].focus(); }
+  }, true);
+  ecranEl.addEventListener('scroll', () => { if (menuEl && !matchMedia('(max-width: 640px)').matches) fermerMenu(); });
 
   return {
     ecran,
@@ -284,6 +348,8 @@ export function creerInvite({ racine, contexte }) {
       });
     },
     rafraichir,
+    /** Lance une commande comme si elle avait été tapée (utilisé par les clics). */
+    lancer,
     focus: () => champ.focus()
   };
 }
