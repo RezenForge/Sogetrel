@@ -3,7 +3,7 @@
  *
  * C'est la source unique : l'analyse (analyse.js) ET l'autocomplétion
  * (completion.js) lisent ces mêmes tableaux. Ajouter une commande ici suffit
- * pour qu'elle soit comprise, proposée et documentée dans « aide ».
+ * pour qu'elle soit comprise et proposée pendant la frappe.
  *
  * Une commande = des verbes (le premier est le nom affiché) + une liste
  * d'emplacements, remplis dans l'ordre :
@@ -13,51 +13,14 @@
  * Les « sortes » de valeurs sont décrites dans SORTES ci-dessous.
  */
 
-export const COMMANDES = Object.freeze([
-  { id: 'ls', verbes: ['ls', 'liste', 'montre'], resume: 'affiche les dossiers (filtres facultatifs)',
-    forme: 'ls [type] [statut] [retard] [sans-fci] [texte]',
-    emplacements: [{ nom: 'filtres', sorte: 'filtre', optionnel: true, multiple: true }] },
-  { id: 'ajoute', verbes: ['ajoute', 'add'], resume: 'crée un dossier',
-    forme: 'ajoute ‹gcblo› ‹type› [fci…]',
-    emplacements: [{ nom: 'gcblo', sorte: 'nouveau-gcblo' }, { nom: 'type', sorte: 'type' }, { nom: 'fci', sorte: 'fci', optionnel: true, multiple: true }] },
-  { id: 'passe', verbes: ['passe'], resume: 'change le statut DFT ou le type',
-    forme: 'passe ‹dossiers› en ‹statut|type›',
-    emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }, { mot: 'en' }, { nom: 'valeur', sorte: 'statut-ou-type' }] },
-  { id: 'relance', verbes: ['relance'], resume: 'prépare l\'email (groupé si plusieurs dossiers) ; avec une date, planifie la relance',
-    forme: 'relance ‹dossiers|retard|proches› [date]',
-    emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }, { nom: 'date', sorte: 'date', optionnel: true }] },
-  { id: 'fci', verbes: ['fci'], resume: 'ajoute des FCI à un dossier',
-    forme: 'fci ‹dossier› ‹fci…›',
-    emplacements: [{ nom: 'cible', sorte: 'dossier' }, { nom: 'fci', sorte: 'fci', multiple: true }] },
-  { id: 'note', verbes: ['note'], resume: 'ajoute une note au dossier',
-    forme: 'note ‹dossier› ‹texte›',
-    emplacements: [{ nom: 'cible', sorte: 'dossier' }, { nom: 'texte', sorte: 'texte' }] },
-  { id: 'ouvre', verbes: ['ouvre', 'cat'], resume: 'affiche la fiche complète d\'un dossier',
-    forme: 'ouvre ‹dossier›',
-    emplacements: [{ nom: 'cible', sorte: 'dossier' }] },
-  { id: 'supprime', verbes: ['supprime', 'rm'], resume: 'supprime des dossiers (confirmation demandée)',
-    forme: 'supprime ‹dossiers›',
-    emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }] },
-  { id: 'jour', verbes: ['jour', 'point', 'briefing'], resume: 'le point du jour : retards, relances du jour et proches, refusés',
-    forme: 'jour', emplacements: [] },
-  { id: 'email', verbes: ['email', 'destinataire'], resume: 'règle le destinataire des relances pour un type (ou les affiche)',
-    forme: 'email [type] [adresse|aucun]',
-    emplacements: [{ nom: 'type', sorte: 'type', optionnel: true }, { nom: 'adresse', sorte: 'adresse', optionnel: true }] },
-  { id: 'meteo', verbes: ['meteo'], resume: 'prévisions météo d\'une ville : aujourd\'hui, demain ou la semaine',
-    forme: 'meteo ‹ville› [jour|demain|semaine]',
-    emplacements: [{ nom: 'ville', sorte: 'ville', multiple: true }, { nom: 'periode', sorte: 'periode', optionnel: true }] },
-  { id: 'wiki', verbes: ['wiki', 'definition', 'def'], resume: 'ce qu\'est un mot ou une expression, d\'après Wikipédia',
-    forme: 'wiki ‹mot ou expression›',
-    emplacements: [{ nom: 'terme', sorte: 'texte' }] },
-  { id: 'stats', verbes: ['stats'], resume: 'compteurs par type, statut et alertes', forme: 'stats', emplacements: [] },
-  { id: 'annule', verbes: ['annule', 'undo'], resume: 'annule la dernière modification', forme: 'annule', emplacements: [] },
-  { id: 'sauvegarde', verbes: ['sauvegarde'], resume: 'télécharge une sauvegarde JSON', forme: 'sauvegarde', emplacements: [] },
-  { id: 'restaure', verbes: ['restaure'], resume: 'recharge une sauvegarde JSON', forme: 'restaure', emplacements: [] },
-  { id: 'clear', verbes: ['clear', 'cls'], resume: 'vide l\'écran', forme: 'clear', emplacements: [] },
-  { id: 'aide', verbes: ['aide', 'help', '?'], resume: 'liste les commandes, ou détaille l\'une d\'elles',
-    forme: 'aide [commande]',
-    emplacements: [{ nom: 'sujet', sorte: 'commande', optionnel: true }] }
-]);
+/*
+ * Vide depuis le 03/11/2026 : les commandes sont refaites une par une.
+ * Exemple d'une commande :
+ *   { id: 'passe', verbes: ['passe'], resume: 'change le statut DFT',
+ *     forme: 'passe ‹dossiers› en ‹statut›',
+ *     emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }, { mot: 'en' }, { nom: 'valeur', sorte: 'statut-ou-type' }] }
+ */
+export const COMMANDES = Object.freeze([]);
 
 /**
  * Mots acceptés pour les statuts DFT et les types. La clé est la forme
@@ -71,7 +34,7 @@ export const MOTS_STATUT = Object.freeze({
   refuse: 'REFUSE', refus: 'REFUSE'
 });
 export const MOTS_TYPE = Object.freeze({ num21: 'NUM21', air: 'AIR', sogetrel: 'SOGETREL' });
-/** Périodes de la météo. */
+/** Périodes (jour, demain, semaine). */
 export const PERIODES = Object.freeze({ jour: 'jour', aujourdhui: 'jour', demain: 'demain', semaine: 'semaine', '7j': 'semaine' });
 
 /** Groupes de dossiers utilisables à la place d'une référence (là où plusieurs dossiers sont acceptés). */

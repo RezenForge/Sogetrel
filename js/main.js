@@ -10,8 +10,6 @@
 import { creerStore, supportNavigateur, supportMemoire } from './store.js';
 import { creerDossiers } from './dossiers.js';
 import { creerReglages } from './reglages.js';
-import { creerMeteo } from './meteo.js';
-import { creerWiki } from './wiki.js';
 import { aujourdhui } from './dates.js';
 import { convertirV1, lireV1Navigateur } from './reprise-v1.js';
 import { creerInvite } from './jarvis/invite.js';
@@ -49,44 +47,24 @@ const invite = creerInvite({
   })
 });
 
-/* 4. Les actions, avec ce dont elles ont besoin. */
+/* 4. Les actions (les commandes sont refaites une par une, voir actions.js). */
 const actions = creerActions({
   regles,
   store,
   reglages,
-  meteo: creerMeteo(),
-  wiki: creerWiki(),
   ecran: invite.ecran,
   confirmer: question => invite.confirmer(question),
-  demander: (question, choix) => invite.demander(question, choix),
-  ouvrirLien: url => { const a = document.createElement('a'); a.href = url; a.click(); },
-  telecharger: (nom, texte) => {
-    const url = URL.createObjectURL(new Blob([texte], { type: 'application/json' }));
-    const a = document.createElement('a'); a.href = url; a.download = nom; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-  },
-  choisirFichier: () => new Promise(resoudre => {
-    const input = document.createElement('input');
-    input.type = 'file'; input.accept = '.json,application/json';
-    input.addEventListener('change', () => resoudre(input.files[0] || null));
-    input.addEventListener('cancel', () => resoudre(null));
-    input.click();
-  })
+  demander: (question, choix) => invite.demander(question, choix)
 });
 invite.brancher(analyse => actions.executer(analyse));
-invite.brancherCollage(texte => actions.collage(texte));
 
 /* 5. Prévenir si l'enregistrement échoue. */
-store.ecouter(e => { if (!e.enregistre) invite.ecran.ligne('✗ enregistrement impossible : faites une « sauvegarde » pour ne rien perdre', 'err'); });
+store.ecouter(e => { if (!e.enregistre) invite.ecran.ligne('✗ enregistrement impossible : les dernières modifications ne sont pas gardées', 'err'); });
 
-/* 6. Accueil. */
+/* 6. Écran de départ : vide, seulement les avertissements utiles. */
 const e = invite.ecran;
-e.ligne('<b>Registre GCBLO</b> <span class="dim">v2 · terminal</span>', 'titre');
 if (reprise?.dossiers.length) e.ligne(`✓ ${reprise.dossiers.length} dossiers repris de la version 1${reprise.ignores ? ` (${reprise.ignores} ignorés)` : ''}`, 'ok');
 if (!stockageOk) e.ligne('✗ ce navigateur bloque l\'enregistrement : les données seront perdues à la fermeture', 'err');
-e.ligne(`<span class="dim">${store.tous().length} dossiers · commencez à taper, les propositions suivent (Tab sur une ligne vide : toutes les commandes) · <span class="c-verbe">aide</span> · collez une liste copiée d'Excel pour l'ajouter</span>`, 'info');
-e.ligne('', 'info');
-actions.point();
 invite.rafraichir();
 invite.focus();
 

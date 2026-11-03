@@ -126,38 +126,9 @@ export function proposer(analyse, ctx) {
   return { propositions: liste, fantome, remplace: { debut: ec.debut, fin: ec.fin } };
 }
 
-/** Une phrase qui dit ce que la commande va faire. */
-export function apercu(analyse, ctx) {
+/** Une phrase qui dit ce que la commande va faire (sa forme tant qu'elle est incomplète, puis son résumé). */
+export function apercu(analyse) {
   const c = analyse.commande;
   if (!c) return null;
-  if (!analyse.complet) return `${c.forme}`;
-  const v = analyse.valeurs;
-  const n = liste => `${liste.length} dossier${liste.length > 1 ? 's' : ''}`;
-  switch (c.id) {
-    case 'ls': return `→ ${n(ctx.regles.filtrer(criteresListe(v)))}`;
-    case 'ajoute': return `→ nouveau dossier ${v.gcblo} (${typeParCode(v.type)?.libelle})${v.fci?.length ? `, FCI ${v.fci.join(', ')}` : ''}`;
-    case 'passe': {
-      const quoi = v.valeur.statut ? `statut → ${statutParCode(v.valeur.statut).libelle}` : `type → ${typeParCode(v.valeur.type).libelle}`;
-      return `→ ${v.cibles.length === 1 ? v.cibles[0].gcblo : n(v.cibles)} : ${quoi}${v.cibles.length > 3 ? ' (confirmation)' : ''}`;
-    }
-    case 'relance': {
-      const qui = v.cibles.length === 1 ? v.cibles[0].gcblo : n(v.cibles);
-      if (v.date) return `→ relance de ${qui} prévue le ${formater(v.date)}`;
-      const types = [...new Set(v.cibles.map(d => d.type))];
-      const sans = types.filter(t => !ctx.reglages?.destinataire(t)).map(t => typeParCode(t).libelle);
-      return `→ ${v.cibles.length === 1 ? 'email de relance' : `${types.length > 1 ? `${types.length} emails récapitulatifs` : 'email récapitulatif'}`} pour ${qui}${sans.length ? ` · sans destinataire : ${sans.join(', ')}` : ''}`;
-    }
-    case 'jour': return '→ le point du jour';
-    case 'wiki': return `→ définition de « ${v.terme} » (Wikipédia)`;
-    case 'meteo': return `→ météo de ${v.ville.join(' ')} · ${{ jour: 'aujourd\'hui', demain: 'demain', semaine: '7 jours' }[v.periode || 'jour']} (service Open-Meteo)`;
-    case 'email':
-      if (!v.type) return '→ affiche les destinataires';
-      if (v.adresse === undefined || v.adresse === null) return `→ destinataire ${typeParCode(v.type).libelle} : ${ctx.reglages?.destinataire(v.type) || 'aucun'}`;
-      return `→ destinataire ${typeParCode(v.type).libelle} : ${v.adresse || 'effacé'}`;
-    case 'fci': return `→ ${v.cible.gcblo} : + ${v.fci.join(', ')}`;
-    case 'note': return `→ note ajoutée à ${v.cible.gcblo}`;
-    case 'ouvre': return `→ fiche de ${v.cible.gcblo}`;
-    case 'supprime': return `→ suppression de ${v.cibles.length === 1 ? v.cibles[0].gcblo : n(v.cibles)} (confirmation)`;
-    default: return `→ ${c.resume}`;
-  }
+  return analyse.complet ? `→ ${c.resume}` : c.forme;
 }

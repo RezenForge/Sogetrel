@@ -7,9 +7,9 @@ Suivi des affectations de dossiers GCBLO (NUM21, AIR, Sogetrel), piloté depuis 
 
 ## Utilisation
 
-Ouvrir **https://rezenforge.github.io/Sogetrel/** et commencer à taper : les propositions suivent. `aide` liste les commandes.
+Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 
-Au premier lancement, les dossiers de la version 1 enregistrés dans ce navigateur sont repris automatiquement. Faire régulièrement `sauvegarde` : vider le cache du navigateur efface les données.
+**Les commandes sont en cours de refonte** : elles ont toutes été retirées le 03/11/2026 pour être refaites une par une. L'ancienne version est gardée dans la branche `v2-commandes`. Les dossiers enregistrés dans le navigateur ne sont pas touchés.
 
 | Touche | Effet |
 | --- | --- |
@@ -17,19 +17,6 @@ Au premier lancement, les dossiers de la version 1 enregistrés dans ce navigate
 | `↑` `↓` | parcourent les propositions, ou l'historique si la ligne est vide |
 | `Entrée` | exécute (ou choisit la proposition sélectionnée) |
 | `Échap` | ferme les propositions, puis vide la ligne |
-
-### Au quotidien
-
-| Pour… | Faire |
-| --- | --- |
-| savoir quoi faire aujourd'hui | rien : le **point du jour** s'affiche à l'ouverture (ou `jour`) |
-| ajouter une liste de dossiers | **coller** dans l'invite une liste copiée d'Excel ou d'un mail : le type est repris des colonnes du classeur robot, sinon demandé une fois |
-| relancer tous les retards | `relance retard` : un email récapitulatif par destinataire, puis la relance suivante à J+7 est proposée |
-| adresser les relances | `email air prenom.nom@…` (une fois par type) ; `email` affiche les réglages |
-| changer un statut | `passe 501404 en refuse` |
-| la météo | `meteo bordeaux`, `meteo le taillan medoc semaine`, `meteo merignac demain` |
-| ce que veut dire un mot | `wiki "fibre optique"`, `wiki GPON`, `def PBO` |
-| tout le reste | `aide` |
 
 ## Avancement
 
@@ -40,6 +27,7 @@ Au premier lancement, les dossiers de la version 1 enregistrés dans ce navigate
 | 2 | Moteur de l'invite (grammaire, analyse, autocomplétion) + tests | ✅ |
 | 3 | Terminal : écran, saisie, reprise v1, sauvegarde | ✅ version de base — style à venir |
 | + | Point du jour, collage d'une liste, relance groupée, destinataires par type | ✅ |
+| 3 bis | Refonte des commandes, une par une | en cours |
 | 4 | Jarvis : phrases naturelles, enchaînements, « tous les air », lumière | à venir |
 | 5 | Finitions : voix, accessibilité, petits écrans | à venir |
 
@@ -51,10 +39,6 @@ Le code est découpé en modules JavaScript : le navigateur ne les charge que de
 - **Sur un PC** : dans le dossier du projet, lancer `python -m http.server`, puis ouvrir `http://localhost:8000/tests/`.
 
 La page affiche « ✓ tout est vert » quand toutes les règles sont respectées.
-
-## Services extérieurs
-
-Deux commandes contactent un service, et n'envoient que ce que vous tapez après elles : `meteo` ([Open-Meteo](https://open-meteo.com), gratuit et sans compte : le nom de la ville) et `wiki` ([Wikipédia](https://fr.wikipedia.org) en français : le terme cherché). Open-Meteo est gratuit pour un usage non commercial ; pour un usage professionnel régulier, leurs conditions prévoient un abonnement.
 
 ## Organisation
 
@@ -70,13 +54,10 @@ js/dossiers.js           les règles : seul module autorisé à modifier les dos
 js/reprise-v1.js         relit les dossiers et sauvegardes de la version 1
 js/reglages.js           destinataires des emails par type
 js/collage.js            lit une liste collée (Excel, mail, classeur robot)
-js/meteo.js              prévisions Open-Meteo (service extérieur)
-js/wiki.js               définitions Wikipédia (service extérieur)
-js/jarvis/grammaire.js   les commandes, sous forme de tableau (source unique)
+js/jarvis/grammaire.js   les commandes, sous forme de tableau (vide : en refonte)
 js/jarvis/analyse.js     comprend la ligne tapée (ne modifie rien)
 js/jarvis/completion.js  propositions, texte grisé, aperçu (ne modifie rien)
 js/jarvis/actions.js     exécute une commande via les règles
-js/jarvis/dessin.js      tableaux de bord en caractères (stats)
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   143 tests : règles, analyse, autocomplétion, collage, relances, dessin ASCII, météo et wiki (services simulés)
+tests/                   79 tests : règles, dates, lecture des mots, collage, relances
 ```

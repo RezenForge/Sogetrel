@@ -259,3 +259,15 @@ groupe('Store et enregistrement', () => {
     egal(evt.enregistre, false);
   });
 });
+
+groupe('Statistiques — relances à venir', () => {
+  test('compte les relances des 7 jours, sans les dossiers clos ni le retard', () => {
+    const store = creerStore(supportMemoire());
+    const r = creerDossiers(store, { horloge: () => new Date(2026, 10, 2, 9) });
+    const mk = (g, rel, statut) => { const res = r.creer({ gcblo: g, type: 'NUM21', dateAffectation: '2026-10-01', dateRelance: rel }); if (statut) r.modifier(res.dossier.id, { statutDft: statut }); };
+    mk('SBA000001-THF001', '2026-11-02'); mk('SBA000002-THF001', '2026-11-04'); mk('SBA000003-THF001', '2026-11-04');
+    mk('SBA000004-THF001', '2026-11-08'); mk('SBA000005-THF001', '2026-11-09'); mk('SBA000006-THF001', '2026-10-30');
+    mk('SBA000007-THF001', '2026-11-03', 'MAD');
+    egal(r.statistiques().aVenir, [1, 0, 2, 0, 0, 0, 1]);
+  });
+});

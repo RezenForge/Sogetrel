@@ -7,8 +7,6 @@ import { creerStore, supportMemoire } from '../js/store.js';
 import { creerDossiers } from '../js/dossiers.js';
 import { creerReglages, estEmail } from '../js/reglages.js';
 import { lireCollage, ressembleAUneListe } from '../js/collage.js';
-import { analyser } from '../js/jarvis/analyse.js';
-import { proposer, apercu } from '../js/jarvis/completion.js';
 
 const MAINTENANT = new Date(2026, 10, 2, 10, 0);
 const AUJ = '2026-11-02';
@@ -108,28 +106,6 @@ groupe('R4 — Relance groupée et destinataires', () => {
     egal(reglages.destinataire('AIR'), 'jean.dupont@exemple.fr'); egal(reglages.destinataire('NUM21'), '');
   });
   test('adresse invalide refusée', () => { vrai(!env().reglages.definirDestinataire('AIR', 'jean.dupont').ok); vrai(estEmail('a.b@c.fr')); });
-  test('« relance retard » vise tous les dossiers en retard', () => {
-    const { ctx } = env();
-    const a = analyser('relance retard', 14, ctx);
-    vrai(a.complet); egal(a.valeurs.cibles.map(d => d.gcblo), ['SBA501404-THF010', 'SBA501423-THF010']);
-  });
-  test('groupe + dossier, sans doublon', () => egal(analyser('relance retard 501404 lundi', 27, env().ctx).valeurs.cibles.length, 2));
-  test('un groupe est refusé là où un seul dossier est attendu', () => vrai(analyser('ouvre retard ', 13, env().ctx).erreurs[0].includes('groupe')));
-  test('le groupe est proposé avec son effectif', () => {
-    const p = proposer(analyser('relance ', 8, env().ctx), env().ctx).propositions;
-    egal([p[0].libelle, p[0].detail], ['retard', 'groupe · 2 dossiers en retard']);
-  });
-  test('aperçu : emails par destinataire et types sans destinataire', () => {
-    const { ctx, reglages } = env();
-    reglages.definirDestinataire('AIR', 'air@exemple.fr');
-    egal(apercu(analyser('relance retard', 14, ctx), ctx), '→ 2 emails récapitulatifs pour 2 dossiers · sans destinataire : NUM21');
-  });
-  test('commande email : type puis adresse', () => {
-    const { ctx } = env();
-    const a = analyser('email air jean.dupont@exemple.fr', 33, ctx);
-    vrai(a.complet); egal([a.valeurs.type, a.valeurs.adresse], ['AIR', 'jean.dupont@exemple.fr']);
-    egal(analyser('email air aucun', 15, ctx).valeurs.adresse, '');
-  });
   test('même GCBLO dans deux listes de types différents : conflit signalé', () => {
     const l = lireCollage('GCBLO NUM21\tFCI\t\tGCBLO AIR\tFCI\nSBA501404-THF010\t\t\tSBA501423-THF010\nSBA111111-THF010\t\t\tSBA501404-THF010');
     egal(l.conflits, [{ gcblo: 'SBA501404-THF010', garde: 'NUM21', autre: 'AIR' }]);

@@ -5,7 +5,7 @@
  *   - les mots sont colorés selon leur rôle (calque « miroir » derrière le champ),
  *   - la meilleure proposition s'affiche en grisé après le curseur (texte fantôme),
  *   - la liste des propositions s'ouvre au-dessus de la ligne,
- *   - une ligne d'aide dessous montre l'aperçu ou l'erreur.
+ *   - l'aperçu ou l'erreur s'affiche en gris sur la ligne même, après le texte tapé.
  * À Entrée : la commande est recopiée à l'écran, puis exécutée par actions.js.
  *
  * Clavier : Tab / → acceptent · ↑ ↓ parcourent (propositions, sinon historique)
@@ -124,7 +124,7 @@ export function creerInvite({ racine, contexte }) {
     // Ligne d'aide : erreur sur le mot courant, sinon erreur, sinon aperçu
     const msg = analyse.erreurs[0] || (texte.trim() && analyse.erreurCourante && curseur < texte.length ? analyse.erreurCourante : null);
     aideEl.className = `aide-ligne ${msg ? 'err' : ''}`;
-    aideEl.textContent = msg ? `✗ ${msg}` : (texte.trim() ? apercu(analyse, ctx) || '' : 'tapez une commande, ou « aide »');
+    aideEl.textContent = msg ? `✗ ${msg}` : (texte.trim() ? apercu(analyse, ctx) || '' : '');
     poserIndice();
   }
 
@@ -192,7 +192,7 @@ export function creerInvite({ racine, contexte }) {
     champ.value = '';
     rafraichir();
 
-    if (!analyse.commande) return ecran.ligne(`✗ ${esc(analyse.erreurs[0] || `commande inconnue : « ${texte.split(/\s+/)[0]} »`)} · tapez <span class="c-verbe">aide</span>`, 'err');
+    if (!analyse.commande) return ecran.ligne(`✗ ${esc(analyse.erreurs[0] || `commande inconnue : « ${texte.split(/\s+/)[0]} »`)}`, 'err');
     if (!analyse.complet) {
       const pb = analyse.erreurs[0] || analyse.erreurCourante || `il manque : ${analyse.manquants.join(', ')}`;
       return ecran.ligne(`✗ ${esc(pb)}<br><span class="dim">forme : ${esc(analyse.commande.forme)}</span>`, 'err');

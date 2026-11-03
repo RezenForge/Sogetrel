@@ -16,8 +16,6 @@ La version précédente est conservée sur la branche `v1-prototype`.
 | Préparation de l'email de relance (Outlook) | Autres thèmes que Terminal |
 | **L'invite de commande Jarvis, avec autocomplétion intelligente** (interface principale) | Connexion Microsoft 365 (Outlook, SharePoint) |
 | Sauvegarde / restauration JSON, reprise des dossiers de la v1 | |
-| Météo d'une ville (commande `meteo`) | |
-| Définition d'un mot ou d'une expression (commande `wiki`, Wikipédia) | |
 | Thème Terminal avec la lumière de Jarvis | |
 
 **Principe directeur** : tout se fait depuis l'invite de commande, sans rien apprendre par cœur. On tape quelques lettres, l'invite propose la suite. La liste des dossiers est l'écran qui montre le résultat. Les clics restent possibles, mais en second.
@@ -93,7 +91,6 @@ js/
     analyse.js             texte tapé → commande comprise + ce qui manque (ne modifie rien)
     completion.js          propositions classées, texte fantôme, aperçu de l'effet
     actions.js             commande validée → appel aux règles de dossiers.js
-    dessin.js              tableaux de bord en caractères (stats), sans accès aux données
     invite.js              la ligne de saisie, la liste de propositions, le fil
     lumiere.js             la lumière : ses états et ses transitions
 tests/
@@ -131,30 +128,15 @@ C'est le cœur de l'application. Trois idées la guident :
 
 ### Les commandes
 
-Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans l'ordre. Les mots entre `‹ ›` sont proposés automatiquement.
+**03/11/2026 : toutes les commandes ont été retirées pour être refaites une par une.** L'écran de départ est vide (plus de titre ni de message d'accueil). Le moteur reste en place : découpage des mots, lecture des dossiers, des dates, des statuts et des types, autocomplétion, couleurs, questions oui/non. Les données et leurs règles (§2, §3) ne changent pas. L'ancienne liste de commandes, avec `meteo`, `wiki` et `stats` en ASCII, est gardée dans la branche `v2-commandes`.
+
+Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans l'ordre. Les mots entre `‹ ›` sont proposés automatiquement. Pour en ajouter une : une ligne dans `grammaire.js` (elle est alors comprise et proposée), puis sa fonction dans `actions.js`, puis ses tests.
 
 | Commande | Forme | Exemple |
 | --- | --- | --- |
-| Ajouter | `ajoute ‹gcblo› ‹type› [fci ‹fci…›] [relance ‹date›] [note "…"]` | `ajoute SBA202020-THF010 air fci F12345678901` |
-| Changer le statut | `passe ‹dossiers› en ‹statut›` | `passe 501404 en refusé` |
-| Changer le type | `passe ‹dossiers› en ‹type›` | `passe 501404 en sogetrel` |
-| Relancer | `relance ‹dossier›` (email) · `relance ‹dossiers› ‹date›` (planifier) | `relance 501404 lundi` |
-| Compléter | `fci ‹dossier› ‹fci…›` · `note ‹dossier› "…"` | `note 501404 "attente client"` |
-| Supprimer | `supprime ‹dossiers›` | `supprime tous les refusés` |
-| Afficher | `montre [‹type›] [‹statut›] [retard] [sans-fci] [texte]` | `montre air en retard` |
-| Ouvrir | `ouvre ‹dossier›` | `ouvre 501404` |
-| Compter | `combien [‹type›] [‹statut›]` | `combien de refusés` |
-| Point du jour | `jour` (aussi affiché à l'ouverture) | `jour` |
-| Tableau de bord | `stats` : cadre dessiné en caractères (barres par type et statut, avancement, alertes, relances des 7 jours), 38 colonnes pour tenir sur téléphone | `stats` |
-| Destinataires | `email [‹type›] [‹adresse›\|aucun]` | `email air jean.dupont@exemple.fr` |
-| Météo | `meteo ‹ville› [jour\|demain\|semaine]` | `meteo le taillan medoc semaine` |
-| Définition | `wiki ‹mot ou expression›` (aussi `def`) | `wiki "fibre optique"`, `wiki GPON` |
-| Coller une liste | coller dans l'invite plusieurs lignes copiées d'Excel ou d'un mail | colonnes du classeur robot reconnues |
-| Divers | `annule` · `aide` · `sauvegarde` · `restaure` · `clear` | |
+| *(aucune pour l'instant)* | | |
 
-`‹dossiers›` accepte : un GCBLO complet ou un morceau (`501404`), plusieurs (`501404 501423`), ou un groupe : `retard` (relances en retard) et `proches` (relances dans les 3 jours). Exemple : `relance retard` prépare l'email récapitulatif de tous les retards. *Prévu ensuite : `le` (dernier dossier évoqué), `tous les air`, `tous les refusés`.*
-
-Enchaîner : `ajoute SBA202020-THF010 air puis relance-le demain`.
+Les **sortes de valeurs** que le moteur sait déjà lire, utilisables dans les nouvelles commandes : `dossier` (GCBLO complet ou morceau ; groupes `retard` et `proches` là où plusieurs sont permis), `nouveau-gcblo`, `type`, `statut-ou-type`, `filtre`, `date` (`demain`, `lundi`, `+3`, `12/11`), `fci`, `adresse`, `ville`, `periode`, `texte`, `commande`.
 
 ### L'autocomplétion
 
@@ -204,7 +186,7 @@ texte tapé + position du curseur
 - `analyse.js` et `completion.js` ne touchent jamais aux données : ils sont testés seuls, phrase par phrase.
 - Les confirmations sont **obligatoires** pour supprimer, et pour toute action qui touche plus de 3 dossiers.
 
-Jarvis est un **interpréteur intégré, pas une IA en ligne** : il fonctionne hors connexion et rien ne quitte le navigateur. **Deux exceptions : `meteo`**, qui envoie le nom de la ville au service Open-Meteo (gratuit, sans compte), puis ses coordonnées, **et `wiki`**, qui envoie le terme cherché à Wikipédia en français. Aucune donnée de dossier n'est envoyée. Ces modules sont isolés dans `js/meteo.js` et `js/wiki.js`.
+Jarvis est un **interpréteur intégré, pas une IA en ligne** : il fonctionne hors connexion et rien ne quitte le navigateur. Une commande qui devrait contacter un service extérieur aura son propre module, isolé, et n'enverra jamais de donnée de dossier.
 
 ### La lumière
 
@@ -279,3 +261,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 02/11/2026 | `stats` redessiné en ASCII (`js/jarvis/dessin.js`) ; `statistiques()` compte aussi les relances des 7 prochains jours |
 | 03/11/2026 | Page déclarée sombre (`color-scheme`, `darkreader-lock`) pour que le mode sombre forcé des navigateurs ne recolore pas le texte |
 | 03/11/2026 | Zone de saisie sur une seule ligne : l'aperçu, les erreurs et les consignes s'affichent en gris après le texte tapé |
+| 03/11/2026 | Toutes les commandes retirées pour être refaites (ancienne version : branche `v2-commandes`) ; écran de départ vide ; `meteo.js`, `wiki.js`, `dessin.js` retirés |
