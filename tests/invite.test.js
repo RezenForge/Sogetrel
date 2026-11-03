@@ -44,14 +44,14 @@ groupe('Commandes ls, open, set, delete, cancel, clear, help', () => {
   test('delete plusieurs dossiers', () => egal(A('delete 501404 501423').a.valeurs.cibles.length, 2));
   test('les anciens verbes français ne sont plus compris', () => egal(['ouvre', 'passe', 'annule', 'aide'].filter(t => A(t + ' ').a.commande), []));
   test('verbe inconnu terminé : marqué en erreur', () => egal(A('blabla ').a.mots[0].role, 'erreur'));
-  test('« se » propose set', () => egal(P('se').propositions.map(p => p.libelle), ['set ‹dossiers› to ‹statut|type›']));
+  test('« se » propose set', () => egal(P('se').propositions.map(p => p.libelle), ['set ‹dossiers› to ‹statut|affect›']));
   test('« set 501404 t » propose d\'abord « to »', () => egal(P('set 501404 t').propositions[0].libelle, 'to'));
 });
 
 groupe('Aperçu', () => {
   test('ls compte les dossiers', () => { const { a, ctx } = A('ls air'); egal(apercu(a, ctx), '→ 2 dossiers'); });
   test('set décrit le changement', () => { const { a, ctx } = A('set 501404 to refuse'); egal(apercu(a, ctx), '→ SBA501404-THF010 : statut → Refusé'); });
-  test('incomplet : rappelle la forme', () => { const { a, ctx } = A('set 501404'); egal(apercu(a, ctx), 'set ‹dossiers› to ‹statut|type›'); });
+  test('incomplet : rappelle la forme', () => { const { a, ctx } = A('set 501404'); egal(apercu(a, ctx), 'set ‹dossiers› to ‹statut|affect›'); });
   test('delete annonce la confirmation', () => { const { a, ctx } = A('delete 501404 501423'); egal(apercu(a, ctx), '→ suppression de 2 dossiers (confirmation)'); });
 });
 

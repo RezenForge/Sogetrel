@@ -54,7 +54,7 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
 
     async set(v) {
       const champ = v.valeur.statut ? { statutDft: v.valeur.statut } : { type: v.valeur.type };
-      const libelle = v.valeur.statut ? `statut → ${statutParCode(v.valeur.statut).libelle}` : `type → ${typeParCode(v.valeur.type).libelle}`;
+      const libelle = v.valeur.statut ? `statut → ${statutParCode(v.valeur.statut).libelle}` : `affect → ${typeParCode(v.valeur.type).libelle}`;
       if (v.cibles.length > SEUIL_CONFIRMATION && !(await confirmer(`modifier ${v.cibles.length} dossiers (${libelle}) ?`))) return info('rien de modifié');
       const r = regles.modifierPlusieurs(v.cibles.map(d => d.id), champ);
       if (!r.ok) return erreur(esc(premiereErreur(r)));
@@ -95,8 +95,8 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       let typeParDefaut = null;
       if (sansType.length) {
         const exemples = [...new Set(sansType.map(n => n.typeLu).filter(Boolean))].slice(0, 3);
-        if (exemples.length) info(`<span class="dim">type non reconnu : ${esc(exemples.join(', '))}</span>`);
-        const choix = await demander(`type des ${pluriel(sansType.length, 'dossier', 'dossiers')} sans type ?`, Object.keys(MOTS_TYPE));
+        if (exemples.length) info(`<span class="dim">affect non reconnu : ${esc(exemples.join(', '))}</span>`);
+        const choix = await demander(`affect des ${pluriel(sansType.length, 'dossier', 'dossiers')} sans affect ?`, Object.keys(MOTS_TYPE));
         if (!choix) return info('import abandonné');
         typeParDefaut = MOTS_TYPE[choix];
       }

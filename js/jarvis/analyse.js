@@ -108,11 +108,11 @@ export function accepter(sorte, mot, ctx, { multiple = false } = {}) {
       return { ok: true, valeur: g };
     }
     case 'type':
-      return MOTS_TYPE[p] ? { ok: true, valeur: MOTS_TYPE[p] } : { ok: false, erreur: `type inconnu : « ${mot} » (num21, air, sogetrel)` };
+      return MOTS_TYPE[p] ? { ok: true, valeur: MOTS_TYPE[p] } : { ok: false, erreur: `affect inconnu : « ${mot} » (num21, air, sogetrel)` };
     case 'statut-ou-type':
       if (MOTS_STATUT[p]) return { ok: true, valeur: { statut: MOTS_STATUT[p] } };
       if (MOTS_TYPE[p]) return { ok: true, valeur: { type: MOTS_TYPE[p] } };
-      return { ok: false, erreur: `« ${mot} » n'est ni un statut ni un type` };
+      return { ok: false, erreur: `« ${mot} » n'est ni un statut ni un affect` };
     case 'filtre':
       if (MOTS_TYPE[p]) return { ok: true, valeur: { type: MOTS_TYPE[p] } };
       if (MOTS_STATUT[p]) return { ok: true, valeur: { statut: MOTS_STATUT[p] } };

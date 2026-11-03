@@ -77,13 +77,13 @@ export function creerInvite({ racine, contexte }) {
       const lignes = dossiers.map(d => {
         const alerte = contexte().regles.etatRelance(d);
         const relance = d.dateRelance ? formater(d.dateRelance).slice(0, 5) + (alerte === 'retard' ? '!' : alerte === 'proche' ? '·' : '') : '—';
-        return `<span class="ty-${d.type}">${col(TYPE_COURT[d.type] || d.type, 6)}</span>`
+        return `<span class="ty-${d.type}">${col(TYPE_COURT[d.type] || d.type, 7)}</span>`
           + `${lienDossier(d)} `
           + `<span class="st-${d.statutDft}">${col(STATUT_COURT[d.statutDft] || d.statutDft, 11)}</span>`
           + `<span class="${alerte || 'dim'}">${col(relance, 6)}</span>`
           + boutonMenu(d);
       });
-      const entete = `<span class="dim">${'TYPE'.padEnd(6)}${'GCBLO'.padEnd(17)}${'STATUT'.padEnd(11)}RELANCE</span>`;
+      const entete = `<span class="dim">${'AFFECT'.padEnd(7)}${'GCBLO'.padEnd(17)}${'STATUT'.padEnd(11)}RELANCE</span>`;
       ecran.ligne(`<pre class="tableau">${[entete, ...lignes].join('\n')}</pre>`, 'vue');
     },
     fiche(d) {
@@ -92,7 +92,7 @@ export function creerInvite({ racine, contexte }) {
       const champ = (nom, valeur) => `<span class="dim">${esc(nom.padEnd(14))}</span>${valeur}`;
       const lignes = [
         `<b>${lienDossier(d)}</b> ${boutonMenu(d)}`,
-        champ('type', `<span class="ty-${d.type}">${esc(typeParCode(d.type).libelle)}</span>`),
+        champ('affect', `<span class="ty-${d.type}">${esc(typeParCode(d.type).libelle)}</span>`),
         champ('statut DFT', `<span class="st-${d.statutDft}">${esc(statutParCode(d.statutDft).libelle)}</span>`),
         champ('FCI', esc(d.fci.join(', ') || 'aucun')),
         champ('commune', esc(d.commune || '—')),

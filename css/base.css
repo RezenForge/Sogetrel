@@ -63,7 +63,7 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .vue.perime { opacity: .5; }
 .vue.perime:hover { opacity: .8; }
 /* Doigt : lignes plus hautes pour viser sans se tromper */
-@media (pointer: coarse) { .tableau { line-height: 2.2; } .points { padding: 4px 6px; } }
+@media (pointer: coarse) { .tableau { line-height: 2.2; } .points { padding: 4px 4px; } }
 
 .menu {
   position: fixed; z-index: 20; min-width: 240px; max-width: calc(100vw - 16px); padding: 4px 0;

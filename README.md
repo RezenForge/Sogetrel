@@ -13,11 +13,11 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 
 | Commande | Effet |
 | --- | --- |
-| `ls [type] [statut] [retard] [sans-fci] [texte]` | affiche les dossiers |
+| `ls [affect] [statut] [retard] [sans-fci] [texte]` | affiche les dossiers |
 | `open ‹dossier›` | la fiche complète |
-| `set ‹dossiers› to ‹statut\|type›` | change le statut DFT ou le type (ex. `set 501404 to refuse`) |
+| `set ‹dossiers› to ‹statut\|affect›` | change le statut DFT ou l'affect (ex. `set 501404 to refuse`, `set 501404 to air`) |
 | `delete ‹dossiers›` | supprime, après confirmation |
-| `import` | lit un classeur Excel : onglets 33, 16, 17, 79, 86, lignes `GCBLO` en colonne E, dossier en D, commune en G, valorisation en H, type en I, FCI en J |
+| `import` | lit un classeur Excel : onglets 33, 16, 17, 79, 86, lignes `GCBLO` en colonne E, dossier en D, commune en G, valorisation en H, affect en I, FCI en J |
 | `attachement fichier` | choisit le classeur d'attachement de référence (gardé dans le navigateur) |
 | `attachement ‹dossier›` | remplit une copie de la référence (X5 commune, AG5 date, U6 GCBLO, paliers 30/60 en lignes 30-31) et l'enregistre en `‹GCBLO›.xlsx` |
 | `cancel` | défait la dernière modification |

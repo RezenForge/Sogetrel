@@ -141,7 +141,7 @@ export function apercu(analyse, ctx) {
     case 'attachement': return v.cible.fichier ? '→ choisir la référence' : `→ ${v.cible.dossier.gcblo}.xlsx`;
     case 'delete': return `→ suppression de ${v.cibles.length === 1 ? v.cibles[0].gcblo : n(v.cibles)} (confirmation)`;
     case 'set': {
-      const quoi = v.valeur.statut ? `statut → ${statutParCode(v.valeur.statut).libelle}` : `type → ${typeParCode(v.valeur.type).libelle}`;
+      const quoi = v.valeur.statut ? `statut → ${statutParCode(v.valeur.statut).libelle}` : `affect → ${typeParCode(v.valeur.type).libelle}`;
       return `→ ${v.cibles.length === 1 ? v.cibles[0].gcblo : n(v.cibles)} : ${quoi}${v.cibles.length > 3 ? ' (confirmation)' : ''}`;
     }
     default: return `→ ${c.resume}`;
