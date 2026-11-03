@@ -48,6 +48,25 @@ const invite = creerInvite({
   })
 });
 
+/*
+ * Avant d'ouvrir l'explorateur de fichiers : on quitte la ligne de saisie et on attend
+ * que la touche Entrée soit relâchée. Sinon Windows (option « Masquer le pointeur
+ * pendant la frappe ») peut garder la souris cachée dans l'explorateur.
+ */
+let toucheEnfoncee = false;
+addEventListener('keydown', () => { toucheEnfoncee = true; }, true);
+addEventListener('keyup', () => { toucheEnfoncee = false; }, true);
+function avantExplorateur() {
+  document.activeElement?.blur();
+  return new Promise(ok => {
+    const fin = () => setTimeout(ok, 120);
+    if (!toucheEnfoncee) return fin();
+    const relache = () => { removeEventListener('keyup', relache, true); clearTimeout(garde); fin(); };
+    const garde = setTimeout(relache, 600);
+    addEventListener('keyup', relache, true);
+  });
+}
+
 /* 4. Les actions (les commandes sont refaites une par une, voir actions.js). */
 const actions = creerActions({
   regles,
@@ -57,22 +76,27 @@ const actions = creerActions({
   confirmer: question => invite.confirmer(question),
   demander: (question, choix) => invite.demander(question, choix),
   // Ouvre l'explorateur de fichiers ; renvoie le fichier choisi, ou null
-  choisirFichier: types => new Promise(resoudre => {
-    const input = document.createElement('input');
-    input.type = 'file'; input.accept = types;
-    input.addEventListener('change', () => resoudre(input.files[0] || null));
-    input.addEventListener('cancel', () => resoudre(null));
-    input.click();
-  }),
+  choisirFichier: async types => {
+    await avantExplorateur();
+    return new Promise(resoudre => {
+      const input = document.createElement('input');
+      input.type = 'file'; input.accept = types;
+      input.addEventListener('change', () => { resoudre(input.files[0] || null); invite.focus(); });
+      input.addEventListener('cancel', () => { resoudre(null); invite.focus(); });
+      input.click();
+    });
+  },
   // « Enregistrer sous » : l'explorateur de fichiers si le navigateur le permet (Chrome, Edge sur ordinateur), sinon téléchargement
   enregistrerFichier: async (nom, octets) => {
     const xlsm = /\.xlsm$/i.test(nom);
     const type = xlsm ? 'application/vnd.ms-excel.sheet.macroEnabled.12' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
     if (window.showSaveFilePicker) {
+      await avantExplorateur();
       try {
         const poignee = await window.showSaveFilePicker({ suggestedName: nom, types: [{ description: 'Classeur Excel', accept: { [type]: [xlsm ? '.xlsm' : '.xlsx'] } }] });
         const flux = await poignee.createWritable();
         await flux.write(octets); await flux.close();
+        invite.focus();
         return 'enregistre';
       } catch (e) {
         if (e.name === 'AbortError') return 'annule';

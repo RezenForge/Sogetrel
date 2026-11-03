@@ -321,3 +321,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 03/11/2026 | `import` : type lu en colonne I (demandé seulement s'il manque) |
 | 03/11/2026 | Dossier : champs `commune` et `valorisation` (import colonnes G et H, fiche, recherche) ; prévus pour la future commande `attachement` |
 | 03/11/2026 | Commande `attachement` (R11) : référence gardée dans le navigateur, copie remplie (X5, AG5, U6, paliers 30/60), enregistrée où l'on veut |
+| 03/11/2026 | Explorateur de fichiers ouvert après le relâchement d'Entrée, hors de la ligne de saisie (souris cachée sous Windows) |
