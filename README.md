@@ -14,11 +14,14 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | Commande | Effet |
 | --- | --- |
 | `ls [type] [statut] [retard] [sans-fci] [texte]` | affiche les dossiers |
-| `ouvre ‹dossier›` | la fiche complète |
-| `passe ‹dossiers› en ‹statut\|type›` | change le statut DFT ou le type |
-| `annule` | défait la dernière modification |
+| `open ‹dossier›` | la fiche complète |
+| `set ‹dossiers› to ‹statut\|type›` | change le statut DFT ou le type (ex. `set 501404 to refuse`) |
+| `delete ‹dossiers›` | supprime, après confirmation |
+| `cancel` | défait la dernière modification |
+| `clear` | vide l'écran |
+| `help [commande]` | la liste des commandes, ou le détail d'une commande |
 
-**Les clics** : dans une liste, cliquer un GCBLO l'ouvre, `⋯` affiche les actions du dossier. Un clic ne fait rien de plus qu'une commande : il l'écrit dans la console et l'exécute, on peut donc toujours faire `annule`.
+**Les clics** : dans une liste, cliquer un GCBLO l'ouvre, `⋯` affiche les actions du dossier. Un clic ne fait rien de plus qu'une commande : il l'écrit dans la console et l'exécute, on peut donc toujours faire `cancel`.
 
 | Touche | Effet |
 | --- | --- |
@@ -69,5 +72,5 @@ js/jarvis/completion.js  propositions, texte grisé, aperçu (ne modifie rien)
 js/jarvis/actions.js     exécute une commande via les règles
 js/jarvis/menus.js       le menu ⋯ d'un dossier : des commandes écrites à l'avance
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   92 tests : règles, dates, commandes, menu ⋯, collage, relances
+tests/                   97 tests : règles, dates, commandes, menu ⋯, collage, relances
 ```

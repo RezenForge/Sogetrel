@@ -33,33 +33,38 @@ groupe('Découpage et dates', () => {
   test('date impossible refusée', () => egal(lireDate('31/02', AUJ), null));
 });
 
-groupe('Commandes ls, ouvre, passe, annule', () => {
+groupe('Commandes ls, open, set, delete, cancel, clear, help', () => {
   test('ls avec filtres', () => { const { a } = A('ls air refuse'); vrai(a.complet); egal(a.valeurs.filtres, [{ type: 'AIR' }, { statut: 'REFUSE' }]); });
-  test('ouvre un dossier par un morceau du numéro', () => egal(A('ouvre 501404').a.valeurs.cible.gcblo, 'SBA501404-THF010'));
-  test('ouvre avec le GCBLO complet (clic)', () => vrai(A('ouvre SBA501404-THF010').a.complet));
-  test('passe … en …', () => { const { a } = A('passe 501404 en refuse'); vrai(a.complet); egal(a.valeurs.valeur, { statut: 'REFUSE' }); });
-  test('le mot « en » peut être omis', () => vrai(A('passe 501404 refuse').a.complet));
-  test('plusieurs dossiers', () => egal(A('passe 501404 501423 en mis-a-dispo').a.valeurs.cibles.length, 2));
-  test('annule', () => vrai(A('annule').a.complet));
+  test('open un dossier par un morceau du numéro', () => egal(A('open 501404').a.valeurs.cible.gcblo, 'SBA501404-THF010'));
+  test('open avec le GCBLO complet (clic)', () => vrai(A('open SBA501404-THF010').a.complet));
+  test('set … to …', () => { const { a } = A('set 501404 to refuse'); vrai(a.complet); egal(a.valeurs.valeur, { statut: 'REFUSE' }); });
+  test('le mot « to » peut être omis', () => vrai(A('set 501404 refuse').a.complet));
+  test('plusieurs dossiers', () => egal(A('set 501404 501423 to mis-a-dispo').a.valeurs.cibles.length, 2));
+  test('cancel, undo, clear, help', () => vrai(['cancel', 'undo', 'clear', 'help', 'help set', '? ls'].every(t => A(t).a.complet)));
+  test('delete plusieurs dossiers', () => egal(A('delete 501404 501423').a.valeurs.cibles.length, 2));
+  test('les anciens verbes français ne sont plus compris', () => egal(['ouvre', 'passe', 'annule', 'aide'].filter(t => A(t + ' ').a.commande), []));
   test('verbe inconnu terminé : marqué en erreur', () => egal(A('blabla ').a.mots[0].role, 'erreur'));
-  test('« pa » propose passe', () => egal(P('pa').propositions.map(p => p.libelle), ['passe ‹dossiers› en ‹statut|type›']));
+  test('« se » propose set', () => egal(P('se').propositions.map(p => p.libelle), ['set ‹dossiers› to ‹statut|type›']));
+  test('« set 501404 t » propose d\'abord « to »', () => egal(P('set 501404 t').propositions[0].libelle, 'to'));
 });
 
 groupe('Aperçu', () => {
   test('ls compte les dossiers', () => { const { a, ctx } = A('ls air'); egal(apercu(a, ctx), '→ 2 dossiers'); });
-  test('passe décrit le changement', () => { const { a, ctx } = A('passe 501404 en refuse'); egal(apercu(a, ctx), '→ SBA501404-THF010 : statut → Refusé'); });
-  test('incomplet : rappelle la forme', () => { const { a, ctx } = A('passe 501404'); egal(apercu(a, ctx), 'passe ‹dossiers› en ‹statut|type›'); });
+  test('set décrit le changement', () => { const { a, ctx } = A('set 501404 to refuse'); egal(apercu(a, ctx), '→ SBA501404-THF010 : statut → Refusé'); });
+  test('incomplet : rappelle la forme', () => { const { a, ctx } = A('set 501404'); egal(apercu(a, ctx), 'set ‹dossiers› to ‹statut|type›'); });
+  test('delete annonce la confirmation', () => { const { a, ctx } = A('delete 501404 501423'); egal(apercu(a, ctx), '→ suppression de 2 dossiers (confirmation)'); });
 });
 
 groupe('Menu ⋯ : un clic = une commande', () => {
   const d = contexte().dossiers.find(x => x.gcblo === 'LRO500767-THF010');      // refusé
   const options = optionsDossier(d);
-  test('ouvrir en premier', () => egal(options[0].commande, 'ouvre LRO500767-THF010'));
-  test('pas de « passer en Refusé » pour un dossier déjà refusé', () => egal(options.slice(1).map(o => o.libelle), ['Passer en « À faire »', 'Passer en « En cours de validation »', 'Passer en « Mis à disposition »']));
+  test('ouvrir en premier', () => egal(options[0].commande, 'open LRO500767-THF010'));
+  test('pas de « passer en Refusé » pour un dossier déjà refusé', () => egal(options.slice(1, -1).map(o => o.libelle), ['Passer en « À faire »', 'Passer en « En cours de validation »', 'Passer en « Mis à disposition »']));
   test('chaque choix est une commande complète et comprise', () => {
     const ctx = contexte();
     egal(options.filter(o => !analyser(o.commande, o.commande.length, ctx).complet).map(o => o.commande), []);
   });
+  test('supprimer en dernier', () => egal(options.at(-1).commande, 'delete LRO500767-THF010'));
   test('le choix vise bien le statut annoncé', () => {
     const ctx = contexte(), o = options.find(x => x.libelle.includes('Mis à disposition'));
     egal(analyser(o.commande, o.commande.length, ctx).valeurs.valeur, { statut: 'MAD' });

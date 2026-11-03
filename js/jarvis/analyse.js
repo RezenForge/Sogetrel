@@ -178,7 +178,7 @@ export function analyser(texte, curseur = texte.length, ctx = { dossiers: [], au
       // Verbe en cours de frappe (« rel » → « relance ») : pas encore une erreur
       const enFrappe = iCur === 0 && debutPossible('commande', premier.texte);
       premier.role = enFrappe ? 'brut' : 'erreur';
-      if (iCur !== 0) res.erreurs.push(`commande inconnue : « ${premier.texte} » (tapez aide)`);
+      if (iCur !== 0) res.erreurs.push(`commande inconnue : « ${premier.texte} » (tapez help)`);
     }
     return res;
   }

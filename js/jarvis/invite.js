@@ -24,8 +24,8 @@ const CLE_HISTORIQUE = 'gcblo.v2.historique';
 const TYPE_COURT = { NUM21: 'NUM21', AIR: 'AIR', SOGETREL: 'SOGE' };
 const STATUT_COURT = { A_FAIRE: 'À faire', EN_VALIDATION: 'En valid.', MAD: 'Mis à disp', REFUSE: 'Refusé' };
 
-/** Le GCBLO cliquable : un clic lance « ouvre ‹gcblo› ». */
-const lienDossier = d => `<button type="button" class="lien c-dossier" data-commande="ouvre ${esc(d.gcblo)}" title="ouvre ${esc(d.gcblo)}">${esc(d.gcblo)}</button>`;
+/** Le GCBLO cliquable : un clic lance « open ‹gcblo› ». */
+const lienDossier = d => `<button type="button" class="lien c-dossier" data-commande="open ${esc(d.gcblo)}" title="open ${esc(d.gcblo)}">${esc(d.gcblo)}</button>`;
 /** Le bouton ⋯ : ouvre le menu d'actions du dossier (menus.js). */
 const boutonMenu = d => `<button type="button" class="points" data-menu-dossier="${esc(d.id)}" aria-label="Actions pour ${esc(d.gcblo)}" aria-haspopup="menu">⋯</button>`;
 
@@ -67,7 +67,7 @@ export function creerInvite({ racine, contexte }) {
     },
     /**
      * Liste de dossiers, alignée (police à chasse fixe), courte pour tenir sur téléphone.
-     * Le GCBLO est cliquable (→ « ouvre ») ; ⋯ ouvre le menu d'actions du dossier.
+     * Le GCBLO est cliquable (→ « open ») ; ⋯ ouvre le menu d'actions du dossier.
      */
     tableau(dossiers) {
       const col = (t, n) => esc(String(t).padEnd(n).slice(0, n));
@@ -201,7 +201,7 @@ export function creerInvite({ racine, contexte }) {
 
   /**
    * Recopie une commande à l'écran puis l'exécute. Sert à la saisie (Entrée)
-   * ET aux clics : un clic = une commande, avec écho, historique et « annule ».
+   * ET aux clics : un clic = une commande, avec écho, historique et « cancel ».
    */
   async function lancer(texte) {
     if (attente) return;

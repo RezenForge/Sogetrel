@@ -8,26 +8,34 @@
  * Une commande = des verbes (le premier est le nom affiché) + une liste
  * d'emplacements, remplis dans l'ordre :
  *   { nom, sorte, optionnel?, multiple? }   une valeur à saisir
- *   { mot: 'en' }                            un mot de liaison (proposé automatiquement)
+ *   { mot: 'to' }                            un mot de liaison (proposé automatiquement)
  *
  * Les « sortes » de valeurs sont décrites dans SORTES ci-dessous.
  */
 
 /*
  * Refaites une par une depuis le 03/11/2026 (l'ancienne liste est dans la branche « v2-commandes »).
+ * Verbes en anglais (choix du 03/11/2026) ; messages et valeurs (statuts, types) en français.
  * Chaque commande a sa fonction du même id dans actions.js.
  */
 export const COMMANDES = Object.freeze([
-  { id: 'ls', verbes: ['ls', 'liste', 'montre'], resume: 'affiche les dossiers (filtres facultatifs)',
+  { id: 'ls', verbes: ['ls', 'list'], resume: 'affiche les dossiers (filtres facultatifs)',
     forme: 'ls [type] [statut] [retard] [sans-fci] [texte]',
     emplacements: [{ nom: 'filtres', sorte: 'filtre', optionnel: true, multiple: true }] },
-  { id: 'ouvre', verbes: ['ouvre', 'cat'], resume: 'affiche la fiche complète d\'un dossier',
-    forme: 'ouvre ‹dossier›',
+  { id: 'open', verbes: ['open'], resume: 'affiche la fiche complète d\'un dossier',
+    forme: 'open ‹dossier›',
     emplacements: [{ nom: 'cible', sorte: 'dossier' }] },
-  { id: 'passe', verbes: ['passe'], resume: 'change le statut DFT ou le type',
-    forme: 'passe ‹dossiers› en ‹statut|type›',
-    emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }, { mot: 'en' }, { nom: 'valeur', sorte: 'statut-ou-type' }] },
-  { id: 'annule', verbes: ['annule', 'undo'], resume: 'annule la dernière modification', forme: 'annule', emplacements: [] }
+  { id: 'set', verbes: ['set'], resume: 'change le statut DFT ou le type',
+    forme: 'set ‹dossiers› to ‹statut|type›',
+    emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }, { mot: 'to' }, { nom: 'valeur', sorte: 'statut-ou-type' }] },
+  { id: 'delete', verbes: ['delete', 'rm'], resume: 'supprime des dossiers (confirmation demandée)',
+    forme: 'delete ‹dossiers›',
+    emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }] },
+  { id: 'cancel', verbes: ['cancel', 'undo'], resume: 'annule la dernière modification', forme: 'cancel', emplacements: [] },
+  { id: 'clear', verbes: ['clear', 'cls'], resume: 'vide l\'écran', forme: 'clear', emplacements: [] },
+  { id: 'help', verbes: ['help', '?'], resume: 'liste les commandes, ou détaille l\'une d\'elles',
+    forme: 'help [commande]',
+    emplacements: [{ nom: 'sujet', sorte: 'commande', optionnel: true }] }
 ]);
 
 /**

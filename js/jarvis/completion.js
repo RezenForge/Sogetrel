@@ -35,7 +35,7 @@ function verbes(mot, ctx) {
 }
 
 function dossiers(mot, ctx, enCours, analyse) {
-  // Dans une liste (« passe 501404 501423 … »), on ne repropose pas un dossier déjà choisi
+  // Dans une liste (« set 501404 501423 … »), on ne repropose pas un dossier déjà choisi
   const choisis = enCours.slot?.multiple ? analyse.valeurs[enCours.slot.nom] || [] : [];
   const deja = new Set(choisis.filter(Boolean).map(d => d.id));
   const base = mot ? chercherDossiers(mot, ctx.dossiers) : ctx.dossiers;
@@ -113,9 +113,9 @@ export function proposer(analyse, ctx) {
     default: liste = [];
   }
 
-  // « passe 501404 e… » : le mot peut être le début de « en » comme d'un statut ; « en » d'abord
+  // « set 501404 t… » : le mot peut être le début du mot de liaison comme d'une valeur ; la liaison d'abord
   if (ec.liaison) liste = [{ inserer: ec.liaison + ' ', libelle: ec.liaison, detail: 'puis la valeur', sorte: 'mot' }, ...liste];
-  // Liste déjà commencée (« passe 501404 … ») : proposer aussi de passer à la suite (« en »)
+  // Liste déjà commencée (« set 501404 … ») : proposer aussi de passer à la suite (« to »)
   if (ec.suivant?.mot && !mot) liste = [{ inserer: ec.suivant.mot + ' ', libelle: ec.suivant.mot, detail: 'puis la valeur', sorte: 'mot' }, ...liste];
 
   liste = liste.slice(0, MAX);
@@ -135,8 +135,9 @@ export function apercu(analyse, ctx) {
   const n = liste => `${liste.length} dossier${liste.length > 1 ? 's' : ''}`;
   switch (c.id) {
     case 'ls': return `→ ${n(ctx.regles.filtrer(criteresListe(v)))}`;
-    case 'ouvre': return `→ fiche de ${v.cible.gcblo}`;
-    case 'passe': {
+    case 'open': return `→ fiche de ${v.cible.gcblo}`;
+    case 'delete': return `→ suppression de ${v.cibles.length === 1 ? v.cibles[0].gcblo : n(v.cibles)} (confirmation)`;
+    case 'set': {
       const quoi = v.valeur.statut ? `statut → ${statutParCode(v.valeur.statut).libelle}` : `type → ${typeParCode(v.valeur.type).libelle}`;
       return `→ ${v.cibles.length === 1 ? v.cibles[0].gcblo : n(v.cibles)} : ${quoi}${v.cibles.length > 3 ? ' (confirmation)' : ''}`;
     }

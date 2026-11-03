@@ -135,23 +135,29 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 
 | Commande | Forme | Exemple |
 | --- | --- | --- |
-| Afficher | `ls [type] [statut] [retard] [sans-fci] [texte]` (aussi `liste`, `montre`) | `ls air retard` |
-| Ouvrir | `ouvre ‹dossier›` | `ouvre 501404` |
-| Changer le statut ou le type | `passe ‹dossiers› en ‹statut\|type›` | `passe 501404 en refuse` |
-| Annuler | `annule` : défait la dernière modification | `annule` |
+| Afficher | `ls [type] [statut] [retard] [sans-fci] [texte]` (aussi `list`) | `ls air retard` |
+| Ouvrir | `open ‹dossier›` | `open 501404` |
+| Changer le statut ou le type | `set ‹dossiers› to ‹statut\|type›` | `set 501404 to refuse` |
+| Supprimer | `delete ‹dossiers›` (aussi `rm`), confirmation demandée | `delete 501404` |
+| Annuler | `cancel` (aussi `undo`) : défait la dernière modification | `cancel` |
+| Vider l'écran | `clear` | `clear` |
+| Aide | `help [commande]` (aussi `?`) ; chaque commande de la liste est cliquable | `help set` |
+
+**Langue** (03/11/2026) : les **verbes et le mot de liaison sont en anglais** (`open`, `set … to …`), les **valeurs métier restent en français** (`refuse`, `mis-a-dispo`, `air`), comme les messages affichés.
 
 ### Console + clics : un clic = une commande
 
 Ce que la console affiche est cliquable, pour le quotidien, mais **un clic ne fait rien de plus qu'une commande** : il écrit la commande dans la console et l'exécute, exactement comme si on l'avait tapée.
 
 - Un seul chemin dans le code : chaque action existe une fois, dans `actions.js`.
-- `annule` et l'historique (`↑`) marchent aussi pour les clics.
+- `cancel` et l'historique (`↑`) marchent aussi pour les clics.
 - On apprend les commandes en les voyant passer.
 
 Ce qui est cliquable :
-- **le GCBLO** d'un dossier, dans une liste ou une fiche → `ouvre ‹gcblo›` ;
-- **`⋯`** à côté d'un dossier → un menu court, construit selon l'état du dossier au moment du clic (`js/jarvis/menus.js`) : Ouvrir, puis les statuts où il peut passer. Chaque choix affiche la commande qu'il va lancer. Sur téléphone, le menu s'ouvre en bas de l'écran avec de grands boutons ;
-- **`annule`** dans le message qui suit une modification.
+- **le GCBLO** d'un dossier, dans une liste ou une fiche → `open ‹gcblo›` ;
+- **`⋯`** à côté d'un dossier → un menu court, construit selon l'état du dossier au moment du clic (`js/jarvis/menus.js`) : Ouvrir, puis les statuts où il peut passer, et Supprimer en dernier (en rouge, avec confirmation). Chaque choix affiche la commande qu'il va lancer. Sur téléphone, le menu s'ouvre en bas de l'écran avec de grands boutons ;
+- **`cancel`** dans le message qui suit une modification ;
+- **chaque commande** dans la liste de `help` → `help ‹commande›`.
 
 **Lignes anciennes** : quand un dossier change, les listes et fiches déjà affichées passent en grisé (elles ne sont plus à jour). Un clic dessus agit toujours sur l'état actuel du dossier.
 
@@ -284,3 +290,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 03/11/2026 | Zone de saisie sur une seule ligne : l'aperçu, les erreurs et les consignes s'affichent en gris après le texte tapé |
 | 03/11/2026 | Toutes les commandes retirées pour être refaites (ancienne version : branche `v2-commandes`) ; écran de départ vide ; `meteo.js`, `wiki.js`, `dessin.js` retirés |
 | 03/11/2026 | Principe « un clic = une commande » ; commandes `ls`, `ouvre`, `passe`, `annule` ; GCBLO et menu `⋯` cliquables ; listes anciennes grisées |
+| 03/11/2026 | Commandes en anglais : `ls`, `open`, `set … to …`, `delete`, `cancel`, `clear`, `help` ; « Supprimer » dans le menu ⋯ |

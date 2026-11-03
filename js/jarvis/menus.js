@@ -5,7 +5,7 @@
  * à l'avance ; le clic la lance dans la console comme si on l'avait tapée.
  *
  * Le menu dépend de l'état du dossier au moment du clic : on ne propose pas
- * de passer en « Refusé » un dossier déjà refusé.
+ * de passer en « Refusé » un dossier déjà refusé. « Supprimer » vient toujours en dernier.
  *
  *   optionsDossier(dossier) → [{ libelle, commande, classe? }]
  */
@@ -14,11 +14,13 @@ import { MOTS_STATUT, motPourCode } from './grammaire.js';
 
 export function optionsDossier(d) {
   return [
-    { libelle: 'Ouvrir la fiche', commande: `ouvre ${d.gcblo}` },
+    { libelle: 'Ouvrir la fiche', commande: `open ${d.gcblo}` },
     ...STATUTS.filter(s => s.code !== d.statutDft).map(s => ({
       libelle: `Passer en « ${s.libelle} »`,
-      commande: `passe ${d.gcblo} en ${motPourCode(MOTS_STATUT, s.code)}`,
+      commande: `set ${d.gcblo} to ${motPourCode(MOTS_STATUT, s.code)}`,
       classe: `st-${s.code}`
-    }))
+    })),
+    // Toujours en dernier, en rouge ; la commande demande confirmation
+    { libelle: 'Supprimer', commande: `delete ${d.gcblo}`, classe: 'err' }
   ];
 }
