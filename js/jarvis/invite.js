@@ -76,7 +76,7 @@ export function creerInvite({ racine, contexte }) {
    */
   function ficheHtml(d) {
     const alerte = contexte().regles.etatRelance(d);
-    const champ = (nom, cle, valeur, classe = '') => `<span class="dim">${esc(nom.padEnd(14))}</span><span class="editable${classe ? ` ${classe}` : ''}" data-champ="${cle}" title="double-clic pour modifier">${valeur}</span>`;
+    const champ = (nom, cle, valeur, classe = '') => `<span class="dim">${esc(nom.padEnd(14))}</span><span class="editable${classe ? ` ${classe}` : ''}" data-champ="${cle}" title="double-clic pour modifier${classe === 'fci-retard' ? ' · clic droit : relance FCI' : ''}">${valeur}</span>`;
     const lignes = [
       `<b>${lienDossier(d)}</b> ${boutonMenu(d)}`,
       champ('affect', 'affect', d.type ? `<span class="ty-${d.type}">${esc(typeParCode(d.type).libelle)}</span>` : '<span class="dim">—</span>'),
@@ -116,7 +116,7 @@ export function creerInvite({ racine, contexte }) {
       const commune = d.commune || '';
       const valo = d.valorisation !== null && d.valorisation !== undefined ? formaterMontant(d.valorisation).replace(/\s/g, ' ') : '';
       // Chaque cellule est éditable au double-clic, comme dans la fiche (data-champ, data-dossier)
-      const ed = (cle, html, classe = '') => `<span class="editable${classe ? ` ${classe}` : ''}" data-champ="${cle}" data-dossier="${esc(d.id)}" title="double-clic pour modifier">${html}</span>`;
+      const ed = (cle, html, classe = '') => `<span class="editable${classe ? ` ${classe}` : ''}" data-champ="${cle}" data-dossier="${esc(d.id)}" title="double-clic pour modifier${classe === 'fci-retard' ? ' · clic droit : relance FCI' : ''}">${html}</span>`;
       // R13 : affecté depuis plus de 24 h et toujours sans FCI → la case FCI en rouge clair
       const fciRouge = fciEnRetard(d, contexte().aujourdhui) ? 'fci-retard' : '';
       // Ordre des colonnes : AFFECT GCBLO COMMUNE VALO FCI STATUT DFT
@@ -455,6 +455,15 @@ export function creerInvite({ racine, contexte }) {
     setTimeout(() => b.remove(), 1200);
   }
   racine.addEventListener('contextmenu', async e => {
+    // R13 : clic droit sur une case FCI rouge (FCI attendu depuis plus de 24 h) → « relance ‹gcblo› fci »
+    const rouge = e.target.closest('.fci-retard');
+    if (rouge && !rouge.querySelector('.edition')) {
+      e.preventDefault();
+      const id = rouge.dataset.dossier || rouge.closest('[data-fiche]')?.dataset.fiche;
+      const d = contexte().dossiers.find(x => x.id === id);
+      if (d) lancer(`relance ${d.gcblo} fci`);
+      return;
+    }
     const cible = e.target.closest('[data-copie]');
     if (!cible || cible.querySelector('.edition')) return;
     e.preventDefault();
