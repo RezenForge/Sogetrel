@@ -52,6 +52,7 @@ export function creerInvite({ racine, contexte }) {
    * les commandes qui ne doivent pas faire défiler la console (open, set, edit, cancel, help).
    */
   const DANS_LE_VOLET = new Set(['open', 'set', 'edit', 'cancel', 'help']);
+  const VIDE_LA_CONSOLE = new Set(['ls', 'info']);
   let sortie = ecranEl;
   const defiler = () => { sortie.scrollTop = sortie.scrollHeight; };
 
@@ -273,6 +274,8 @@ export function creerInvite({ racine, contexte }) {
     fermerMenu();
     const analyse = analyser(texte, texte.length, contexte());
     if (voletEl && DANS_LE_VOLET.has(analyse.commande?.id)) sortie = voletEl;
+    // ls (list) et info repartent d'une console vide : seule la nouvelle liste reste affichée
+    if (VIDE_LA_CONSOLE.has(analyse.commande?.id)) ecranEl.innerHTML = '';
     try { await lancerDans(texte, analyse); } finally { sortie = ecranEl; }
   }
 
