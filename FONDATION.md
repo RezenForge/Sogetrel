@@ -215,7 +215,7 @@ Ce qui est cliquable :
 
 **Console vidée** (04/11/2026) : `ls` (`list`) et `info` vident la console, qui ne montre que la liste et son bilan ; la commande elle-même s'écrit dans le volet de droite, comme les autres (même lancée d'un clic sur le tableau de bord). Sans aucun résultat, tout s'affiche dans le volet et la liste déjà affichée reste en place.
 
-**Volet de droite** (04/11/2026) : `open`, `set`, `edit` (donc le double-clic), `cancel`, `help`, `sauvegarde`, `restore`, `attachement` et `delete` s'affichent sous le tableau de bord, dans un volet qui défile seul ; la console ne bouge pas.
+**Volet de droite** (04/11/2026) : `open`, `set`, `edit` (donc le double-clic), `cancel`, `help`, `sauvegarde`, `restore`, `attachement` et `delete` s'affichent, ainsi que toute commande inconnue ou incomplète (message d'erreur), sous le tableau de bord, dans un volet qui défile seul ; la console ne bouge pas.
 
 Pas de barre d'outils fixe : les clics restent à l'intérieur de ce que la console affiche.
 
@@ -387,3 +387,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | Colonne DATE (d'affectation) en tête de liste (jour/mois ; année au double-clic), modifiable ; `affect` la met au jour même (aussi pour un dossier déjà au bon affect mais sans date) ; vide à l'import ; filtres `ls 12/03`, `ls 03/2026` |
 | 04/11/2026 | « date affect » renommé « date » (colonne DATE, fiche, `edit ‹dossier› date …`) |
 | 04/11/2026 | R13 : case FCI en rouge clair 24 h après la date sans FCI ; `ls fci-retard` ; « FCI > 24 h » au tableau de bord |
+| 04/11/2026 | Commande introuvable ou incomplète : le message va dans le volet |

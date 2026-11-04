@@ -291,7 +291,8 @@ export function creerInvite({ racine, contexte }) {
     const analyse = analyser(texte, texte.length, contexte());
     const id = analyse.commande?.id;
     let echoDansLeVolet = false;
-    if (voletEl && DANS_LE_VOLET.has(id)) sortie = voletEl;
+    // Commande inconnue ou incomplète : le message d'erreur va aussi dans le volet (la console ne bouge pas)
+    if (voletEl && (DANS_LE_VOLET.has(id) || !analyse.commande || !analyse.complet)) sortie = voletEl;
     if (voletEl && VIDE_LA_CONSOLE.has(id) && analyse.complet) {
       // ls (list) et info : la commande s'écrit dans le volet, comme les autres ;
       // la console est vidée et ne montre que la liste. Sans résultat, tout va dans le volet
