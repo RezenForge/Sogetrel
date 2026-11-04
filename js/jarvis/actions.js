@@ -54,7 +54,7 @@ export function texteClasseur(c, complet = false) {
   return `classeur partagé${esc(quand)} : ${morceaux.join(' · ')}${exemples ? ` <span class="dim">· ${esc(exemples)}</span>` : ''}`;
 }
 
-export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre, sauvegarderDans, choisirSauvegarde, choisirDossier, ecrireDansDossier, ouvrirMail = () => {} }) {
+export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre, sauvegarderDans, choisirSauvegarde, choisirDossier, ecrireDansDossier, ouvrirMail = () => {}, recharger = () => location.reload() }) {
   let annulation = null;       // { libelle, faire() } : de quoi défaire la dernière modification
 
   // Comme les outils Linux : un succès s'écrit simplement, une erreur est préfixée du nom du programme
@@ -311,6 +311,9 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
     },
 
     clear() { ecran.vider(); },
+
+    /** Recharge la page, en allant chercher la dernière version publiée (comme Ctrl+F5). */
+    async refresh() { info('rechargement…'); await recharger(); },
 
     /** Sans sujet : la liste des commandes (cliquables) ; avec un sujet : le détail d'une commande. */
     help(v) {
