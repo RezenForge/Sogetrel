@@ -124,6 +124,14 @@ pre { margin: 0; font: inherit; white-space: pre; }
 }
 .edition:focus { border-color: var(--invite-chemin); }
 
+/* Bulle « copié » (clic droit sur un GCBLO ou un FCI) */
+.bulle-copie {
+  position: fixed; z-index: 30; padding: 3px 8px; font-size: 14px; pointer-events: none;
+  color: var(--fond); background: var(--accent); border-radius: 3px;
+  animation: bulle 1.2s ease-out forwards;
+}
+@keyframes bulle { 0%, 70% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-6px); } }
+
 /* ---------------- Zone de saisie ---------------- */
 .saisie-zone {
   grid-column: 1; grid-row: 2; position: relative;

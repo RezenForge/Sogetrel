@@ -29,7 +29,9 @@ const TYPE_COURT = { NUM21: 'NUM21', AIR: 'AIR', SOGETREL: 'SOGE' };
 const STATUT_COURT = { A_FAIRE: 'À faire', EN_VALIDATION: 'En valid.', MAD: 'Mis à disp', REFUSE: 'Refusé', LITIGE: 'Litige', ANNULE: 'Annulé', ATTACH: 'Attach' };
 
 /** Le GCBLO cliquable : un clic lance « open ‹gcblo› ». */
-const lienDossier = d => `<button type="button" class="lien c-dossier" data-commande="open ${esc(d.gcblo)}" title="open ${esc(d.gcblo)}">${esc(d.gcblo)}</button>`;
+const lienDossier = d => `<button type="button" class="lien c-dossier" data-commande="open ${esc(d.gcblo)}" data-copie="${esc(d.gcblo)}" title="clic : open ${esc(d.gcblo)} · clic droit : copier">${esc(d.gcblo)}</button>`;
+/** Les FCI d'un dossier, copiables d'un clic droit (tous, séparés par une espace). */
+const copieFci = (d, html) => d.fci.length ? `<span data-copie="${esc(d.fci.join(' '))}" title="clic droit : copier">${html}</span>` : html;
 /** Le bouton ⋯ : ouvre le menu d'actions du dossier (menus.js). */
 const boutonMenu = d => `<button type="button" class="points" data-menu-dossier="${esc(d.id)}" aria-label="Actions pour ${esc(d.gcblo)}" aria-haspopup="menu">⋯</button>`;
 
@@ -79,7 +81,7 @@ export function creerInvite({ racine, contexte }) {
       `<b>${lienDossier(d)}</b> ${boutonMenu(d)}`,
       champ('affect', 'affect', `<span class="ty-${d.type}">${esc(typeParCode(d.type).libelle)}</span>`),
       champ('statut DFT', 'statut', `<span class="st-${d.statutDft}">${esc(statutParCode(d.statutDft).libelle)}</span>`),
-      champ('FCI', 'fci', esc(d.fci.join(', ') || 'aucun')),
+      champ('FCI', 'fci', copieFci(d, esc(d.fci.join(', ') || 'aucun'))),
       champ('commune', 'commune', esc(d.commune || '—')),
       champ('valorisation', 'valo', d.valorisation !== null && d.valorisation !== undefined ? esc(formaterMontant(d.valorisation)) : '—'),
       champ('affectation', 'affectation', esc(formater(d.dateAffectation))),
@@ -116,7 +118,7 @@ export function creerInvite({ racine, contexte }) {
       // Chaque cellule est éditable au double-clic, comme dans la fiche (data-champ, data-dossier)
       const ed = (cle, html) => `<span class="editable" data-champ="${cle}" data-dossier="${esc(d.id)}" title="double-clic pour modifier">${html}</span>`;
       // Ordre des colonnes : AFFECT GCBLO COMMUNE VALO FCI STATUT DFT
-      const milieu = `${ed('commune', col(coupe(commune, 22) || '—', 22))} ${ed('valo', `<span class="valo">${esc((valo || '—').padStart(11))}</span>`)}  ${ed('fci', `<span class="dim">${col(fci || '—', 15)}</span>`)} `;
+      const milieu = `${ed('commune', col(coupe(commune, 22) || '—', 22))} ${ed('valo', `<span class="valo">${esc((valo || '—').padStart(11))}</span>`)}  ${ed('fci', copieFci(d, `<span class="dim">${col(fci || '—', 15)}</span>`))} `;
       // Une ligne = un bloc : le statut peut colorer toute la ligne (Attach : vert clair)
       return `<span class="rangee rangee-${d.statutDft}">`
         + `${ed('affect', `<span class="ty-${d.type}">${col(TYPE_COURT[d.type] || d.type, 6)}</span>`)} `
@@ -426,6 +428,34 @@ export function creerInvite({ racine, contexte }) {
     if (e.target.closest('#ecran, #volet') && !e.target.closest('.edition, .editable') && !getSelection().toString()) champ.focus();
   });
   /* ---------------- Fiche : double-clic sur un champ pour le modifier ---------------- */
+
+  /* ---------------- Clic droit sur un GCBLO ou un FCI : copie dans le presse-papiers ---------------- */
+
+  async function copier(texte) {
+    try { await navigator.clipboard.writeText(texte); return true; } catch { /* navigateur réticent : méthode ancienne */ }
+    const zone = document.createElement('textarea');
+    zone.value = texte; zone.style.position = 'fixed'; zone.style.opacity = '0';
+    document.body.appendChild(zone); zone.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch { /* rien */ }
+    zone.remove();
+    return ok;
+  }
+  /** Petite bulle « copié » près du curseur, qui disparaît seule. */
+  function bulle(x, y, texte) {
+    const b = document.createElement('div');
+    b.className = 'bulle-copie'; b.textContent = texte;
+    b.style.left = `${Math.min(x + 12, innerWidth - 260)}px`; b.style.top = `${Math.max(4, y - 30)}px`;
+    document.body.appendChild(b);
+    setTimeout(() => b.remove(), 1200);
+  }
+  racine.addEventListener('contextmenu', async e => {
+    const cible = e.target.closest('[data-copie]');
+    if (!cible || cible.querySelector('.edition')) return;
+    e.preventDefault();
+    const texte = cible.dataset.copie;
+    bulle(e.clientX, e.clientY, (await copier(texte)) ? `copié : ${texte}` : 'copie impossible');
+  });
 
   const surDoubleClic = e => {
     // Fiche (open) ou liste (ls) : le dossier vient de la fiche, ou de la cellule dans une liste

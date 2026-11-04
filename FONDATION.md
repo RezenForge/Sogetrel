@@ -189,6 +189,7 @@ Ce qui est cliquable :
 - **`⋯`** à côté d'un dossier → un menu court, construit selon l'état du dossier au moment du clic (`js/jarvis/menus.js`) : Ouvrir, puis les statuts où il peut passer (`→ Refusé`), et Supprimer en dernier (en rouge, avec confirmation). ;
 - **une valeur de la fiche** (`open`) **ou d'une liste** (`ls` : affect, commune, valo, FCI, relance, statut), au **double-clic** : elle devient une zone de saisie (une liste pour l'affect et le statut). Entrée ou un clic ailleurs valide, Échap annule. La validation lance `edit ‹gcblo› ‹champ› ‹valeur›` ; la fiche ou la liste se met à jour sur place ;
 - **`cancel`** dans le message qui suit une modification ;
+- **clic droit sur un GCBLO ou un FCI** (liste, fiche) → copie dans le presse-papiers (tous les FCI du dossier, séparés par une espace), avec une bulle « copié ». Ce n'est pas une commande : rien ne change dans les données ;
 - **les libellés du tableau de bord** (nombre de dossiers, affects, statuts, attaché, sans valo, en retard, sous 3 jours, sans FCI) → `ls` filtré sur ce qu'ils désignent ;
 - **chaque commande** dans la liste de `help` → `help ‹commande›`.
 
@@ -363,3 +364,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | Commande `sauvegarde` (`js/sauvegarde.js`) : dossier choisi, nom daté, 3 sauvegardes gardées ; dernière sauvegarde dans le tableau de bord |
 | 04/11/2026 | Sauvegarde automatique toutes les 3 h dans le dernier dossier choisi ; autorisation à renouveler signalée dans le volet |
 | 04/11/2026 | `backup` retiré (malentendu : c'était `restore`) ; commande `restore` |
+| 04/11/2026 | Clic droit sur un GCBLO ou un FCI : copie dans le presse-papiers |
