@@ -43,6 +43,10 @@
   --statut-EN_VALIDATION: #34e2e2;
   --statut-MAD: #8ae234;
   --statut-REFUSE: #ef2929;
+  --statut-LITIGE: #fcaf3e;
+  --statut-ANNULE: #888a85;
+  --statut-ATTACH: #8ae234;
+  --ligne-ATTACH: rgba(138, 226, 52, .13);   /* fond vert clair d'une ligne au statut Attach */
 
   /* Alertes de relance */
   --retard: #ef2929;

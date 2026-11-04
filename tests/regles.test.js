@@ -306,3 +306,12 @@ groupe('Commune et valorisation', () => {
     egal(r.filtrer({ texte: 'haillan' }).length, 1);
   });
 });
+
+groupe('Statuts Litige, Annulé, Attach', () => {
+  test('Annulé et Attach sont clos : plus d\'alerte de relance ; Litige reste suivi', () => {
+    const r = creerDossiers(creerStore(supportMemoire()), { horloge: () => new Date(2026, 10, 4, 9) });
+    let n = 0;
+    const etat = statut => { const d = r.creer({ type: 'AIR', gcblo: `SBA50100${n++}-THF010`, dateRelance: '2026-10-01' }).dossier; return r.etatRelance(r.modifier(d.id, { statutDft: statut }).dossier); };
+    egal([etat('ANNULE'), etat('ATTACH'), etat('LITIGE')], [null, null, 'retard']);
+  });
+});

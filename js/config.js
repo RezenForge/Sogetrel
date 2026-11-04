@@ -23,7 +23,10 @@ export const STATUTS = Object.freeze([
   { code: 'A_FAIRE', libelle: 'À faire', clos: false },
   { code: 'EN_VALIDATION', libelle: 'En cours de validation', clos: false },
   { code: 'MAD', libelle: 'Mis à disposition', clos: true },
-  { code: 'REFUSE', libelle: 'Refusé', clos: false }
+  { code: 'REFUSE', libelle: 'Refusé', clos: false },
+  { code: 'LITIGE', libelle: 'Litige', clos: false },
+  { code: 'ANNULE', libelle: 'Annulé', clos: true },
+  { code: 'ATTACH', libelle: 'Attach', clos: true }           // attachement fait : la ligne est surlignée en vert clair
 ]);
 
 export const STATUT_PAR_DEFAUT = 'A_FAIRE';

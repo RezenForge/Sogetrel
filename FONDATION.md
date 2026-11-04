@@ -49,6 +49,9 @@ L'application s'ouvre par le lien GitHub Pages. Elle fonctionne sans serveur : l
 | `EN_VALIDATION` | En cours de validation | cyan | non |
 | `MAD` | Mis à disposition | vert | **oui** |
 | `REFUSE` | Refusé | rouge | non (à reprendre) |
+| `LITIGE` | Litige | orange | non (à suivre) |
+| `ANNULE` | Annulé | gris | oui |
+| `ATTACH` | Attach | vert ; **toute la ligne** de la liste en vert clair | oui (attachement fait) |
 
 Un dossier **clos** n'a plus d'alerte de relance.
 
@@ -335,3 +338,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | Commande `info` (`js/info.js`) ; une colonne collée dans la ligne de saisie devient une suite de mots séparés par des espaces |
 | 04/11/2026 | `info` : les GCBLO sont cherchés dans tout le texte collé (même recollés bout à bout, tirets variés) ; les mots ignorés sont comptés dans le bilan |
 | 04/11/2026 | `info` : un début de GCBLO seul (`SBA501023`) retrouve le dossier complet (fins -THF010, -THF011, -ACF010, -ACF011…) ; plusieurs dossiers possibles → tous affichés |
+| 04/11/2026 | Statuts Litige, Annulé (clos) et Attach (clos, ligne en vert clair) ; colonne RELANCE retirée de la liste ; « STATUT » devient « STATUT DFT » |

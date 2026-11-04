@@ -25,7 +25,7 @@ const CLE_HISTORIQUE = 'gcblo.v2.historique';
 /** L'invite, façon bash : utilisateur@machine:chemin$ */
 const INVITE = '<span class="pr-hote">dylan@gcblo</span>:<span class="pr-chemin">~</span>$';
 const TYPE_COURT = { NUM21: 'NUM21', AIR: 'AIR', SOGETREL: 'SOGE' };
-const STATUT_COURT = { A_FAIRE: 'À faire', EN_VALIDATION: 'En valid.', MAD: 'Mis à disp', REFUSE: 'Refusé' };
+const STATUT_COURT = { A_FAIRE: 'À faire', EN_VALIDATION: 'En valid.', MAD: 'Mis à disp', REFUSE: 'Refusé', LITIGE: 'Litige', ANNULE: 'Annulé', ATTACH: 'Attach' };
 
 /** Le GCBLO cliquable : un clic lance « open ‹gcblo› ». */
 const lienDossier = d => `<button type="button" class="lien c-dossier" data-commande="open ${esc(d.gcblo)}" title="open ${esc(d.gcblo)}">${esc(d.gcblo)}</button>`;
@@ -102,34 +102,30 @@ export function creerInvite({ racine, contexte }) {
     const col = (t, n) => esc(String(t).padEnd(n).slice(0, n));
     const coupe = (t, n) => (t.length > n ? t.slice(0, n - 1) + '…' : t);
     const lignes = dossiers.map(d => {
-      const alerte = contexte().regles.etatRelance(d);
-      const relance = d.dateRelance ? formater(d.dateRelance).slice(0, 5) + (alerte === 'retard' ? '!' : alerte === 'proche' ? '·' : '') : '—';
       const fci = d.fci.length ? d.fci[0] + (d.fci.length > 1 ? `+${d.fci.length - 1}` : '') : '';
       const commune = d.commune || '';
       const valo = d.valorisation !== null && d.valorisation !== undefined ? formaterMontant(d.valorisation).replace(/\s/g, ' ') : '';
       // Chaque cellule est éditable au double-clic, comme dans la fiche (data-champ, data-dossier)
       const ed = (cle, html) => `<span class="editable" data-champ="${cle}" data-dossier="${esc(d.id)}" title="double-clic pour modifier">${html}</span>`;
-      // Ordre des colonnes : AFFECT GCBLO COMMUNE VALO FCI RELANCE STATUT
+      // Ordre des colonnes : AFFECT GCBLO COMMUNE VALO FCI STATUT DFT
       // Grand écran : commune, valo et FCI en colonnes au milieu de la ligne
       const large = `<span class="col-large">${ed('commune', col(coupe(commune, 22) || '—', 22))} ${ed('valo', `<span class="valo">${esc((valo || '—').padStart(11))}</span>`)}  ${ed('fci', `<span class="dim">${col(fci || '—', 15)}</span>`)} </span>`;
       // Téléphone : les mêmes informations, dans le même ordre, sur une seconde ligne en retrait
       const infos = [['commune', commune], ['valo', valo], ['fci', fci]].filter(([, t]) => t).map(([cle, t]) => ed(cle, esc(t)));
       const etroit = infos.length ? `<span class="col-etroit dim">${infos.join(' · ')}</span>` : '';
-      return `${ed('affect', `<span class="ty-${d.type}">${col(TYPE_COURT[d.type] || d.type, 6)}</span>`)} `
+      // Une ligne = un bloc : le statut peut colorer toute la ligne (Attach : vert clair)
+      return `<span class="rangee rangee-${d.statutDft}">`
+        + `${ed('affect', `<span class="ty-${d.type}">${col(TYPE_COURT[d.type] || d.type, 6)}</span>`)} `
         + `${lienDossier(d)} `
         + large
-        + `${ed('relance', `<span class="${alerte || 'dim'}">${col(relance, 6)}</span>`)} `
-        + ed('statut', `<span class="st-${d.statutDft}">${col(STATUT_COURT[d.statutDft] || d.statutDft, 10)}</span>`)
-        // Fin de ligne : sur téléphone, la seconde ligne (bloc) termine déjà la ligne
-        + boutonMenu(d) + (etroit ? `${etroit}<span class="col-large">\n</span>` : '\n');
+        + ed('statut', `<span class="st-${d.statutDft}">${col(STATUT_COURT[d.statutDft] || d.statutDft, 11)}</span>`)
+        + boutonMenu(d) + etroit + '</span>';
     });
     // L'en-tête reste visible en haut de l'écran tant que la liste défile (CSS : sticky)
     const entete = `<span class="entete dim">${'AFFECT'.padEnd(7)}${'GCBLO'.padEnd(17)}`
-      + `<span class="col-large">${'COMMUNE'.padEnd(23)}${'VALO'.padStart(11)}  ${'FCI'.padEnd(16)}</span>`
-      + `${'RELANCE'.padEnd(8)}STATUT</span>`;
-    return `<pre class="tableau">${entete}${lignes.join('').replace(/\n$/, '')}</pre>`;
+      + `<span class="col-large">${'COMMUNE'.padEnd(23)}${'VALO'.padStart(11)}  ${'FCI'.padEnd(16)}</span>STATUT DFT</span>`;
+    return `<pre class="tableau">${entete}${lignes.join('')}</pre>`;
   }
-
 
   const ecran = {
     ligne(html, classe = '') {

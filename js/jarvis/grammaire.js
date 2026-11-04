@@ -57,7 +57,8 @@ export const MOTS_STATUT = Object.freeze({
   'a-faire': 'A_FAIRE', afaire: 'A_FAIRE',
   'en-validation': 'EN_VALIDATION', validation: 'EN_VALIDATION', 'en-cours': 'EN_VALIDATION',
   'mis-a-dispo': 'MAD', 'mis-a-disposition': 'MAD', mad: 'MAD', dispo: 'MAD',
-  refuse: 'REFUSE', refus: 'REFUSE'
+  refuse: 'REFUSE', refus: 'REFUSE',
+  litige: 'LITIGE', annule: 'ANNULE', attach: 'ATTACH', attache: 'ATTACH'
 });
 export const MOTS_TYPE = Object.freeze({ num21: 'NUM21', air: 'AIR', sogetrel: 'SOGETREL' });
 /** Périodes (jour, demain, semaine). */

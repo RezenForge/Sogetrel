@@ -40,6 +40,7 @@ groupe('Commandes ls, open, set, delete, cancel, clear, help', () => {
   test('set … to …', () => { const { a } = A('set 501404 to refuse'); vrai(a.complet); egal(a.valeurs.valeur, { statut: 'REFUSE' }); });
   test('le mot « to » peut être omis', () => vrai(A('set 501404 refuse').a.complet));
   test('plusieurs dossiers', () => egal(A('set 501404 501423 to mis-a-dispo').a.valeurs.cibles.length, 2));
+  test('nouveaux statuts : litige, annule, attach', () => egal(['litige', 'annule', 'attach'].map(m => A(`set 501404 to ${m}`).a.valeurs.valeur), [{ statut: 'LITIGE' }, { statut: 'ANNULE' }, { statut: 'ATTACH' }]));
   test('cancel, undo, clear, help', () => vrai(['cancel', 'undo', 'clear', 'help', 'help set', '? ls'].every(t => A(t).a.complet)));
   test('delete plusieurs dossiers', () => egal(A('delete 501404 501423').a.valeurs.cibles.length, 2));
   test('les anciens verbes français ne sont plus compris', () => egal(['ouvre', 'passe', 'annule', 'aide'].filter(t => A(t + ' ').a.commande), []));
@@ -59,7 +60,7 @@ groupe('Menu ⋯ : un clic = une commande', () => {
   const d = contexte().dossiers.find(x => x.gcblo === 'LRO500767-THF010');      // refusé
   const options = optionsDossier(d);
   test('ouvrir en premier', () => egal(options[0].commande, 'open LRO500767-THF010'));
-  test('pas de « passer en Refusé » pour un dossier déjà refusé', () => egal(options.slice(1, -2).map(o => o.libelle), ['→ À faire', '→ En cours de validation', '→ Mis à disposition']));
+  test('pas de « passer en Refusé » pour un dossier déjà refusé', () => egal(options.slice(1, -2).map(o => o.libelle), ['→ À faire', '→ En cours de validation', '→ Mis à disposition', '→ Litige', '→ Annulé', '→ Attach']));
   test('chaque choix est une commande complète et comprise', () => {
     const ctx = contexte();
     egal(options.filter(o => !analyser(o.commande, o.commande.length, ctx).complet).map(o => o.commande), []);
