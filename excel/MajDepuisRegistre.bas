@@ -35,10 +35,12 @@ Private Const COL_FCI As String = "J"
 Private Const PREMIERE_LIGNE As Long = 2
 Private Const ONGLET_JOURNAL As String = "Journal registre"
 Private Const APPLI As String = "RegistreGCBLO"
+Private Const TITRE As String = "Mise a jour depuis le registre"
 
 Private journal As Worksheet
 Private nbModifs As Long
 Private nbIgnores As Long
+Private cible As Workbook           ' le classeur a mettre a jour (IMMO-COORDI-DISSIM)
 Private faits As Collection          ' ce que la macro a fait, pour la fenetre de compte rendu
 
 ' Textes avec accents, construits ici pour ne pas dependre de l'encodage du module
@@ -57,8 +59,20 @@ Public Sub MajDepuisRegistre()
     Dim cle As String, filtre As String, info As Variant
     Dim ancienJ As String, nouveauJ As String, vus As Long, absents As String
 
+    Set cible = ClasseurCible()
+    If cible Is Nothing Then
+        MsgBox "Classeur IMMO-COORDI-DISSIM introuvable : ouvrez-le dans Excel (application de bureau), puis relancez la macro.", vbExclamation, TITRE
+        Exit Sub
+    End If
+
     chemin = CheminCsv()
-    If chemin = "" Then Exit Sub
+    If chemin = "" Then
+        MsgBox "Aucun fichier choisi : rien n'a " & ChrW(233) & "t" & ChrW(233) & " fait." & vbCrLf & vbCrLf & _
+               "Le fichier registre-gcblo.csv est " & ChrW(233) & "crit par le registre " & ChrW(224) & " chaque sauvegarde, " & _
+               "dans le dossier des sauvegardes. S'il n'y est pas, tapez sauvegarde dans le registre " & _
+               "(apr" & ChrW(232) & "s Ctrl+F5 pour avoir la derni" & ChrW(232) & "re version de la page).", vbExclamation, TITRE
+        Exit Sub
+    End If
 
     Set registre = LireRegistre(chemin)
     If registre Is Nothing Then Exit Sub
@@ -74,7 +88,7 @@ Public Sub MajDepuisRegistre()
     For Each nomOnglet In Split(ONGLETS, ",")
         Set ws = Nothing
         On Error Resume Next
-        Set ws = ThisWorkbook.Worksheets(Trim$(nomOnglet))
+        Set ws = cible.Worksheets(Trim$(nomOnglet))
         On Error GoTo Fin
         If ws Is Nothing Then
             absents = absents & " " & Trim$(nomOnglet)
@@ -120,11 +134,36 @@ Fin:
 
     If nbModifs + nbIgnores = 0 And erreur = "" Then
         MsgBox "Tout est d" & ChrW(233) & "j" & ChrW(224) & " " & ChrW(224) & " jour." & vbCrLf & vbCrLf & Replace(bilan, "  " & ChrW(183) & "  ", vbCrLf), _
-               vbInformation, "Mise " & ChrW(224) & " jour depuis le registre"
+               vbInformation, TITRE
     Else
-        CompteRendu bilan, erreur
+        If Not CompteRendu(bilan, erreur) Then
+            MsgBox Replace(bilan, "  " & ChrW(183) & "  ", vbCrLf) & erreur & vbCrLf & vbCrLf & _
+                   "D" & ChrW(233) & "tail : onglet " & ONGLET_JOURNAL, vbInformation, TITRE
+        End If
     End If
 End Sub
+
+'------------------------------------------------------------------------------
+' Le classeur a mettre a jour : celui qui contient la macro s'il a l'onglet 33,
+' sinon un classeur ouvert dont le nom commence par IMMO-COORDI-DISSIM,
+' sinon le classeur actif s'il a l'onglet 33.
+Private Function ClasseurCible() As Workbook
+    Dim wb As Workbook
+    If AOnglet(ThisWorkbook, "33") Then Set ClasseurCible = ThisWorkbook: Exit Function
+    For Each wb In Application.Workbooks
+        If UCase$(wb.Name) Like "IMMO-COORDI-DISSIM*" Then Set ClasseurCible = wb: Exit Function
+    Next wb
+    If Not ActiveWorkbook Is Nothing Then
+        If AOnglet(ActiveWorkbook, "33") Then Set ClasseurCible = ActiveWorkbook
+    End If
+End Function
+
+Private Function AOnglet(wb As Workbook, nom As String) As Boolean
+    Dim ws As Worksheet
+    On Error Resume Next
+    Set ws = wb.Worksheets(nom)
+    AOnglet = Not ws Is Nothing
+End Function
 
 '------------------------------------------------------------------------------
 ' Nouveau texte de J. Garde le texte autour de la mention "Numéro de commande FCI :".
@@ -192,13 +231,14 @@ End Sub
 '------------------------------------------------------------------------------
 ' Compte rendu dans une fenetre a part : un classeur temporaire, jamais enregistre,
 ' qui se ferme sans question. Le classeur partage n'est pas touche.
-Private Sub CompteRendu(bilan As String, erreur As String)
+Private Function CompteRendu(bilan As String, erreur As String) As Boolean
     Dim wb As Workbook, ws As Worksheet, f As Variant, r As Long, n As Long
     Dim vert As Long, orange As Long, quoi As String
 
     On Error Resume Next
     Application.ScreenUpdating = False
     Set wb = Workbooks.Add(xlWBATWorksheet)
+    If wb Is Nothing Then Application.ScreenUpdating = True: Exit Function
     Set ws = wb.Worksheets(1)
     ws.Name = "Compte rendu"
     ActiveWindow.DisplayGridlines = False
@@ -207,7 +247,7 @@ Private Sub CompteRendu(bilan As String, erreur As String)
     vert = RGB(226, 239, 218): orange = RGB(252, 228, 214)
 
     With ws.Range("A1")
-        .Value = "Mise " & ChrW(224) & " jour de " & ThisWorkbook.Name & " depuis le registre GCBLO"
+        .Value = "Mise " & ChrW(224) & " jour de " & cible.Name & " depuis le registre GCBLO"
         .Font.Bold = True: .Font.Size = 14
     End With
     ws.Range("A2").Value = Format(Now, "dddd d mmmm yyyy") & " " & ChrW(224) & " " & Format(Now, "hh:mm")
@@ -241,7 +281,7 @@ Private Sub CompteRendu(bilan As String, erreur As String)
             ws.Range(ws.Cells(r, 1), ws.Cells(r, 8)).Interior.Color = orange
         End If
         ' Lien vers la cellule dans le classeur partage
-        ws.Hyperlinks.Add Anchor:=ws.Cells(r, 8), Address:=ThisWorkbook.FullName, _
+        ws.Hyperlinks.Add Anchor:=ws.Cells(r, 8), Address:=cible.FullName, _
             SubAddress:="'" & f(0) & "'!" & f(3) & f(1), TextToDisplay:="voir"
     Next f
 
@@ -259,15 +299,16 @@ Private Sub CompteRendu(bilan As String, erreur As String)
     wb.Saved = True                  ' se ferme sans demander d'enregistrer
     Application.ScreenUpdating = True
     wb.Activate
-End Sub
+    CompteRendu = True
+End Function
 
 Private Function FeuilleJournal() As Worksheet
     Dim ws As Worksheet
     On Error Resume Next
-    Set ws = ThisWorkbook.Worksheets(ONGLET_JOURNAL)
+    Set ws = cible.Worksheets(ONGLET_JOURNAL)
     On Error GoTo 0
     If ws Is Nothing Then
-        Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))
+        Set ws = cible.Worksheets.Add(After:=cible.Worksheets(cible.Worksheets.Count))
         ws.Name = ONGLET_JOURNAL
         ws.Range("A1:G1").Value = Array("Date", "Onglet", "Ligne", "GCBLO", "Colonne", "Avant", "Apr" & ChrW(232) & "s")
         ws.Range("H1").Value = "Remarque"
@@ -321,10 +362,10 @@ Private Function LireRegistre(chemin As String) As Object
     Exit Function
 
 MauvaisFormat:
-    MsgBox "Ce fichier n'est pas un registre-gcblo.csv (en-t" & ChrW(234) & "tes GCBLO, FCI, CODE STATUT attendus) :" & vbCrLf & chemin, vbExclamation
+    MsgBox "Ce fichier n'est pas un registre-gcblo.csv (en-t" & ChrW(234) & "tes GCBLO, FCI, CODE STATUT attendus) :" & vbCrLf & chemin, vbExclamation, TITRE
     Exit Function
 Echec:
-    MsgBox "Lecture impossible :" & vbCrLf & chemin & vbCrLf & Err.Description, vbExclamation
+    MsgBox "Lecture impossible :" & vbCrLf & chemin & vbCrLf & Err.Description, vbExclamation, TITRE
 End Function
 
 Private Function NormaliserGcblo(ByVal s As String) As String
