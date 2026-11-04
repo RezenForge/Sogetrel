@@ -80,7 +80,7 @@ Un dossier **clos** n'a plus d'alerte de relance.
     - `attachement ‹dossier›` : une copie de la référence est remplie, sur sa **première feuille** : **X5** = commune du dossier, **AG5** = date du jour (format date si la cellule en a un), **U6** = GCBLO.
     - Selon la **valorisation**, le palier le plus proche est coché : proche de **30** → `ANNEX` en A30 et `1` en AB30 ; proche de **60** → en plus `BLOCS` en A31 et `1` en AB31. « Proche » = à 15 au plus du palier (réglable). Sans valorisation, ou trop loin des deux paliers, les lignes 30-31 restent vides et c'est signalé.
     - L'explorateur de fichiers s'ouvre pour choisir **où enregistrer** le fichier, nommé `‹GCBLO›.xlsx` (ou `.xlsm` si la référence contient des macros). Les navigateurs qui ne savent pas ouvrir cet explorateur (téléphones, Firefox) le téléchargent.
-    - Le reste du classeur (mise en forme, formules, macros) n'est pas touché ; Excel recalcule les formules à l'ouverture. Une ligne « Attachement créé » s'ajoute à l'historique du dossier.
+    - Le reste du classeur (mise en forme, formules, macros) n'est pas touché ; Excel recalcule les formules à l'ouverture. Une ligne « Attachement créé » s'ajoute à l'historique du dossier, et le dossier **passe au statut Attach** (annulable avec `cancel` ; rien ne change si l'enregistrement est abandonné).
     - Cellules et paliers sont réglés dans `config.js` (`ATTACHEMENT`).
 
 Toutes ces règles vivent dans **un seul fichier** (`js/dossiers.js`), et chacune a un test.
@@ -339,3 +339,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | `info` : les GCBLO sont cherchés dans tout le texte collé (même recollés bout à bout, tirets variés) ; les mots ignorés sont comptés dans le bilan |
 | 04/11/2026 | `info` : un début de GCBLO seul (`SBA501023`) retrouve le dossier complet (fins -THF010, -THF011, -ACF010, -ACF011…) ; plusieurs dossiers possibles → tous affichés |
 | 04/11/2026 | Statuts Litige, Annulé (clos) et Attach (clos, ligne en vert clair) ; colonne RELANCE retirée de la liste ; « STATUT » devient « STATUT DFT » |
+| 04/11/2026 | `attachement ‹dossier›` : le dossier passe au statut Attach une fois le fichier enregistré |

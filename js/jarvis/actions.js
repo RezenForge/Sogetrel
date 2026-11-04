@@ -172,7 +172,12 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       const r = await enregistrerFichier(nom, octets);
       if (r === 'annule') return info('non enregistré');
       regles.noterAttachement(d.id, palier?.nom);
-      ok(`${esc(nom)} ${r === 'telecharge' ? 'téléchargé' : 'enregistré'}${palier ? ` <span class="dim">· ${esc(palier.nom)}</span>` : ''}`);
+      // Attachement fait : le dossier passe au statut Attach (annulable)
+      const m = regles.modifier(d.id, { statutDft: 'ATTACH' });
+      const passe = m.ok && !m.inchange;
+      if (passe) annulation = { libelle: `statut Attach de ${d.gcblo}`, faire: () => regles.restaurer([m.avant]) };
+      ok(`${esc(nom)} ${r === 'telecharge' ? 'téléchargé' : 'enregistré'}${palier ? ` <span class="dim">· ${esc(palier.nom)}</span>` : ''}`
+        + (passe ? ` <span class="dim">·</span> statut → <span class="st-ATTACH">Attach</span> <span class="dim">·</span> ${LIEN_ANNULE}` : ''));
     },
 
     cancel() {

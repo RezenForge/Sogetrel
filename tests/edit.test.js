@@ -62,3 +62,34 @@ groupe('edit — modifications', () => {
     await e.lancer('cancel'); egal(e.get().commune, 'Mérignac');
   });
 });
+
+groupe('attachement → statut Attach', () => {
+  const preparer = async enregistrement => {
+    const { lireClasseur } = await import('../js/xlsx.js');
+    const { coffreMemoire } = await import('../js/coffre.js');
+    const store = creerStore(supportMemoire());
+    const regles = creerDossiers(store, { horloge: () => new Date(2026, 10, 4, 9) });
+    const d = regles.creer({ type: 'AIR', gcblo: 'SBA501404-THF010', commune: 'Mérignac', valorisation: 30 }).dossier;
+    const coffre = coffreMemoire();
+    const octets = new Uint8Array(await (await fetch(new URL('./donnees/attachement-reference.xlsx', import.meta.url))).arrayBuffer());
+    await lireClasseur(octets);
+    await coffre.ecrire('attachement-reference', { nom: 'ref.xlsx', octets });
+    const lignes = [];
+    const ecran = { ligne: h => lignes.push(h), tableau() {}, fiche() {}, vider() {} };
+    const actions = creerActions({ regles, store, ecran, coffre, enregistrerFichier: async () => enregistrement, confirmer: async () => true, demander: async () => null });
+    const lancer = t => actions.executer(analyser(t, t.length, { dossiers: store.tous(), aujourdhui: '2026-11-04', regles }));
+    return { store, d, lancer, lignes };
+  };
+  test('fichier enregistré : statut Attach, annulable', async () => {
+    const e = await preparer('enregistre');
+    await e.lancer('attachement 501404');
+    egal(e.store.parId(e.d.id).statutDft, 'ATTACH');
+    await e.lancer('cancel');
+    egal(e.store.parId(e.d.id).statutDft, 'A_FAIRE');
+  });
+  test('enregistrement abandonné : statut inchangé', async () => {
+    const e = await preparer('annule');
+    await e.lancer('attachement 501404');
+    egal(e.store.parId(e.d.id).statutDft, 'A_FAIRE');
+  });
+});
