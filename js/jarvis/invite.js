@@ -379,13 +379,16 @@ export function creerInvite({ racine, contexte }) {
     } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       const delta = e.key === 'ArrowDown' ? 1 : -1;
-      if (ouvert && (champ.value.trim() || etat.choisi >= 0)) {
+      // Dans l'historique (↑ déjà utilisé, rien tapé depuis) : ↑ ↓ continuent dans l'historique,
+      // la liste de propositions reste fermée. Sinon ↑ ↓ choisissent une proposition.
+      if (ouvert && posHistorique < 0 && (champ.value.trim() || etat.choisi >= 0)) {
         etat.choisi = (etat.choisi + delta + n) % n; dessinerPropositions();
       } else if (historique.length) {
         posHistorique = Math.max(-1, Math.min(historique.length - 1, posHistorique - delta));
         champ.value = posHistorique >= 0 ? historique[posHistorique] : '';
         champ.setSelectionRange(champ.value.length, champ.value.length);
         const garde = posHistorique; rafraichir(); posHistorique = garde;
+        listeEl.hidden = true; etat.choisi = -1;
       }
     } else if (e.key === 'Enter') {
       e.preventDefault();
