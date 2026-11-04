@@ -14,6 +14,7 @@ import { creerCoffre } from './coffre.js';
 import { aSupprimer, nomSauvegarde, contenuSauvegarde } from './sauvegarde.js';
 import { csvRegistre, NOM_CSV, NOM_CSV_CLASSEUR, lireCsvClasseur } from './export-excel.js';
 import { extraireDossiers, appliquerImport } from './import-excel.js';
+import { lireAffectsClasseur, noterAffectsClasseur, ecartAffect } from './affects-classeur.js';
 import { SAUVEGARDE_AUTO_HEURES } from './config.js';
 import { aujourdhui } from './dates.js';
 import { convertirV1, lireV1Navigateur } from './reprise-v1.js';
@@ -105,6 +106,7 @@ async function lireClasseurPartage(dossier) {
   try { poignee = await dossier.getFileHandle(NOM_CSV_CLASSEUR); } catch { return null; }
   const fichier = await poignee.getFile();
   const r = extraireDossiers(lireCsvClasseur(await fichier.text()), store.tous());
+  noterAffectsClasseur(r.affects);
   const fait = appliquerImport(regles, r, 'classeur partagé');
   return { lus: r.lus, crees: fait.crees.map(d => d.gcblo), completes: fait.avant.length, refuses: r.refuses.length + fait.refuses.length, le: fichier.lastModified };
 }
@@ -292,7 +294,9 @@ invite.brancher(analyse => actions.executer(analyse));
 /* 5. Le tableau de bord à droite : redessiné à chaque changement, et chaque minute (date, retards). */
 const tableauBord = document.getElementById('tableauBord');
 const derniereSauvegarde = () => { try { return localStorage.getItem(CLE_DERNIERE_SAUVEGARDE); } catch { return null; } };
-function dessinerBord() { tableauBord.innerHTML = `<div class="dessin">${dessinerTableauBord(regles.statistiques(), regles.aujourdhui(), { derniereSauvegarde: derniereSauvegarde(), maintenant: new Date() }).html}</div>`; }
+/** Nombre de dossiers dont l'affect diffère de la colonne I (tableau de bord). */
+function nbEcartsAffect() { const a = lireAffectsClasseur(); return store.tous().filter(d => ecartAffect(d, a)).length; }
+function dessinerBord() { tableauBord.innerHTML = `<div class="dessin">${dessinerTableauBord(regles.statistiques(), regles.aujourdhui(), { derniereSauvegarde: derniereSauvegarde(), maintenant: new Date(), ecartsAffect: nbEcartsAffect() }).html}</div>`; }
 store.ecouter(dessinerBord);
 setInterval(() => { dessinerBord(); sauvegardeAutomatique(); }, 60 * 1000);
 dessinerBord();

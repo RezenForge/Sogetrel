@@ -79,6 +79,7 @@ js/collage.js            lit une liste collée (Excel, mail, classeur robot)
 js/xlsx.js               lit un classeur Excel (.xlsx, .xlsm) et en écrit une copie modifiée, sans bibliothèque
 js/import-excel.js       quels dossiers et FCI prendre dans le classeur (commande import)
 js/attachement.js        quelles cellules remplir dans l'attachement d'un dossier
+js/affects-classeur.js   affect de la colonne I retenu, écarts avec le registre (ls ecart-affect)
 js/info.js               retrouve les dossiers d'une liste collée (ls avec une colonne de GCBLO)
 js/sauvegarde.js         nom, contenu et rotation des sauvegardes
 js/export-excel.js       registre-gcblo.csv (vers le classeur) · lecture de classeur-gcblo.csv
@@ -92,7 +93,7 @@ js/jarvis/actions.js     exécute une commande via les règles
 js/jarvis/menus.js       le menu ⋯ d'un dossier : des commandes écrites à l'avance
 js/jarvis/tableau-bord.js le tableau de bord ASCII, toujours visible à droite
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   225 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
+tests/                   233 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
 ```
 
 ## Classeur partagé IMMO-COORDI-DISSIM.xlsm
@@ -106,5 +107,7 @@ Le registre écrit `registre-gcblo.csv` à chaque sauvegarde (manuelle ou toutes
 La relancer ne change rien de plus : un FCI déjà présent et un `FACTU` déjà posé ne sont pas réécrits.
 
 **Installer la macro (une fois)** : dans le classeur, Alt+F11, *Fichier › Importer un fichier…*, choisir `excel/MajDepuisRegistre.bas`, enregistrer. **Lancer** : Alt+F8 › `MajDepuisRegistre`. La première fois, elle demande où est `registre-gcblo.csv` (le dossier des sauvegardes). `ChoisirCsvRegistre` permet d'en changer.
+
+**Écarts d'affect** : l'affect d'un dossier déjà au registre n'est jamais changé par un import ; `ls ecart-affect` (ou « ≠ colonne I » au tableau de bord) liste les dossiers dont l'affect diffère de la colonne I, avec les deux valeurs. On corrige à la main.
 
 **Dans l'autre sens**, la macro écrit aussi `classeur-gcblo.csv` dans le même dossier : les lignes « GCBLO » du classeur ouvert, même non enregistrées. À chaque sauvegarde (manuelle ou toutes les heures), le registre lit ce fichier et crée les nouveaux GCBLO, ou complète ce qui manque, comme `import`. Rien n'est remplacé. La commande `import` reste possible.

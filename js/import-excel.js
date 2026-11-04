@@ -68,6 +68,9 @@ export function extraireDossiers(classeur, existants = [], reglages = IMPORT_EXC
       // Type : le premier lisible l'emporte ; un type illisible est signalé, le type sera demandé
       const typeLu = String(cellules[colonnes.type] ?? '').trim();
       if (!t.type) { t.type = lireType(typeLu); if (!t.type && typeLu) t.typeLu = typeLu; }
+      // Toutes les valeurs de la colonne I, pour repérer les écarts avec le registre (affects-classeur.js)
+      t.affectsLus ||= [];
+      if (typeLu && !t.affectsLus.includes(typeLu)) t.affectsLus.push(typeLu);
       if (fci && FORMATS.fci.test(fci) && !t.fci.includes(fci)) t.fci.push(fci);
       // Commune (G) et valorisation (H, en euros) : la première valeur non vide l'emporte
       const commune = String(cellules[colonnes.commune] ?? '').trim();
@@ -92,7 +95,9 @@ export function extraireDossiers(classeur, existants = [], reglages = IMPORT_EXC
     if ((d.valorisation ?? null) === null && t.valorisation !== null) changements.valorisation = t.valorisation;
     if (Object.keys(changements).length) completes.push({ dossier: d, changements }); else deja++;
   }
-  return { lus, nouveaux, completes, deja, refuses, ongletsAbsents: onglets.filter(o => !classeur.feuilles[o]) };
+  // GCBLO → valeurs de la colonne I (vide : [])
+  const affects = Object.fromEntries([...trouves.values()].map(t => [t.gcblo, t.affectsLus || []]));
+  return { lus, nouveaux, completes, deja, refuses, affects, ongletsAbsents: onglets.filter(o => !classeur.feuilles[o]) };
 }
 
 /**

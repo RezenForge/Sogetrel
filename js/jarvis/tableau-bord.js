@@ -76,7 +76,7 @@ export function ageSauvegarde(iso, maintenant) {
   return [texte, jours > 7 ? 'retard' : jours > 2 ? 'proche' : 'st-ATTACH'];
 }
 
-export function dessinerTableauBord(s, jour, { derniereSauvegarde = undefined, maintenant = new Date() } = {}) {
+export function dessinerTableauBord(s, jour, { derniereSauvegarde = undefined, maintenant = new Date(), ecartsAffect = 0 } = {}) {
   const date = depuisJour(jour).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' }).replace('.', '');
   const total = s.total;
   const lignes = [cadre('tableau de bord', date)];
@@ -86,6 +86,8 @@ export function dessinerTableauBord(s, jour, { derniereSauvegarde = undefined, m
   TYPES.forEach(t => lignes.push(rangeeBarre(t.libelle, s.parType[t.code], total, `ty-${t.code}`, `ls ${motPourCode(MOTS_TYPE, t.code)}`)));
   // « - » : les dossiers sans affect (toujours affiché, cliquable comme les autres)
   lignes.push(rangeeBarre('-', s.parType.SANS || 0, total, 'proche', 'ls sans-affect'));
+  // Écarts avec la colonne I du classeur partagé (affiché seulement s'il y en a)
+  if (ecartsAffect) lignes.push(rangee(['≠ colonne I', 'dim', 'ls ecart-affect'], [String(ecartsAffect).padStart(INTERIEUR - 11), 'retard', 'ls ecart-affect']));
 
   lignes.push(separation('statut DFT'));
   STATUTS.forEach(st => lignes.push(rangeeBarre(COURT[st.code] || st.libelle, s.parStatut[st.code], total, `st-${st.code}`, `ls ${motPourCode(MOTS_STATUT, st.code)}`)));

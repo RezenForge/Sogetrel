@@ -310,7 +310,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
      * `texte` cherche dans le GCBLO, les FCI et le commentaire (sans tenir compte
      * des majuscules, des accents ni des tirets).
      */
-    filtrer({ texte = '', type = '', statut = '', retard = false, proche = false, sansFci = false, fciRetard = false, sansValo = false, sansAffect = false, dates = [], masquer = [] } = {}, liste = store.tous()) {
+    filtrer({ texte = '', type = '', statut = '', retard = false, proche = false, sansFci = false, fciRetard = false, sansValo = false, sansAffect = false, dates = [], masquer = [], parmi = null } = {}, liste = store.tous()) {
       const plat = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/-/g, '');
       const mots = plat(texte).split(/\s+/).filter(Boolean);
       const ref = jour();
@@ -326,6 +326,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
         (!fciRetard || fciEnRetard(d, ref)) &&
         (!sansValo || d.valorisation === null || d.valorisation === undefined) &&
         (!sansAffect || !d.type) &&
+        (!parmi || parmi.has(d.id)) &&
         // Date d'affectation : un jour (« 12/03 ») ou un mois (« 03/2026 ») ; plusieurs = l'un ou l'autre
         (!dates.length || dates.some(f => (f.jour ? d.dateAffectation === f.jour : (d.dateAffectation || '').startsWith(`${f.mois}-`)))) &&
         mots.every(m => plat(`${d.gcblo} ${d.fci.join(' ')} ${d.commune || ''} ${d.commentaire}`).includes(m)));

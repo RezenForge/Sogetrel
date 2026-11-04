@@ -32,6 +32,7 @@ import { cellulesAttachement } from '../attachement.js';
 import { mailAffectation, mailRelance, lienMailto, AFFECTS_MAIL } from '../mails.js';
 import { contenuSauvegarde, nomSauvegarde, lireSauvegarde, GARDER } from '../sauvegarde.js';
 import { extraireDossiers, appliquerImport } from '../import-excel.js';
+import { lireAffectsClasseur, noterAffectsClasseur, ecartAffect } from '../affects-classeur.js';
 import { typeParCode, statutParCode } from '../config.js';
 
 /** Échappe un texte avant de l'insérer dans du HTML. */
@@ -79,6 +80,14 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       if (!liste.length) return info(store.tous().length ? `aucun dossier ne correspond${note}` : 'aucun dossier enregistré');
       ecran.tableau(liste);
       info(`<span class="dim">${pluriel(liste.length, 'dossier', 'dossiers')}${note}</span>`);
+      // Écarts d'affect : ce que dit la colonne I pour chacun (correction : double-clic sur la case affect)
+      if (criteresListe(v).ecartAffect) {
+        const affects = lireAffectsClasseur();
+        for (const d of liste) {
+          const e = ecartAffect(d, affects);
+          if (e) info(`${esc(d.gcblo)} <span class="dim">· registre</span> ${esc(typeParCode(d.type)?.libelle || '—')} <span class="dim">· colonne I</span> ${esc(e.classeur.join(' / '))}`);
+        }
+      }
     },
 
     open(v) { ecran.fiche(store.parId(v.cible.id) || v.cible); },
@@ -173,6 +182,7 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       let classeur;
       try { classeur = await lireClasseur(await fichier.arrayBuffer(), { onglets: IMPORT_EXCEL.onglets }); } catch (e) { return erreur(esc(e.message)); }
       const r = extraireDossiers(classeur, store.tous());
+      noterAffectsClasseur(r.affects);
       if (r.ongletsAbsents.length === IMPORT_EXCEL.onglets.length) return erreur(`aucun onglet ${IMPORT_EXCEL.onglets.join(', ')} dans ${esc(fichier.name)}`);
 
       const bilan = [pluriel(r.lus, 'ligne GCBLO', 'lignes GCBLO'), r.nouveaux.length && pluriel(r.nouveaux.length, 'nouveau', 'nouveaux'),

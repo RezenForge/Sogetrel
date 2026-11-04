@@ -20,6 +20,7 @@ import { COMMANDES, MOTS_STATUT, MOTS_TYPE, MOTS_FILTRE, GROUPES, PERIODES, JOUR
 import { FORMATS, typeParCode } from '../config.js';
 import { normaliserGcblo, etatRelance } from '../dossiers.js';
 import { chercherListe } from '../info.js';
+import { lireAffectsClasseur, ecartAffect } from '../affects-classeur.js';
 import { estEmail } from '../reglages.js';
 import { ajouterJours, ecartJours, estJour, versJour } from '../dates.js';
 
@@ -353,6 +354,11 @@ export function resultatLs(criteres, regles, dossiers) {
   if ((criteres.texte.match(MOTIF_DEBUT_GCBLO) || []).length >= 2) {
     const collee = chercherListe(criteres.texte, dossiers);
     return { liste: regles.filtrer({ ...criteres, texte: '', masquer: [] }, collee.trouves), collee, masques: 0 };
+  }
+  // « ls ecart-affect » : les dossiers dont l'affect diffère de la colonne I du classeur partagé
+  if (criteres.ecartAffect) {
+    const affects = lireAffectsClasseur();
+    criteres = { ...criteres, parmi: new Set(dossiers.filter(d => ecartAffect(d, affects)).map(d => d.id)) };
   }
   const liste = regles.trier(regles.filtrer(criteres), { cle: 'dateAffectation', sens: 'desc' });
   // Combien de dossiers Attach sont masqués par ce filtre (visibles avec « ls attach »)

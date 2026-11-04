@@ -72,7 +72,7 @@ export const PERIODES = Object.freeze({ jour: 'jour', aujourdhui: 'jour', demain
 
 /** Groupes de dossiers utilisables à la place d'une référence (là où plusieurs dossiers sont acceptés). */
 export const GROUPES = Object.freeze({ retard: 'retard', proches: 'proche' });
-export const MOTS_FILTRE = Object.freeze({ retard: 'retard', 'en-retard': 'retard', proches: 'proche', 'sans-fci': 'sansFci', sansfci: 'sansFci', 'fci-retard': 'fciRetard', 'sans-valo': 'sansValo', sansvalo: 'sansValo', 'sans-affect': 'sansAffect' });
+export const MOTS_FILTRE = Object.freeze({ retard: 'retard', 'en-retard': 'retard', proches: 'proche', 'sans-fci': 'sansFci', sansfci: 'sansFci', 'fci-retard': 'fciRetard', 'sans-valo': 'sansValo', sansvalo: 'sansValo', 'sans-affect': 'sansAffect', 'ecart-affect': 'ecartAffect' });
 
 /**
  * Champs modifiables avec « edit » (et au double-clic dans une fiche) : mot affiché → champ du dossier.
