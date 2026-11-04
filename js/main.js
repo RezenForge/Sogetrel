@@ -117,6 +117,21 @@ async function ecrireSauvegarde(dossier, nom, contenu) {
   return { supprimes, classeur };
 }
 
+/**
+ * Le dossier de sauvegarde retenu, s'il est encore accessible. Si le navigateur redemande
+ * l'accès (après une fermeture), il affiche une petite question « Autoriser » : pas d'explorateur.
+ */
+async function dossierConnu() {
+  let dossier;
+  try { dossier = await coffre.lire('dossier-sauvegarde'); } catch { return null; }
+  if (!dossier?.queryPermission) return null;
+  try {
+    if (await dossier.queryPermission({ mode: 'readwrite' }) === 'granted') return dossier;
+    if (await dossier.requestPermission({ mode: 'readwrite' }) === 'granted') return dossier;
+  } catch { /* refusé, ou dossier disparu */ }
+  return null;
+}
+
 /*
  * Sauvegarde automatique toutes les SAUVEGARDE_AUTO_HEURES heures, tant que l'appli est ouverte,
  * dans le dernier dossier choisi avec « sauvegarde ». Le navigateur peut redemander l'autorisation
@@ -230,7 +245,8 @@ const actions = creerActions({
   // Sauvegarde : on choisit un dossier (Chrome, Edge), le fichier y est écrit, et seules
   // les 3 sauvegardes les plus récentes y restent. Ailleurs : téléchargement simple.
   // Sauvegarde : on choisit un dossier (Chrome, Edge) ; il est retenu pour les sauvegardes automatiques
-  sauvegarderDans: async (nom, texte) => {
+  // Le dossier déjà choisi est réutilisé sans rien demander ; « sauvegarde dossier » (changer) en choisit un autre
+  sauvegarderDans: async (nom, texte, { changer = false } = {}) => {
     if (!window.showDirectoryPicker) {
       if (typeof texte === 'function') texte = texte();
       const url = URL.createObjectURL(new Blob([texte], { type: 'application/json' }));
@@ -239,8 +255,12 @@ const actions = creerActions({
       noterSauvegarde();
       return { etat: 'telecharge' };
     }
+    let dossier = changer ? null : await dossierConnu();
+    if (dossier) {
+      const { supprimes, classeur } = await ecrireSauvegarde(dossier, nom, texte);
+      return { etat: 'enregistre', dossier: dossier.name, supprimes, classeur };
+    }
     await avantExplorateur();
-    let dossier;
     try {
       // « id » : le navigateur rouvre l'explorateur dans le dernier dossier choisi
       dossier = await window.showDirectoryPicker({ id: 'gcblo-sauvegardes', mode: 'readwrite' });
@@ -278,4 +298,4 @@ invite.rafraichir();
 invite.focus();
 
 // Accès depuis la console du navigateur, pour dépanner : window.gcblo.store.tous()
-window.gcblo = { store, regles, esc };
+window.gcblo = { store, regles, esc, coffre };

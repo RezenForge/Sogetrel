@@ -17,7 +17,7 @@
  *   choisirFichier(types)    → Promise<File|null>  (ouvre l'explorateur de fichiers)
  *   enregistrerFichier(nom, octets) → Promise<'enregistre'|'telecharge'|'annule'>  (explorateur « Enregistrer sous »)
  *   coffre                   fichiers gardés dans le navigateur (la référence d'attachement)
- *   sauvegarderDans(nom, texte) → Promise<{ etat: 'enregistre'|'telecharge'|'annule', dossier?, supprimes? }>
+ *   sauvegarderDans(nom, texte, { changer }) → Promise<{ etat: 'enregistre'|'telecharge'|'annule', dossier?, supprimes? }>
  *   choisirSauvegarde()      → Promise<File|null>  (explorateur, ouvert si possible dans le dossier des sauvegardes)
  *   choisirDossier(id)       → Promise<dossier|'telechargement'|null>  (explorateur de dossiers ; null = abandon)
  *   ecrireDansDossier(dossier, nom, octets) → Promise  (écrit ou remplace un fichier dans ce dossier)
@@ -267,12 +267,12 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
     },
 
     /** Sauvegarde toute la base dans un dossier choisi ; seules les 3 plus récentes y sont gardées. */
-    async sauvegarde() {
+    async sauvegarde(v = {}) {
       const maintenant = new Date();
       const nom = nomSauvegarde(maintenant);
       // Le contenu est calculé au dernier moment : après la lecture de classeur-gcblo.csv (R14)
       let r;
-      try { r = await sauvegarderDans(nom, () => contenuSauvegarde(store.tous(), maintenant)); } catch (e) { return erreur(`sauvegarde impossible : ${esc(e.message)}`); }
+      try { r = await sauvegarderDans(nom, () => contenuSauvegarde(store.tous(), maintenant), { changer: v.option === 'dossier' }); } catch (e) { return erreur(`sauvegarde impossible : ${esc(e.message)}`); }
       if (r.etat === 'annule') return info('aucun dossier choisi');
       const n = store.tous().length;
       if (r.etat === 'telecharge') return ok(`${esc(nom)} téléchargé <span class="dim">· ${pluriel(n, 'dossier', 'dossiers')}</span>`);

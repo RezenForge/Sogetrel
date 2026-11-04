@@ -189,7 +189,7 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 | Annuler | `cancel` (aussi `undo`) : défait la dernière modification | `cancel` |
 | Importer | `import` : ouvre l'explorateur de fichiers, lit un classeur Excel (R10) | `import` |
 | Attachement | `attachement fichier` (choisir la référence) · `attachement ‹dossiers›` (créer, R11) ; plusieurs dossiers (`*`, un statut, une liste) : un dossier de destination pour tous les fichiers, confirmation | `attachement 501404`, `attachement *`, `attachement mis-a-dispo` |
-| Sauvegarder | `sauvegarde` : choisir un dossier ; fichier `gcblo-sauvegarde_AAAA-MM-JJ_HHhMM-SS.json` ; seules les **3 plus récentes** y restent (les plus anciennes sont supprimées, les autres fichiers jamais touchés) | `sauvegarde` |
+| Sauvegarder | `sauvegarde` : la première fois, choisir un dossier ; ensuite, directement dans ce dossier (le navigateur peut seulement redemander « Autoriser » après une fermeture) ; `sauvegarde dossier` pour en changer ; fichier `gcblo-sauvegarde_AAAA-MM-JJ_HHhMM-SS.json` ; seules les **3 plus récentes** y restent (les plus anciennes sont supprimées, les autres fichiers jamais touchés) | `sauvegarde`, `sauvegarde dossier` |
 | Restaurer | `restore` : choisir une sauvegarde (l'explorateur s'ouvre dans le dossier des sauvegardes) ; remplace toute la base après confirmation ; annulable (`cancel`) ; les dossiers illisibles ou en double sont ignorés | `restore` |
 | Affecter (mail) | `affect ‹GCBLO› ‹num21\|air\|sogetrel›` : affect donné (dossier créé s'il n'existe pas) et mail d'affectation ouvert (R12) | `affect SBA501404-THF010 num21` |
 | Relancer (mail) | `relance ‹dossier› ‹fci\|dft›` : mail de relance ouvert (fci seulement sans FCI) (R12) | `relance 501404 dft` |
@@ -217,7 +217,7 @@ Ce qui est cliquable :
 
 **Vues à jour** (04/11/2026, remplace le grisé) : quand un dossier change, les listes et fiches déjà affichées se mettent à jour sur place (mêmes dossiers, même ordre). Un dossier supprimé disparaît des listes ; sa fiche passe en grisé.
 
-**Sauvegarde** (04/11/2026) : les dossiers n'existent que dans le navigateur ; `sauvegarde` en écrit une copie dans un dossier choisi (Chrome, Edge ; ailleurs, téléchargement). Le tableau de bord affiche la date de la dernière sauvegarde (rouge au-delà de 7 jours, cliquable). **Sauvegarde automatique toutes les 3 heures** (`SAUVEGARDE_AUTO_HEURES`), tant que l'appli est ouverte, dans le dernier dossier choisi avec `sauvegarde` (retenu dans le navigateur). Si le navigateur redemande l'autorisation d'écrire dans ce dossier (après une fermeture, par exemple), un message cliquable le signale une fois dans le volet : un clic sur `sauvegarde` suffit.
+**Sauvegarde** (04/11/2026) : les dossiers n'existent que dans le navigateur ; `sauvegarde` en écrit une copie dans un dossier choisi (Chrome, Edge ; ailleurs, téléchargement). Le tableau de bord affiche la date de la dernière sauvegarde (rouge au-delà de 7 jours, cliquable). **Sauvegarde automatique toutes les 3 heures** (`SAUVEGARDE_AUTO_HEURES`), tant que l'appli est ouverte, dans le dernier dossier choisi avec `sauvegarde` (retenu dans le navigateur). Si le navigateur redemande l'autorisation d'écrire dans ce dossier (après une fermeture, par exemple), un message cliquable le signale une fois dans le volet : un clic sur `sauvegarde` suffit (petite question « Autoriser » du navigateur, pas d'explorateur).
 
 **`*` = la liste affichée** (04/11/2026) : partout où plusieurs dossiers sont permis (`set`, `delete`, `attachement`), `*` désigne tous les dossiers de la dernière liste affichée dans la console (`ls`, `info`), comme le `*` des terminaux. Exemple : `ls litige` puis `set * to annule` (confirmation au-delà de 3 dossiers).
 
@@ -402,5 +402,6 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | R14 : `registre-gcblo.csv` écrit à chaque sauvegarde ; macro `MajDepuisRegistre` pour IMMO-COORDI-DISSIM.xlsm (J = FCI, E = VALIDÉ GDP pour Attach, journal des changements) |
 | 04/11/2026 | Macro : fenêtre de compte rendu à la fin (modifié en vert, laissé de côté en orange, lien vers la cellule) |
 | 04/11/2026 | Macro : J n'est pas touché si un FCI du registre s'y trouve déjà, à n'importe quel endroit |
+| 04/11/2026 | `sauvegarde` réutilise le dossier déjà choisi sans ouvrir l'explorateur ; `sauvegarde dossier` pour en changer |
 | 04/11/2026 | Les deux sens par un seul dossier : la macro écrit `classeur-gcblo.csv`, le registre le lit à chaque sauvegarde et crée les nouveaux GCBLO |
 | 04/11/2026 | Macro : E = `FACTU` (et non VALIDÉ GDP) pour les dossiers Attach ; onglet Journal registre retiré, le compte rendu suffit |

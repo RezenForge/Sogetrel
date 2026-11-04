@@ -113,6 +113,8 @@ export function accepter(sorte, mot, ctx, { multiple = false } = {}) {
       const r = accepter('dossier', mot, ctx);
       return r.ok ? { ok: true, valeur: { gcblo: r.valeur.gcblo, dossier: r.valeur } } : { ...r, erreur: `${r.erreur} (GCBLO complet pour en créer un)` };
     }
+    case 'option-sauvegarde':
+      return p === 'dossier' ? { ok: true, valeur: 'dossier' } : { ok: false, erreur: `sauvegarde « ${mot} » : « dossier » pour changer de dossier` };
     case 'motif-relance':
       return ['fci', 'dft'].includes(p) ? { ok: true, valeur: p } : { ok: false, erreur: `relance « ${mot} » : fci ou dft` };
     case 'attachement': {
@@ -186,6 +188,7 @@ const MOTS_CONNUS = {
   dossier: Object.keys(GROUPES),
   'dossier-ou-fichier': ['fichier'],
   'motif-relance': ['fci', 'dft'],
+  'option-sauvegarde': ['dossier'],
   attachement: ['fichier', ...Object.keys(GROUPES), ...Object.keys(MOTS_STATUT)],
   champ: Object.keys(CHAMPS),
   periode: Object.keys(PERIODES),

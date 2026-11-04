@@ -22,7 +22,7 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `import` | lit un classeur Excel : onglets 33, 16, 17, 79, 86, lignes `GCBLO` en colonne E, dossier en D, commune en G, valorisation en H, affect en I, FCI en J |
 | `attachement fichier` | choisit le classeur d'attachement de référence (gardé dans le navigateur) |
 | `attachement ‹dossiers›` | remplit une copie de la référence (X5 commune, AG5 date, U6 GCBLO, paliers 30/60 en lignes 30-31) et l'enregistre en `‹GCBLO›.xlsx` ; le dossier passe au statut Attach |
-| `sauvegarde` | choisit un dossier et y écrit une sauvegarde datée ; seules les 3 plus récentes y restent. Ensuite, sauvegarde automatique toutes les 3 h dans ce dossier, tant que l'appli est ouverte. Écrit aussi `registre-gcblo.csv` pour le classeur partagé (voir plus bas) |
+| `sauvegarde` · `sauvegarde dossier` | la première fois, choisit un dossier ; ensuite, sauvegarde directement dans ce dossier sans rien redemander (`sauvegarde dossier` pour en changer). Écrit une sauvegarde datée ; seules les 3 plus récentes y restent. Ensuite, sauvegarde automatique toutes les 3 h dans ce dossier, tant que l'appli est ouverte. Écrit aussi `registre-gcblo.csv` pour le classeur partagé (voir plus bas) |
 | `restore` | recharge une sauvegarde : remplace toute la base après confirmation (annulable) |
 | `*` | dans `set`, `delete`, `attachement` : tous les dossiers de la liste affichée (ex. `ls litige` puis `set * to annule`, `attachement *`) |
 | `affect ‹GCBLO› ‹num21\|air\|sogetrel›` | donne l'affect (crée le dossier s'il n'existe pas) et ouvre le mail d'affectation |
