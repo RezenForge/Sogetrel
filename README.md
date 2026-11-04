@@ -16,7 +16,7 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `ls [affect] [statut] [retard] [sans-fci] [texte]` | affiche les dossiers, avec FCI, commune et valo |
 | `open ‹dossier›` | la fiche complète |
 | `set ‹dossiers› to ‹statut\|affect›` | change le statut DFT ou l'affect (ex. `set 501404 to refuse`, `set 501404 to air`) |
-| `info ‹GCBLO…›` | tapez `info ` puis collez une colonne de GCBLO : affiche ceux qui sont dans la base (comme `ls`) et liste les introuvables |
+| `info ‹GCBLO…›` | tapez `info ` puis collez une colonne de GCBLO, complets ou seulement leur début (`SBA501023`) : affiche ceux qui sont dans la base (comme `ls`) et liste les introuvables |
 | `edit ‹dossier› ‹champ› ‹valeur›` | modifie un champ (affect, statut, commune, valo, fci, affectation, relance, commentaire, gcblo) ; dans une fiche ou une liste, double-cliquer une valeur fait la même chose |
 | `delete ‹dossiers›` | supprime, après confirmation |
 | `import` | lit un classeur Excel : onglets 33, 16, 17, 79, 86, lignes `GCBLO` en colonne E, dossier en D, commune en G, valorisation en H, affect en I, FCI en J |
@@ -82,5 +82,5 @@ js/jarvis/completion.js  propositions, texte grisé, aperçu (ne modifie rien)
 js/jarvis/actions.js     exécute une commande via les règles
 js/jarvis/menus.js       le menu ⋯ d'un dossier : des commandes écrites à l'avance
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   146 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
+tests/                   153 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
 ```

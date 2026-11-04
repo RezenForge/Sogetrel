@@ -4,7 +4,7 @@
 import { groupe, test, egal } from './outil.js';
 import { chercherListe } from '../js/info.js';
 
-const D = ['SBA501404-THF010', 'SBA501423-THF010', 'LRO500767-THF010', 'LRO500768-THF010'].map((gcblo, i) => ({ id: String(i), gcblo }));
+const D = ['SBA501404-THF010', 'SBA501423-THF010', 'LRO500767-THF010', 'LRO500768-THF010', 'SBA501023-ACF011', 'POI500553-THF011', 'POI500553-ACF010'].map((gcblo, i) => ({ id: String(i), gcblo }));
 const noms = r => r.trouves.map(d => d.gcblo);
 
 groupe('info — liste collée', () => {
@@ -30,5 +30,10 @@ groupe('info — liste collée', () => {
     egal(noms(chercherListe('SBA501404-THF010SBA501423-THF010LRO500767-THF010', D)), ['SBA501404-THF010', 'SBA501423-THF010', 'LRO500767-THF010']));
   test('tiret long ou insécable (copié de Word, d\'un mail)', () => egal(noms(chercherListe('SBA501404–THF010 SBA501423‑THF010 LRO-500767-THF010', D)).length, 3));
   test('GCBLO entouré de texte (« Dossier SBA501404-THF010 : ok »)', () => egal(noms(chercherListe('Dossier SBA501404-THF010 : ok', D)), ['SBA501404-THF010']));
+  test('début de GCBLO seul (« SBA501023 ») → le dossier complet', () =>
+    egal(noms(chercherListe('SBA501023\nSBA501404\nsba 501423', D)), ['SBA501023-ACF011', 'SBA501404-THF010', 'SBA501423-THF010']));
+  test('début de GCBLO partagé par deux dossiers → les deux', () => egal(noms(chercherListe('POI500553', D)), ['POI500553-THF011', 'POI500553-ACF010']));
+  test('début de GCBLO absent de la base → introuvable', () => egal(chercherListe('ABC123456', D).introuvables, ['ABC123456']));
+  test('débuts recollés bout à bout', () => egal(noms(chercherListe('SBA501023SBA501404', D)).length, 2));
   test('séparateurs : virgules, points-virgules, tabulations', () => egal(noms(chercherListe('SBA501404-THF010;SBA501423-THF010,\tLRO500768-THF010', D)).length, 3));
 });

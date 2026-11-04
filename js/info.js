@@ -3,6 +3,7 @@
  *
  * Fonction pure : elle ne modifie rien. Chaque mot de la liste est cherché :
  *   - un GCBLO complet (même avec espaces, minuscules, sans tiret, ou collé à un autre) → correspondance exacte ;
+ *   - un début de GCBLO (« SBA501023 », sans la fin -THF010…) → tous les dossiers qui commencent ainsi ;
  *   - un morceau d'au moins 4 chiffres (ex. 501404) → retenu s'il désigne un seul dossier ;
  *   - le reste (en-tête « GCBLO », texte) est ignoré.
  *
@@ -30,8 +31,19 @@ export function chercherListe(texte, dossiers) {
     return ' ';
   });
 
-  // 2. Le reste : un morceau d'au moins 4 chiffres désigne un dossier s'il est seul à le contenir
-  for (const mot of reste.split(/[\s,;|]+/).filter(Boolean)) {
+  // 2. Un début de GCBLO seul (« SBA501023 ») : les dossiers qui commencent ainsi (…-THF010, -THF011, -ACF010, -ACF011)
+  const reste2 = reste.replace(/([A-Za-z]{3})\s*[-‐‑‒–—]?\s*(\d{6})(?!\d)/g, (_, a, b) => {
+    const debut = `${a}${b}`.toUpperCase();
+    if (!vus.has(debut)) {
+      vus.add(debut);
+      const possibles = dossiers.filter(d => cle(d.gcblo).startsWith(debut));
+      if (possibles.length) possibles.forEach(ajouter); else introuvables.push(debut);
+    }
+    return ' ';
+  });
+
+  // 3. Le reste : un morceau d'au moins 4 chiffres désigne un dossier s'il est seul à le contenir
+  for (const mot of reste2.split(/[\s,;|]+/).filter(Boolean)) {
     const chiffres = mot.replace(/\D/g, '');
     if (chiffres.length >= 4 && chiffres === mot.replace(/[\s-]/g, '')) {
       if (vus.has(chiffres)) continue;
