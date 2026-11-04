@@ -15,7 +15,7 @@
  *   dessinerTableauBord(stats, jour) → { texte: [lignes], html }
  */
 import { TYPES, STATUTS } from '../config.js';
-import { depuisJour, ajouterJours } from '../dates.js';
+import { depuisJour } from '../dates.js';
 import { formaterMontant } from '../dossiers.js';
 import { MOTS_TYPE, MOTS_STATUT, motPourCode } from './grammaire.js';
 
@@ -84,7 +84,8 @@ export function dessinerTableauBord(s, jour, { derniereSauvegarde = undefined, m
 
   lignes.push(separation('affect'));
   TYPES.forEach(t => lignes.push(rangeeBarre(t.libelle, s.parType[t.code], total, `ty-${t.code}`, `ls ${motPourCode(MOTS_TYPE, t.code)}`)));
-  if (s.parType.SANS) lignes.push(rangeeBarre('Sans aff.', s.parType.SANS, total, 'proche', 'ls sans-affect'));
+  // « - » : les dossiers sans affect (toujours affiché, cliquable comme les autres)
+  lignes.push(rangeeBarre('-', s.parType.SANS || 0, total, 'proche', 'ls sans-affect'));
 
   lignes.push(separation('statut DFT'));
   STATUTS.forEach(st => lignes.push(rangeeBarre(COURT[st.code] || st.libelle, s.parStatut[st.code], total, `st-${st.code}`, `ls ${motPourCode(MOTS_STATUT, st.code)}`)));
@@ -105,19 +106,6 @@ export function dessinerTableauBord(s, jour, { derniereSauvegarde = undefined, m
     if (s.valo.sans) lignes.push(rangee(['sans valo'.padEnd(INTERIEUR - 16), 'dim', 'ls sans-valo'], [String(s.valo.sans).padStart(16), 'proche']));
   }
 
-  // Alertes et relances des 7 prochains jours
-  lignes.push(separation('relances'));
-  const points = (n, classe) => [['●'.repeat(Math.min(n, 10)) + (n > 10 ? '+' : ''), classe]];
-  lignes.push(rangee(['en retard   ', 'dim', 'ls retard'], [String(s.retard).padStart(4) + ' ', s.retard ? 'retard' : 'dim'], ...points(s.retard, 'retard')));
-  lignes.push(rangee(['sous 3 jours', 'dim', 'ls proches'], [String(s.proche).padStart(4) + ' ', s.proche ? 'proche' : 'dim'], ...points(s.proche, 'proche')));
-  lignes.push(rangee(['sans FCI    ', 'dim', 'ls sans-fci'], [String(s.sansFci).padStart(4), s.sansFci ? 'fort' : 'dim']));
-  if (s.fciRetard !== undefined) lignes.push(rangee(['FCI > 24 h  ', 'dim', 'ls fci-retard'], [String(s.fciRetard).padStart(4), s.fciRetard ? 'retard' : 'dim']));
-  if (s.aVenir) {
-    const initiales = s.aVenir.map((_, i) => depuisJour(ajouterJours(jour, i)).toLocaleDateString('fr-FR', { weekday: 'narrow' }).toUpperCase());
-    const n = s.aVenir.reduce((a, b) => a + b, 0);
-    lignes.push(rangee(['7 jours     ', 'dim'], [String(n).padStart(4) + ' ', n ? 'fort' : 'dim'], [etincelle(s.aVenir).join(' '), 'proche']));
-    lignes.push(rangee([' '.repeat(17), ''], [initiales.join(' '), 'dim']));
-  }
   // Dernière sauvegarde (cliquable : lance « sauvegarde »)
   if (derniereSauvegarde !== undefined) {
     const [texte, classe] = ageSauvegarde(derniereSauvegarde, maintenant);

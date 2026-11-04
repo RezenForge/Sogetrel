@@ -24,7 +24,8 @@ groupe('Tableau de bord ASCII', () => {
   test('cadre, date et sections', () => {
     const t = dessinerTableauBord(S, '2026-11-04').texte;
     vrai(t[0].startsWith('┌─ tableau de bord') && t[0].includes('mer 04/11') && t.at(-1).startsWith('└'));
-    vrai(['affect', 'statut DFT', 'avancement', 'valorisation', 'relances'].every(s => t.some(l => l.includes(s))));
+    vrai(['affect', 'statut DFT', 'avancement', 'valorisation'].every(s => t.some(l => l.includes(s))));
+    vrai(!t.some(l => l.includes('relances')));
   });
   test('les 7 statuts DFT', () => vrai(['À faire', 'En valid.', 'Mis à disp', 'Refusé', 'Litige', 'Annulé', 'Attach'].every(s => dessinerTableauBord(S, '2026-11-04').texte.some(l => l.includes(s)))));
   test('avancement : clos = mis à dispo + annulé + attach', () => vrai(dessinerTableauBord(S, '2026-11-04').texte.some(l => l.includes('41 %') && l.includes('clos'))));   // 35 / 85
@@ -53,7 +54,8 @@ groupe('Tableau de bord cliquable', () => {
   const html = dessinerTableauBord(S, '2026-11-04').html;
   const commandes = [...html.matchAll(/data-commande="([^"]+)"/g)].map(m => m[1]);
   test('chaque affect et chaque statut lance ls', () => vrai(['ls num21', 'ls air', 'ls sogetrel', 'ls a-faire', 'ls en-validation', 'ls mis-a-dispo', 'ls refuse', 'ls litige', 'ls annule', 'ls attach'].every(c => commandes.includes(c))));
-  test('relances et valorisation aussi', () => vrai(['ls retard', 'ls proches', 'ls sans-fci', 'ls sans-valo', 'ls'].every(c => commandes.includes(c))));
+  test('sans affect (« - ») et valorisation aussi', () => vrai(['ls sans-affect', 'ls sans-valo', 'ls'].every(c => commandes.includes(c))));
+  test('« - » affiché même à zéro', () => vrai(dessinerTableauBord(vide, '2026-11-04').texte.some(l => /^│ - /.test(l))));
   test('toutes ces commandes sont comprises', async () => {
     const { analyser } = await import('../js/jarvis/analyse.js');
     const store = creerStore(supportMemoire()), regles = creerDossiers(store);

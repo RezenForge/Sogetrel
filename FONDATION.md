@@ -92,7 +92,7 @@ Un dossier **clos** n'a plus d'alerte de relance.
     - **Objets** : `Affectation GCBLO ‹affect› | ‹GCBLO›`, `Relance GCBLO ‹affect› | ‹GCBLO›`, `Relance GCBLO DFT ‹affect› | ‹GCBLO›`. Les textes sont dans `js/mails.js` (vouvoiement pour NUM21, tutoiement « Jérémie » pour AIR).
     - Le volet résume le mail (lien pour le rouvrir, destinataires, copie) ; l'historique du dossier note « Mail d'affectation préparé » ou « Relance FCI/DFT préparée ». L'envoi reste fait à la main dans la messagerie.
 
-13. **FCI attendu** : un dossier **affecté** (affect et date) qui n'a **toujours pas de FCI 24 h après sa date** (le lendemain) et n'est pas clos voit sa case FCI passer en **rouge clair** (liste et fiche). Le tableau de bord compte ces dossiers (« FCI > 24 h », cliquable) ; `ls fci-retard` les liste ; c'est le moment d'un `relance ‹dossier› fci` : un **clic droit sur la case rouge** le lance. Après une relance FCI (clic droit ou commande), la case passe en **orange pendant 2 jours** (le jour de la relance et le lendemain), puis redevient rouge si le FCI n'est toujours pas arrivé (`FCI_RELANCE_JOURS`). La date de relance est lue dans l'historique du dossier. Délai réglable : `FCI_ATTENDU_JOURS` dans `config.js`.
+13. **FCI attendu** : un dossier **affecté** (affect et date) qui n'a **toujours pas de FCI 24 h après sa date** (le lendemain) et n'est pas clos voit sa case FCI passer en **rouge clair** (liste et fiche). `ls fci-retard` les liste ; c'est le moment d'un `relance ‹dossier› fci` : un **clic droit sur la case rouge** le lance. Après une relance FCI (clic droit ou commande), la case passe en **orange pendant 2 jours** (le jour de la relance et le lendemain), puis redevient rouge si le FCI n'est toujours pas arrivé (`FCI_RELANCE_JOURS`). La date de relance est lue dans l'historique du dossier. Délai réglable : `FCI_ATTENDU_JOURS` dans `config.js`.
 
 14. **Classeur partagé (IMMO-COORDI-DISSIM.xlsm)** : à chaque sauvegarde (commande `sauvegarde` ou automatique toutes les 3 h), le registre écrit aussi **`registre-gcblo.csv`** dans le même dossier, toujours sous ce nom (remplacé à chaque fois, hors rotation). UTF-8 avec BOM, séparateur `;`, en-têtes `GCBLO;AFFECT;STATUT DFT;CODE STATUT;FCI;COMMUNE;VALO;DATE;MODIFIE LE`, plusieurs FCI séparés par un espace (`js/export-excel.js`).
     La macro **`MajDepuisRegistre`** (`excel/MajDepuisRegistre.bas`), lancée dans le classeur (Alt+F8), lit ce CSV et, sur les onglets 33, 16, 17, 79, 86, pour chaque ligne dont D est un GCBLO du registre et E vaut `GCBLO` (ou déjà `FACTU`) :
@@ -227,7 +227,7 @@ Ce qui est cliquable :
 
 Pas de barre d'outils fixe : les clics restent à l'intérieur de ce que la console affiche.
 
-**Écran** (04/11/2026) : pour ordinateur seulement. À gauche la console ; à droite, toujours visible, le **tableau de bord** dessiné en caractères (affect, statut DFT, avancement, valorisation, relances), redessiné à chaque changement de dossier et chaque minute.
+**Écran** (04/11/2026) : pour ordinateur seulement. À gauche la console ; à droite, toujours visible, le **tableau de bord** dessiné en caractères (affect, avec « - » pour les dossiers sans affect ; statut DFT, avancement, valorisation, sauvegarde), redessiné à chaque changement de dossier et chaque minute.
 
 **Textes courts** (03/11/2026) : la console n'explique pas ce que fait chaque chose. Pas de phrase d'aide sous les résultats, des libellés de quelques mots (`6 dossiers`, `annulé : 1 modification`), une aide (`help`) en une ligne par commande. Le détail reste dans ce document.
 
@@ -402,6 +402,7 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | R14 : `registre-gcblo.csv` écrit à chaque sauvegarde ; macro `MajDepuisRegistre` pour IMMO-COORDI-DISSIM.xlsm (J = FCI, E = VALIDÉ GDP pour Attach, journal des changements) |
 | 04/11/2026 | Macro : fenêtre de compte rendu à la fin (modifié en vert, laissé de côté en orange, lien vers la cellule) |
 | 04/11/2026 | Macro : J n'est pas touché si un FCI du registre s'y trouve déjà, à n'importe quel endroit |
+| 04/11/2026 | Tableau de bord : partie « relances » retirée ; ligne « - » dans affect pour les dossiers sans affect (toujours affichée, clic : `ls sans-affect`) |
 | 04/11/2026 | Explorateur de fichiers lancé au clavier : bouton « ▸ ouvrir l'explorateur » à cliquer à la souris (sinon Windows cache le pointeur) ; Échap abandonne. Lancé à la souris : ouverture directe |
 | 04/11/2026 | `sauvegarde` réutilise le dossier déjà choisi sans ouvrir l'explorateur ; `sauvegarde dossier` pour en changer |
 | 04/11/2026 | Les deux sens par un seul dossier : la macro écrit `classeur-gcblo.csv`, le registre le lit à chaque sauvegarde et crée les nouveaux GCBLO |
