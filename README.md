@@ -16,7 +16,7 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `ls [affect] [statut] [retard] [sans-fci] [texte]` | affiche les dossiers, avec FCI, commune et valo |
 | `open ‹dossier›` | la fiche complète |
 | `set ‹dossiers› to ‹statut\|affect›` | change le statut DFT ou l'affect (ex. `set 501404 to refuse`, `set 501404 to air`) |
-| `edit ‹dossier› ‹champ› ‹valeur›` | modifie un champ (affect, statut, commune, valo, fci, affectation, relance, commentaire, gcblo) ; dans une fiche, double-cliquer une valeur fait la même chose |
+| `edit ‹dossier› ‹champ› ‹valeur›` | modifie un champ (affect, statut, commune, valo, fci, affectation, relance, commentaire, gcblo) ; dans une fiche ou une liste, double-cliquer une valeur fait la même chose |
 | `delete ‹dossiers›` | supprime, après confirmation |
 | `import` | lit un classeur Excel : onglets 33, 16, 17, 79, 86, lignes `GCBLO` en colonne E, dossier en D, commune en G, valorisation en H, affect en I, FCI en J |
 | `attachement fichier` | choisit le classeur d'attachement de référence (gardé dans le navigateur) |

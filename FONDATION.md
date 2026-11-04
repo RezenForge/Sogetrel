@@ -178,7 +178,7 @@ Ce que la console affiche est cliquable, pour le quotidien, mais **un clic ne fa
 Ce qui est cliquable :
 - **le GCBLO** d'un dossier, dans une liste ou une fiche → `open ‹gcblo›` ;
 - **`⋯`** à côté d'un dossier → un menu court, construit selon l'état du dossier au moment du clic (`js/jarvis/menus.js`) : Ouvrir, puis les statuts où il peut passer (`→ Refusé`), et Supprimer en dernier (en rouge, avec confirmation). Sur téléphone, le menu s'ouvre en bas de l'écran avec de grands boutons ;
-- **une valeur de la fiche** (`open`), au **double-clic** : elle devient une zone de saisie (une liste pour l'affect et le statut). Entrée ou un clic ailleurs valide, Échap annule. La validation lance `edit ‹gcblo› ‹champ› ‹valeur›` ; la fiche se met à jour sur place ;
+- **une valeur de la fiche** (`open`) **ou d'une liste** (`ls` : affect, commune, valo, FCI, relance, statut), au **double-clic** : elle devient une zone de saisie (une liste pour l'affect et le statut). Entrée ou un clic ailleurs valide, Échap annule. La validation lance `edit ‹gcblo› ‹champ› ‹valeur›` ; la fiche ou la liste se met à jour sur place ;
 - **`cancel`** dans le message qui suit une modification ;
 - **chaque commande** dans la liste de `help` → `help ‹commande›`.
 
@@ -329,3 +329,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 03/11/2026 | `ls` affiche aussi FCI, commune et valo : en colonnes sur grand écran, sur une seconde ligne sur téléphone |
 | 03/11/2026 | Ordre des colonnes de `ls` : AFFECT GCBLO COMMUNE VALO FCI RELANCE STATUT (sur téléphone : commune · valo · FCI en seconde ligne) |
 | 03/11/2026 | Commande `edit` ; fiche éditable au double-clic (chaque modification passe par `edit`, annulable) |
+| 04/11/2026 | Listes (`ls`) éditables au double-clic, comme la fiche ; la liste se met à jour sur place |

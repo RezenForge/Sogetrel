@@ -98,6 +98,39 @@ export function creerInvite({ racine, contexte }) {
     }
   }
 
+  function tableauHtml(dossiers) {
+    const col = (t, n) => esc(String(t).padEnd(n).slice(0, n));
+    const coupe = (t, n) => (t.length > n ? t.slice(0, n - 1) + '…' : t);
+    const lignes = dossiers.map(d => {
+      const alerte = contexte().regles.etatRelance(d);
+      const relance = d.dateRelance ? formater(d.dateRelance).slice(0, 5) + (alerte === 'retard' ? '!' : alerte === 'proche' ? '·' : '') : '—';
+      const fci = d.fci.length ? d.fci[0] + (d.fci.length > 1 ? `+${d.fci.length - 1}` : '') : '';
+      const commune = d.commune || '';
+      const valo = d.valorisation !== null && d.valorisation !== undefined ? formaterMontant(d.valorisation).replace(/\s/g, ' ') : '';
+      // Chaque cellule est éditable au double-clic, comme dans la fiche (data-champ, data-dossier)
+      const ed = (cle, html) => `<span class="editable" data-champ="${cle}" data-dossier="${esc(d.id)}" title="double-clic pour modifier">${html}</span>`;
+      // Ordre des colonnes : AFFECT GCBLO COMMUNE VALO FCI RELANCE STATUT
+      // Grand écran : commune, valo et FCI en colonnes au milieu de la ligne
+      const large = `<span class="col-large">${ed('commune', col(coupe(commune, 22) || '—', 22))} ${ed('valo', `<span class="valo">${esc((valo || '—').padStart(11))}</span>`)}  ${ed('fci', `<span class="dim">${col(fci || '—', 15)}</span>`)} </span>`;
+      // Téléphone : les mêmes informations, dans le même ordre, sur une seconde ligne en retrait
+      const infos = [['commune', commune], ['valo', valo], ['fci', fci]].filter(([, t]) => t).map(([cle, t]) => ed(cle, esc(t)));
+      const etroit = infos.length ? `<span class="col-etroit dim">${infos.join(' · ')}</span>` : '';
+      return `${ed('affect', `<span class="ty-${d.type}">${col(TYPE_COURT[d.type] || d.type, 6)}</span>`)} `
+        + `${lienDossier(d)} `
+        + large
+        + `${ed('relance', `<span class="${alerte || 'dim'}">${col(relance, 6)}</span>`)} `
+        + ed('statut', `<span class="st-${d.statutDft}">${col(STATUT_COURT[d.statutDft] || d.statutDft, 10)}</span>`)
+        // Fin de ligne : sur téléphone, la seconde ligne (bloc) termine déjà la ligne
+        + boutonMenu(d) + (etroit ? `${etroit}<span class="col-large">\n</span>` : '\n');
+    });
+    // L'en-tête reste visible en haut de l'écran tant que la liste défile (CSS : sticky)
+    const entete = `<span class="entete dim">${'AFFECT'.padEnd(7)}${'GCBLO'.padEnd(17)}`
+      + `<span class="col-large">${'COMMUNE'.padEnd(23)}${'VALO'.padStart(11)}  ${'FCI'.padEnd(16)}</span>`
+      + `${'RELANCE'.padEnd(8)}STATUT</span>`;
+    return `<pre class="tableau">${entete}${lignes.join('').replace(/\n$/, '')}</pre>`;
+  }
+
+
   const ecran = {
     ligne(html, classe = '') {
       const div = document.createElement('div');
@@ -111,33 +144,8 @@ export function creerInvite({ racine, contexte }) {
      * Le GCBLO est cliquable (→ « open ») ; ⋯ ouvre le menu d'actions du dossier.
      */
     tableau(dossiers) {
-      const col = (t, n) => esc(String(t).padEnd(n).slice(0, n));
-      const coupe = (t, n) => (t.length > n ? t.slice(0, n - 1) + '…' : t);
-      const lignes = dossiers.map(d => {
-        const alerte = contexte().regles.etatRelance(d);
-        const relance = d.dateRelance ? formater(d.dateRelance).slice(0, 5) + (alerte === 'retard' ? '!' : alerte === 'proche' ? '·' : '') : '—';
-        const fci = d.fci.length ? d.fci[0] + (d.fci.length > 1 ? `+${d.fci.length - 1}` : '') : '';
-        const commune = d.commune || '';
-        const valo = d.valorisation !== null && d.valorisation !== undefined ? formaterMontant(d.valorisation).replace(/\s/g, ' ') : '';
-        // Ordre des colonnes : AFFECT GCBLO COMMUNE VALO FCI RELANCE STATUT
-        // Grand écran : commune, valo et FCI en colonnes au milieu de la ligne
-        const large = `<span class="col-large">${col(coupe(commune, 22) || '—', 23)}<span class="valo">${esc((valo || '—').padStart(11))}</span>  <span class="dim">${col(fci || '—', 16)}</span></span>`;
-        // Téléphone : les mêmes informations, dans le même ordre, sur une seconde ligne en retrait
-        const infos = [commune, valo, fci].filter(Boolean);
-        const etroit = infos.length ? `<span class="col-etroit dim">${esc(infos.join(' · '))}</span>` : '';
-        return `<span class="ty-${d.type}">${col(TYPE_COURT[d.type] || d.type, 7)}</span>`
-          + `${lienDossier(d)} `
-          + large
-          + `<span class="${alerte || 'dim'}">${col(relance, 7)}</span>`
-          + `<span class="st-${d.statutDft}">${col(STATUT_COURT[d.statutDft] || d.statutDft, 10)}</span>`
-          // Fin de ligne : sur téléphone, la seconde ligne (bloc) termine déjà la ligne
-          + boutonMenu(d) + (etroit ? `${etroit}<span class="col-large">\n</span>` : '\n');
-      });
-      // L'en-tête reste visible en haut de l'écran tant que la liste défile (CSS : sticky)
-      const entete = `<span class="entete dim">${'AFFECT'.padEnd(7)}${'GCBLO'.padEnd(17)}`
-        + `<span class="col-large">${'COMMUNE'.padEnd(23)}${'VALO'.padStart(11)}  ${'FCI'.padEnd(16)}</span>`
-        + `${'RELANCE'.padEnd(8)}STATUT</span>`;
-      ecran.ligne(`<pre class="tableau">${entete}${lignes.join('').replace(/\n$/, '')}</pre>`, 'vue');
+      ecran.ligne(tableauHtml(dossiers), 'vue');
+      ecranEl.lastElementChild.dataset.liste = dossiers.map(d => d.id).join(',');
     },
     fiche(d) {
       ecran.ligne(ficheHtml(d), 'vue');
@@ -362,10 +370,12 @@ export function creerInvite({ racine, contexte }) {
   /* ---------------- Fiche : double-clic sur un champ pour le modifier ---------------- */
 
   ecranEl.addEventListener('dblclick', e => {
-    const cible = e.target.closest('.fiche .editable');
-    const vue = cible?.closest('[data-fiche]');
+    // Fiche (open) ou liste (ls) : le dossier vient de la fiche, ou de la cellule dans une liste
+    const cible = e.target.closest('.editable');
+    const vue = cible?.closest('[data-fiche], [data-liste]');
     if (!cible || !vue || attente || cible.querySelector('.edition')) return;
-    const d = contexte().dossiers.find(x => x.id === vue.dataset.fiche);
+    const id = cible.dataset.dossier || vue.dataset.fiche;
+    const d = contexte().dossiers.find(x => x.id === id);
     if (!d) return ecran.ligne('gcblo: ce dossier n\'existe plus', 'err');
     getSelection()?.removeAllRanges();
     const cle = cible.dataset.champ, avant = valeurBrute(d, cle);
@@ -374,7 +384,7 @@ export function creerInvite({ racine, contexte }) {
     const saisie = document.createElement(choix ? 'select' : 'input');
     saisie.className = 'edition';
     if (choix) saisie.innerHTML = choix.map(c => `<option value="${esc(c)}"${c === avant ? ' selected' : ''}>${esc(c)}</option>`).join('');
-    else { saisie.value = avant; saisie.size = Math.max(12, Math.min(40, avant.length + 4)); saisie.spellcheck = false; }
+    else { saisie.value = avant; saisie.size = Math.max(10, Math.min(40, avant.length + 3)); saisie.spellcheck = false; }
     const contenu = cible.innerHTML;
     cible.innerHTML = '';
     cible.appendChild(saisie);
@@ -390,9 +400,16 @@ export function creerInvite({ racine, contexte }) {
       if (!valider || valeur === avant) return;
       // Un clic = une commande : la modification passe par « edit », visible dans la console
       await lancer(`edit ${d.gcblo} ${cle} ${valeur || '-'}`);
-      // La fiche modifiée se met à jour sur place (les autres vues passent en grisé)
-      const maj = contexte().dossiers.find(x => x.id === d.id);
-      if (maj && vue.isConnected) { vue.innerHTML = ficheHtml(maj); vue.classList.remove('perime'); }
+      // La fiche ou la liste se met à jour sur place (les autres vues passent en grisé)
+      if (!vue.isConnected) return;
+      const dossiers = contexte().dossiers;
+      if (vue.dataset.fiche) {
+        const maj = dossiers.find(x => x.id === d.id);
+        if (maj) { vue.innerHTML = ficheHtml(maj); vue.classList.remove('perime'); }
+      } else {
+        const liste = vue.dataset.liste.split(',').map(i => dossiers.find(x => x.id === i)).filter(Boolean);
+        vue.innerHTML = tableauHtml(liste); vue.classList.remove('perime');
+      }
     };
     saisie.addEventListener('keydown', ev => {
       if (ev.key === 'Enter') { ev.preventDefault(); terminer(true); }

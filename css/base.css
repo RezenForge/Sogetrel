@@ -98,10 +98,9 @@ pre { margin: 0; font: inherit; white-space: pre; }
   .menu-titre { padding: 8px 16px 10px; }
 }
 
-/* Fiche : champs modifiables au double-clic */
-.fiche .editable { cursor: text; border-radius: 2px; }
-.fiche .editable:hover { background: var(--trait); }
-.vue.perime .fiche .editable:hover { background: none; }
+/* Fiche et liste : valeurs modifiables au double-clic */
+.editable { cursor: text; border-radius: 2px; }
+.editable:hover { background: var(--trait); }
 .edition {
   font: inherit; color: var(--texte); background: var(--fond-menu); border: 1px solid var(--pale);
   padding: 0 4px; margin: -1px 0; border-radius: 2px; outline: none; max-width: calc(100vw - 14ch - 40px);
