@@ -188,7 +188,9 @@ Ce qui est cliquable :
 - **`cancel`** dans le message qui suit une modification ;
 - **chaque commande** dans la liste de `help` → `help ‹commande›`.
 
-**Lignes anciennes** : quand un dossier change, les listes et fiches déjà affichées passent en grisé (elles ne sont plus à jour). Un clic dessus agit toujours sur l'état actuel du dossier.
+**Vues à jour** (04/11/2026, remplace le grisé) : quand un dossier change, les listes et fiches déjà affichées se mettent à jour sur place (mêmes dossiers, même ordre). Un dossier supprimé disparaît des listes ; sa fiche passe en grisé.
+
+**Volet de droite** (04/11/2026) : `open`, `set`, `edit` (donc le double-clic) et `cancel` s'affichent sous le tableau de bord, dans un volet qui défile seul ; la console ne bouge pas.
 
 Pas de barre d'outils fixe : les clics restent à l'intérieur de ce que la console affiche.
 
@@ -345,3 +347,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | `attachement ‹dossier›` : le dossier passe au statut Attach une fois le fichier enregistré |
 | 04/11/2026 | Affichage téléphone abandonné (ordinateur seulement) ; tableau de bord ASCII toujours visible à droite (`js/jarvis/tableau-bord.js`) : affect, statut DFT, avancement, valorisation (total, attaché, à attacher), relances ; redessiné à chaque changement |
 | 04/11/2026 | Tableau de bord : chaque morceau posé dans une case de largeur fixe, les traits remplissent le reste ; le cadre reste droit quelle que soit la police |
+| 04/11/2026 | Volet sous le tableau de bord pour `open`, `set`, `edit`, `cancel` (la console ne défile plus) ; listes et fiches mises à jour sur place au lieu d'être grisées |

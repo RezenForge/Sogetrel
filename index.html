@@ -18,8 +18,12 @@
   <!-- Zone de sortie : tout ce que les commandes affichent -->
   <main class="ecran" id="ecran" aria-live="polite" aria-label="Sortie du terminal"></main>
 
-  <!-- Tableau de bord récapitulatif, toujours visible à droite (mis à jour à chaque changement) -->
-  <aside class="tableau-bord" id="tableauBord" aria-label="Tableau de bord"></aside>
+  <!-- À droite : le tableau de bord (toujours visible), et dessous le volet où s'affichent
+       open, set, edit et cancel, pour ne pas faire défiler la console -->
+  <aside class="cote">
+    <div class="tableau-bord" id="tableauBord" aria-label="Tableau de bord"></div>
+    <div class="volet" id="volet" aria-live="polite" aria-label="Fiches et modifications"></div>
+  </aside>
 
   <!-- Zone de saisie : propositions (au-dessus), ligne de commande, ligne d'aide (dessous) -->
   <footer class="saisie-zone">

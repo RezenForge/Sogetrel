@@ -34,7 +34,7 @@ const boutonMenu = d => `<button type="button" class="points" data-menu-dossier=
 
 export function creerInvite({ racine, contexte }) {
   const $ = sel => racine.querySelector(sel);
-  const ecranEl = $('#ecran'), champ = $('#saisie'), miroir = $('#miroir'), listeEl = $('#propositions'), aideEl = $('#aideLigne'), inviteEl = $('#invite');
+  const ecranEl = $('#ecran'), voletEl = $('#volet'), champ = $('#saisie'), miroir = $('#miroir'), listeEl = $('#propositions'), aideEl = $('#aideLigne'), inviteEl = $('#invite');
 
   let etat = { analyse: null, prop: { propositions: [] }, choisi: -1 };
   let historique = [];
@@ -47,7 +47,13 @@ export function creerInvite({ racine, contexte }) {
 
   /* ---------------- Zone de sortie ---------------- */
 
-  const defiler = () => { ecranEl.scrollTop = ecranEl.scrollHeight; };
+  /*
+   * Où s'écrit la sortie : la console, ou le volet de droite (sous le tableau de bord) pour
+   * les commandes qui ne doivent pas faire défiler la console (open, set, edit, cancel).
+   */
+  const DANS_LE_VOLET = new Set(['open', 'set', 'edit', 'cancel']);
+  let sortie = ecranEl;
+  const defiler = () => { sortie.scrollTop = sortie.scrollHeight; };
 
   /** Le texte d'une ligne avec la couleur de chaque mot (pour l'écho des commandes). */
   function colorer(texte, analyse) {
@@ -128,7 +134,7 @@ export function creerInvite({ racine, contexte }) {
       const div = document.createElement('div');
       div.className = `l ${classe}`;
       div.innerHTML = html;
-      ecranEl.appendChild(div);
+      sortie.appendChild(div);
       defiler();
     },
     /**
@@ -137,16 +143,31 @@ export function creerInvite({ racine, contexte }) {
      */
     tableau(dossiers) {
       ecran.ligne(tableauHtml(dossiers), 'vue');
-      ecranEl.lastElementChild.dataset.liste = dossiers.map(d => d.id).join(',');
+      sortie.lastElementChild.dataset.liste = dossiers.map(d => d.id).join(',');
     },
     fiche(d) {
       ecran.ligne(ficheHtml(d), 'vue');
-      const el = ecranEl.lastElementChild;
+      const el = sortie.lastElementChild;
       el.dataset.fiche = d.id;
     },
     /** Les listes et fiches déjà affichées ne sont plus à jour : on les grise. */
-    marquerPerime() { ecranEl.querySelectorAll('.vue:not(.perime)').forEach(el => el.classList.add('perime')); },
-    vider() { ecranEl.innerHTML = ''; }
+    /**
+     * Un dossier a changé : les listes et fiches affichées se mettent à jour sur place
+     * (même ordre, mêmes dossiers). Un dossier supprimé disparaît des listes ; sa fiche passe en grisé.
+     */
+    rafraichirVues() {
+      const dossiers = contexte().dossiers, parId = new Map(dossiers.map(d => [d.id, d]));
+      racine.querySelectorAll('.vue[data-liste]').forEach(vue => {
+        if (vue.querySelector('.edition')) return;          // saisie en cours : on n'y touche pas
+        vue.innerHTML = tableauHtml(vue.dataset.liste.split(',').map(i => parId.get(i)).filter(Boolean));
+      });
+      racine.querySelectorAll('.vue[data-fiche]').forEach(vue => {
+        if (vue.querySelector('.edition')) return;
+        const d = parId.get(vue.dataset.fiche);
+        if (d) { vue.innerHTML = ficheHtml(d); vue.classList.remove('perime'); } else vue.classList.add('perime');
+      });
+    },
+    vider() { ecranEl.innerHTML = ''; if (voletEl) voletEl.innerHTML = ''; }
   };
 
   /* ---------------- Ligne de saisie ---------------- */
@@ -251,6 +272,11 @@ export function creerInvite({ racine, contexte }) {
     if (attente) return;
     fermerMenu();
     const analyse = analyser(texte, texte.length, contexte());
+    if (voletEl && DANS_LE_VOLET.has(analyse.commande?.id)) sortie = voletEl;
+    try { await lancerDans(texte, analyse); } finally { sortie = ecranEl; }
+  }
+
+  async function lancerDans(texte, analyse) {
     ecran.ligne(`<span class="invite-echo">${INVITE}</span> ${colorer(texte, analyse)}`, 'echo');
     historique = [texte, ...historique.filter(h => h !== texte)].slice(0, 100);
     try { localStorage.setItem(CLE_HISTORIQUE, JSON.stringify(historique)); } catch { /* facultatif */ }
@@ -366,11 +392,11 @@ export function creerInvite({ racine, contexte }) {
     if (points) { e.preventDefault(); menuEl && points.getAttribute('aria-expanded') === 'true' ? fermerMenu() : ouvrirMenu(points, points.dataset.menuDossier); return; }
     if (menuEl && !e.target.closest('.menu')) fermerMenu();
     // Clic ailleurs dans l'écran : on revient à la saisie
-    if (e.target.closest('#ecran') && !e.target.closest('.edition, .editable') && !getSelection().toString()) champ.focus();
+    if (e.target.closest('#ecran, #volet') && !e.target.closest('.edition, .editable') && !getSelection().toString()) champ.focus();
   });
   /* ---------------- Fiche : double-clic sur un champ pour le modifier ---------------- */
 
-  ecranEl.addEventListener('dblclick', e => {
+  const surDoubleClic = e => {
     // Fiche (open) ou liste (ls) : le dossier vient de la fiche, ou de la cellule dans une liste
     const cible = e.target.closest('.editable');
     const vue = cible?.closest('[data-fiche], [data-liste]');
@@ -419,7 +445,9 @@ export function creerInvite({ racine, contexte }) {
     });
     saisie.addEventListener('blur', () => terminer(true));
     if (choix) saisie.addEventListener('change', () => terminer(true));
-  });
+  };
+  ecranEl.addEventListener('dblclick', surDoubleClic);
+  voletEl?.addEventListener('dblclick', surDoubleClic);
 
   racine.addEventListener('keydown', e => {
     if (!menuEl) return;
@@ -428,6 +456,7 @@ export function creerInvite({ racine, contexte }) {
     else if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && i >= 0) { e.preventDefault(); choix[(i + (e.key === 'ArrowDown' ? 1 : -1) + choix.length) % choix.length].focus(); }
   }, true);
   ecranEl.addEventListener('scroll', () => { if (menuEl) fermerMenu(); });
+  voletEl?.addEventListener('scroll', () => { if (menuEl) fermerMenu(); });
 
   return {
     ecran,

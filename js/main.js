@@ -121,7 +121,7 @@ setInterval(dessinerBord, 60 * 1000);
 dessinerBord();
 
 /* 6. Prévenir si l'enregistrement échoue. */
-store.ecouter(() => invite.ecran.marquerPerime());
+store.ecouter(() => invite.ecran.rafraichirVues());
 store.ecouter(e => { if (!e.enregistre) invite.ecran.ligne('gcblo: enregistrement impossible : les dernières modifications ne sont pas gardées', 'err'); });
 
 /* 7. Écran de départ : vide, seulement les avertissements utiles. */
