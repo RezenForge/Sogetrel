@@ -107,7 +107,7 @@ async function sauvegardeAutomatique() {
   sauvegardeEnCours = true;
   try {
     if (await dossier.queryPermission({ mode: 'readwrite' }) !== 'granted') {
-      if (!autorisationSignalee) invite.ecran.journal(`<span class="dim">sauvegarde automatique en attente : le navigateur redemande l'accès au dossier ·</span> <button type="button" class="lien c-verbe" data-commande="backup">backup</button>`, 'info');
+      if (!autorisationSignalee) invite.ecran.journal(`<span class="dim">sauvegarde automatique en attente : le navigateur redemande l'accès au dossier ·</span> <button type="button" class="lien c-verbe" data-commande="sauvegarde">sauvegarde</button>`, 'info');
       autorisationSignalee = true;
       return;
     }
@@ -162,6 +162,30 @@ const actions = creerActions({
     return 'telecharge';
   },
   coffre,
+  // Restaurer : l'explorateur s'ouvre dans le dossier des sauvegardes quand le navigateur le permet
+  choisirSauvegarde: async () => {
+    let dossier = null;
+    try { dossier = await coffre.lire('dossier-sauvegarde'); } catch { /* pas de dossier retenu */ }
+    if (window.showOpenFilePicker) {
+      await avantExplorateur();
+      try {
+        const [poignee] = await window.showOpenFilePicker({ id: 'gcblo-restaurer', ...(dossier?.kind === 'directory' ? { startIn: dossier } : {}),
+          types: [{ description: 'Sauvegarde GCBLO', accept: { 'application/json': ['.json'] } }] });
+        invite.focus();
+        return await poignee.getFile();
+      } catch (e) {
+        invite.focus();
+        if (e.name === 'AbortError') return null;
+      }
+    }
+    return new Promise(resoudre => {
+      const input = document.createElement('input');
+      input.type = 'file'; input.accept = '.json,application/json';
+      input.addEventListener('change', () => { resoudre(input.files[0] || null); invite.focus(); });
+      input.addEventListener('cancel', () => { resoudre(null); invite.focus(); });
+      input.click();
+    });
+  },
   // Sauvegarde : on choisit un dossier (Chrome, Edge), le fichier y est écrit, et seules
   // les 3 sauvegardes les plus récentes y restent. Ailleurs : téléchargement simple.
   // Sauvegarde : on choisit un dossier (Chrome, Edge) ; il est retenu pour les sauvegardes automatiques

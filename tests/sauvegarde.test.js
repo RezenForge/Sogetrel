@@ -2,7 +2,7 @@
  * sauvegarde.test.js — nom, contenu et rotation des sauvegardes (3 gardées).
  */
 import { groupe, test, egal, vrai } from './outil.js';
-import { nomSauvegarde, contenuSauvegarde, aSupprimer } from '../js/sauvegarde.js';
+import { nomSauvegarde, contenuSauvegarde, aSupprimer, lireSauvegarde } from '../js/sauvegarde.js';
 import { ageSauvegarde, dessinerTableauBord, LARGEUR } from '../js/jarvis/tableau-bord.js';
 
 groupe('Sauvegarde', () => {
@@ -26,7 +26,24 @@ groupe('Sauvegarde — tableau de bord', () => {
   test('ligne cliquable, largeur tenue', () => {
     const vide = { total: 0, parType: { NUM21: 0, AIR: 0, SOGETREL: 0 }, parStatut: { A_FAIRE: 0, EN_VALIDATION: 0, MAD: 0, REFUSE: 0, LITIGE: 0, ANNULE: 0, ATTACH: 0 }, retard: 0, proche: 0, sansFci: 0, aVenir: [0, 0, 0, 0, 0, 0, 0] };
     const r = dessinerTableauBord(vide, '2026-11-04', { derniereSauvegarde: null, maintenant: m });
-    vrai(r.html.includes('data-commande="backup"'));
+    vrai(r.html.includes('data-commande="sauvegarde"'));
     egal(r.texte.filter(l => [...l].length !== LARGEUR), []);
+  });
+});
+
+groupe('Restauration', () => {
+  const D = (gcblo, extra = {}) => ({ id: gcblo, gcblo, type: 'AIR', statutDft: 'A_FAIRE', fci: [], historique: [], dateAffectation: '2026-11-01', ...extra });
+  test('relit ce que contenuSauvegarde écrit', () => {
+    const r = lireSauvegarde(contenuSauvegarde([D('SBA501404-THF010', { commune: 'Mérignac', valorisation: 30 })], new Date(2026, 10, 4, 9, 30)));
+    egal([r.dossiers.length, r.dossiers[0].commune, r.ignores], [1, 'Mérignac', 0]); vrai(r.le.startsWith('2026-11-04'));
+  });
+  test('dossiers illisibles ou en double ignorés', () => {
+    const r = lireSauvegarde(JSON.stringify({ app: 'Registre GCBLO', dossiers: [D('SBA501404-THF010'), D('SBA501404-THF010'), D('XYZ'), { ...D('SBA501405-THF010'), statutDft: 'INCONNU' }] }));
+    egal([r.dossiers.length, r.ignores], [1, 3]);
+  });
+  test('ancien dossier sans commune ni valo : complété', () => egal(lireSauvegarde(JSON.stringify({ app: 'Registre GCBLO', dossiers: [D('SBA501404-THF010')] })).dossiers[0].valorisation, null));
+  test('autre fichier refusé clairement', () => {
+    const msg = t => { try { lireSauvegarde(t); return ''; } catch (e) { return e.message; } };
+    egal([msg('pas du json'), msg('{"a":1}')], ['ce fichier n\'est pas une sauvegarde lisible', 'ce fichier n\'est pas une sauvegarde du Registre GCBLO']);
   });
 });

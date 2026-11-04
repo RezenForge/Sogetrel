@@ -18,6 +18,7 @@
  *   enregistrerFichier(nom, octets) → Promise<'enregistre'|'telecharge'|'annule'>  (explorateur « Enregistrer sous »)
  *   coffre                   fichiers gardés dans le navigateur (la référence d'attachement)
  *   sauvegarderDans(nom, texte) → Promise<{ etat: 'enregistre'|'telecharge'|'annule', dossier?, supprimes? }>
+ *   choisirSauvegarde()      → Promise<File|null>  (explorateur, ouvert si possible dans le dossier des sauvegardes)
  */
 import { criteresListe } from './analyse.js';
 import { COMMANDES, SORTES, MOTS_TYPE, MOTS_STATUT, CHAMPS, plat } from './grammaire.js';
@@ -26,7 +27,7 @@ import { IMPORT_EXCEL } from '../config.js';
 import { lireClasseur, modifierClasseur, contientMacros } from '../xlsx.js';
 import { cellulesAttachement } from '../attachement.js';
 import { chercherListe } from '../info.js';
-import { contenuSauvegarde, nomSauvegarde, GARDER } from '../sauvegarde.js';
+import { contenuSauvegarde, nomSauvegarde, lireSauvegarde, GARDER } from '../sauvegarde.js';
 import { extraireDossiers } from '../import-excel.js';
 import { typeParCode, statutParCode } from '../config.js';
 
@@ -37,7 +38,7 @@ const SEUIL_CONFIRMATION = 3;
 /** Le mot « cancel », cliquable : un clic lance la commande. */
 const LIEN_ANNULE = '<button type="button" class="lien c-verbe" data-commande="cancel">cancel</button>';
 
-export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre, sauvegarderDans }) {
+export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre, sauvegarderDans, choisirSauvegarde }) {
   let annulation = null;       // { libelle, faire() } : de quoi défaire la dernière modification
 
   // Comme les outils Linux : un succès s'écrit simplement, une erreur est préfixée du nom du programme
@@ -192,6 +193,22 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       if (r.etat === 'telecharge') return ok(`${esc(nom)} téléchargé <span class="dim">· ${pluriel(dossiers.length, 'dossier', 'dossiers')}</span>`);
       ok(`${esc(nom)} <span class="dim">· ${pluriel(dossiers.length, 'dossier', 'dossiers')} · dans ${esc(r.dossier)}</span>`);
       if (r.supprimes?.length) info(`<span class="dim">${GARDER} sauvegardes gardées · supprimée${r.supprimes.length > 1 ? 's' : ''} : ${esc(r.supprimes.join(', '))}</span>`);
+    },
+
+    /** Recharge une sauvegarde : remplace toute la base, après confirmation ; annulable. */
+    async restore() {
+      const fichier = await (choisirSauvegarde || (() => choisirFichier('.json')))();
+      if (!fichier) return info('aucun fichier choisi');
+      let r;
+      try { r = lireSauvegarde(await fichier.text()); } catch (e) { return erreur(esc(e.message)); }
+      if (!r.dossiers.length) return erreur('aucun dossier lisible dans cette sauvegarde');
+      const quand = r.le ? ` du ${new Date(r.le).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}` : '';
+      const n = store.tous().length;
+      if (!(await confirmer(`remplacer ${n === 1 ? 'le dossier actuel' : `les ${n} dossiers actuels`} par ${r.dossiers.length === 1 ? 'le dossier' : `les ${r.dossiers.length} dossiers`} de la sauvegarde${quand} ?`))) return info('rien n\'a été modifié');
+      const avant = store.tous();
+      store.remplacerTout(r.dossiers);
+      annulation = { libelle: 'la restauration', faire: () => store.remplacerTout(avant) };
+      ok(`${pluriel(r.dossiers.length, 'dossier restauré', 'dossiers restaurés')}${quand}${r.ignores ? ` <span class="dim">· ${r.ignores} ignoré${r.ignores > 1 ? 's' : ''} (illisibles ou en double)</span>` : ''} <span class="dim">·</span> ${LIEN_ANNULE}`);
     },
 
     cancel() {
