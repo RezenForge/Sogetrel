@@ -12,6 +12,7 @@ import { creerDossiers } from './dossiers.js';
 import { creerReglages } from './reglages.js';
 import { creerCoffre } from './coffre.js';
 import { aSupprimer, nomSauvegarde, contenuSauvegarde } from './sauvegarde.js';
+import { csvRegistre, NOM_CSV } from './export-excel.js';
 import { SAUVEGARDE_AUTO_HEURES } from './config.js';
 import { aujourdhui } from './dates.js';
 import { convertirV1, lireV1Navigateur } from './reprise-v1.js';
@@ -85,6 +86,10 @@ async function ecrireSauvegarde(dossier, nom, texte) {
   const fichier = await dossier.getFileHandle(nom, { create: true });
   const flux = await fichier.createWritable();
   await flux.write(texte); await flux.close();
+  // R14 : à côté, le CSV pour le classeur partagé (toujours le même nom, remplacé à chaque fois)
+  const csv = await dossier.getFileHandle(NOM_CSV, { create: true });
+  const fluxCsv = await csv.createWritable();
+  await fluxCsv.write(csvRegistre(store.tous())); await fluxCsv.close();
   const noms = [];
   for await (const [n, h] of dossier.entries()) if (h.kind === 'file') noms.push(n);
   const supprimes = aSupprimer(noms);

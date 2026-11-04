@@ -94,6 +94,13 @@ Un dossier **clos** n'a plus d'alerte de relance.
 
 13. **FCI attendu** : un dossier **affecté** (affect et date) qui n'a **toujours pas de FCI 24 h après sa date** (le lendemain) et n'est pas clos voit sa case FCI passer en **rouge clair** (liste et fiche). Le tableau de bord compte ces dossiers (« FCI > 24 h », cliquable) ; `ls fci-retard` les liste ; c'est le moment d'un `relance ‹dossier› fci` : un **clic droit sur la case rouge** le lance. Après une relance FCI (clic droit ou commande), la case passe en **orange pendant 2 jours** (le jour de la relance et le lendemain), puis redevient rouge si le FCI n'est toujours pas arrivé (`FCI_RELANCE_JOURS`). La date de relance est lue dans l'historique du dossier. Délai réglable : `FCI_ATTENDU_JOURS` dans `config.js`.
 
+14. **Classeur partagé (IMMO-COORDI-DISSIM.xlsm)** : à chaque sauvegarde (commande `sauvegarde` ou automatique toutes les 3 h), le registre écrit aussi **`registre-gcblo.csv`** dans le même dossier, toujours sous ce nom (remplacé à chaque fois, hors rotation). UTF-8 avec BOM, séparateur `;`, en-têtes `GCBLO;AFFECT;STATUT DFT;CODE STATUT;FCI;COMMUNE;VALO;DATE;MODIFIE LE`, plusieurs FCI séparés par un espace (`js/export-excel.js`).
+    La macro **`MajDepuisRegistre`** (`excel/MajDepuisRegistre.bas`), lancée dans le classeur (Alt+F8), lit ce CSV et, sur les onglets 33, 16, 17, 79, 86, pour chaque ligne dont D est un GCBLO du registre et E vaut `GCBLO` (ou déjà `VALIDÉ GDP`) :
+    - **J** : `Numéro de commande FCI : ‹fci›`. Registre sans FCI → rien. J contient déjà un des FCI du registre → rien (un dossier sur plusieurs lignes garde un FCI par ligne). Sinon le texte après la mention est remplacé, ou la mention est ajoutée à la fin ; le reste de J est gardé.
+    - **E** : `VALIDÉ GDP` pour les dossiers **Attach**.
+    - Rien n'est effacé ; une cellule à formule ou protégée est laissée et signalée. Chaque changement est noté dans l'onglet **Journal registre**. Le chemin du CSV est demandé la première fois et gardé sur le PC (pas dans le classeur).
+    Dans l'autre sens, les nouveaux GCBLO du classeur entrent avec `import` (R10). Les lignes passées en `VALIDÉ GDP` ne sont plus relues par `import` : ces dossiers sont déjà au registre.
+
 Toutes ces règles vivent dans **un seul fichier** (`js/dossiers.js`), et chacune a un test.
 
 ---
@@ -117,6 +124,7 @@ js/
   info.js                  retrouve les dossiers d'une liste collée (commande info)
   sauvegarde.js            nom, contenu et rotation des sauvegardes (3 gardées)
   mails.js                 R12 : mails d'affectation et de relance (destinataires, objet, texte, lien mailto)
+  export-excel.js          R14 : registre-gcblo.csv pour le classeur partagé
   coffre.js                garde des fichiers dans le navigateur (IndexedDB) : la référence d'attachement
   ui/
     registre.js            la liste des dossiers
@@ -391,3 +399,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | Clic droit sur une case FCI rouge : `relance ‹gcblo› fci` |
 | 04/11/2026 | `ls` masque les dossiers Attach sauf `ls attach` (le bilan indique combien sont masqués) |
 | 04/11/2026 | Case FCI orange pendant 2 jours après une relance FCI, puis rouge à nouveau |
+| 04/11/2026 | R14 : `registre-gcblo.csv` écrit à chaque sauvegarde ; macro `MajDepuisRegistre` pour IMMO-COORDI-DISSIM.xlsm (J = FCI, E = VALIDÉ GDP pour Attach, journal des changements) |

@@ -268,7 +268,7 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       try { r = await sauvegarderDans(nom, contenuSauvegarde(dossiers, maintenant)); } catch (e) { return erreur(`sauvegarde impossible : ${esc(e.message)}`); }
       if (r.etat === 'annule') return info('aucun dossier choisi');
       if (r.etat === 'telecharge') return ok(`${esc(nom)} téléchargé <span class="dim">· ${pluriel(dossiers.length, 'dossier', 'dossiers')}</span>`);
-      ok(`${esc(nom)} <span class="dim">· ${pluriel(dossiers.length, 'dossier', 'dossiers')} · dans ${esc(r.dossier)}</span>`);
+      ok(`${esc(nom)} <span class="dim">· ${pluriel(dossiers.length, 'dossier', 'dossiers')} · dans ${esc(r.dossier)} · registre-gcblo.csv à jour</span>`);
       if (r.supprimes?.length) info(`<span class="dim">${GARDER} sauvegardes gardées · supprimée${r.supprimes.length > 1 ? 's' : ''} : ${esc(r.supprimes.join(', '))}</span>`);
     },
 

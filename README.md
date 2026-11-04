@@ -22,7 +22,7 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `import` | lit un classeur Excel : onglets 33, 16, 17, 79, 86, lignes `GCBLO` en colonne E, dossier en D, commune en G, valorisation en H, affect en I, FCI en J |
 | `attachement fichier` | choisit le classeur d'attachement de référence (gardé dans le navigateur) |
 | `attachement ‹dossiers›` | remplit une copie de la référence (X5 commune, AG5 date, U6 GCBLO, paliers 30/60 en lignes 30-31) et l'enregistre en `‹GCBLO›.xlsx` ; le dossier passe au statut Attach |
-| `sauvegarde` | choisit un dossier et y écrit une sauvegarde datée ; seules les 3 plus récentes y restent. Ensuite, sauvegarde automatique toutes les 3 h dans ce dossier, tant que l'appli est ouverte |
+| `sauvegarde` | choisit un dossier et y écrit une sauvegarde datée ; seules les 3 plus récentes y restent. Ensuite, sauvegarde automatique toutes les 3 h dans ce dossier, tant que l'appli est ouverte. Écrit aussi `registre-gcblo.csv` pour le classeur partagé (voir plus bas) |
 | `restore` | recharge une sauvegarde : remplace toute la base après confirmation (annulable) |
 | `*` | dans `set`, `delete`, `attachement` : tous les dossiers de la liste affichée (ex. `ls litige` puis `set * to annule`, `attachement *`) |
 | `affect ‹GCBLO› ‹num21\|air\|sogetrel›` | donne l'affect (crée le dossier s'il n'existe pas) et ouvre le mail d'affectation |
@@ -81,6 +81,8 @@ js/import-excel.js       quels dossiers et FCI prendre dans le classeur (command
 js/attachement.js        quelles cellules remplir dans l'attachement d'un dossier
 js/info.js               retrouve les dossiers d'une liste collée (commande info)
 js/sauvegarde.js         nom, contenu et rotation des sauvegardes
+js/export-excel.js       registre-gcblo.csv pour le classeur partagé
+excel/MajDepuisRegistre.bas  macro VBA du classeur IMMO-COORDI-DISSIM.xlsm
 js/mails.js              mails d'affectation et de relance (adresses : config.js)
 js/coffre.js             garde la référence d'attachement dans le navigateur (IndexedDB)
 js/jarvis/grammaire.js   les commandes, sous forme de tableau (vide : en refonte)
@@ -90,5 +92,17 @@ js/jarvis/actions.js     exécute une commande via les règles
 js/jarvis/menus.js       le menu ⋯ d'un dossier : des commandes écrites à l'avance
 js/jarvis/tableau-bord.js le tableau de bord ASCII, toujours visible à droite
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   175 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
+tests/                   217 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
 ```
+
+## Classeur partagé IMMO-COORDI-DISSIM.xlsm
+
+Le registre écrit `registre-gcblo.csv` à chaque sauvegarde (manuelle ou toutes les 3 h). La macro `MajDepuisRegistre` met le classeur à jour depuis ce fichier, sans rien effacer :
+
+- colonne **J** : `Numéro de commande FCI : ‹fci›` ;
+- colonne **E** : `VALIDÉ GDP` pour les dossiers en Attach ;
+- chaque changement est noté dans l'onglet *Journal registre*.
+
+**Installer la macro (une fois)** : dans le classeur, Alt+F11, *Fichier › Importer un fichier…*, choisir `excel/MajDepuisRegistre.bas`, enregistrer. **Lancer** : Alt+F8 › `MajDepuisRegistre`. La première fois, elle demande où est `registre-gcblo.csv` (le dossier des sauvegardes). `ChoisirCsvRegistre` permet d'en changer.
+
+Dans l'autre sens, les nouveaux GCBLO du classeur entrent dans le registre avec `import`.
