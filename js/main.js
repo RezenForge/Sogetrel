@@ -115,7 +115,7 @@ invite.brancher(analyse => actions.executer(analyse));
 
 /* 5. Le tableau de bord à droite : redessiné à chaque changement, et chaque minute (date, retards). */
 const tableauBord = document.getElementById('tableauBord');
-const dessinerBord = () => { tableauBord.innerHTML = `<pre class="dessin">${dessinerTableauBord(regles.statistiques(), regles.aujourdhui()).html}</pre>`; };
+const dessinerBord = () => { tableauBord.innerHTML = `<div class="dessin">${dessinerTableauBord(regles.statistiques(), regles.aujourdhui()).html}</div>`; };
 store.ecouter(dessinerBord);
 setInterval(dessinerBord, 60 * 1000);
 dessinerBord();

@@ -344,3 +344,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | Statuts Litige, Annulé (clos) et Attach (clos, ligne en vert clair) ; colonne RELANCE retirée de la liste ; « STATUT » devient « STATUT DFT » |
 | 04/11/2026 | `attachement ‹dossier›` : le dossier passe au statut Attach une fois le fichier enregistré |
 | 04/11/2026 | Affichage téléphone abandonné (ordinateur seulement) ; tableau de bord ASCII toujours visible à droite (`js/jarvis/tableau-bord.js`) : affect, statut DFT, avancement, valorisation (total, attaché, à attacher), relances ; redessiné à chaque changement |
+| 04/11/2026 | Tableau de bord : chaque morceau posé dans une case de largeur fixe, les traits remplissent le reste ; le cadre reste droit quelle que soit la police |

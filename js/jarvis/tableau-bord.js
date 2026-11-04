@@ -7,6 +7,11 @@
  *   - le texte brut (pour les tests : toutes les lignes ont la même largeur),
  *   - le HTML coloré (pour l'écran).
  *
+ * Alignement : selon la police, certains caractères (█ ░ ● ▁…) n'ont pas exactement la
+ * largeur d'une lettre et décaleraient le bord droit. À l'écran, chaque morceau est donc
+ * posé dans une case d'une largeur fixe (en « ch », la largeur d'un caractère) ; les traits
+ * horizontaux remplissent la place restante. Le cadre reste droit quelle que soit la police.
+ *
  *   dessinerTableauBord(stats, jour) → { texte: [lignes], html }
  */
 import { TYPES, STATUTS } from '../config.js';
@@ -41,17 +46,18 @@ const euros = v => formaterMontant(v).replace(/\s/g, ' ');
 
 function cadre(titre, droite = '') {
   const debut = `┌─ ${titre} `, fin = droite ? ` ${droite} ─┐` : '┐';
-  return [['┌─ ', 'cadre'], [titre, 'cadre-titre'], [' ' + '─'.repeat(LARGEUR - [...debut].length - [...fin].length) + (droite ? ' ' : ''), 'cadre'], [droite, 'dim'], [droite ? ' ─┐' : '┐', 'cadre']];
+  const fil = ['─'.repeat(LARGEUR - [...debut].length - [...fin].length), 'cadre fil'];
+  return [['┌─ ', 'cadre'], [titre, 'cadre-titre'], [' ', ''], fil, ...(droite ? [[' ', ''], [droite, 'dim'], [' ─┐', 'cadre']] : [['┐', 'cadre']])];
 }
 function separation(titre) {
   const debut = `├─ ${titre} `;
-  return [['├─ ', 'cadre'], [titre, 'cadre-titre'], [' ' + '─'.repeat(LARGEUR - [...debut].length - 1) + '┤', 'cadre']];
+  return [['├─ ', 'cadre'], [titre, 'cadre-titre'], [' ', ''], ['─'.repeat(LARGEUR - [...debut].length - 1), 'cadre fil'], ['┤', 'cadre']];
 }
-const bas = () => [['└' + '─'.repeat(LARGEUR - 2) + '┘', 'cadre']];
+const bas = () => [['└', 'cadre'], ['─'.repeat(LARGEUR - 2), 'cadre fil'], ['┘', 'cadre']];
 /** Une ligne de contenu, complétée par des espaces jusqu'au bord droit. */
 function rangee(...morceaux) {
   const reste = INTERIEUR - longueur(morceaux);
-  return [['│ ', 'cadre'], ...morceaux, [' '.repeat(Math.max(0, reste)) + ' │', 'cadre']];
+  return [['│ ', 'cadre'], ...morceaux, [' '.repeat(Math.max(0, reste)), ''], [' │', 'cadre']];
 }
 function rangeeBarre(libelle, n, total, classe) {
   const [p, v] = barre(n, total);
@@ -104,6 +110,9 @@ export function dessinerTableauBord(s, jour) {
 
   return {
     texte: lignes.map(l => l.map(([t]) => t).join('')),
-    html: lignes.map(l => l.map(([t, c]) => c ? `<span class="${c}">${esc(t)}</span>` : esc(t)).join('')).join('\n')
+    // Une ligne = une rangée de cases de largeur fixe ; les traits (fil) prennent la place restante
+    html: lignes.map(l => `<div class="bl">${l.map(([t, c]) => /\bfil\b/.test(c)
+      ? `<span class="${c}">${esc('─'.repeat(LARGEUR))}</span>`
+      : `<span class="m ${c}" style="width:calc(${[...t].length} * var(--ch))">${esc(t)}</span>`).join('')}</div>`).join('')
   };
 }
