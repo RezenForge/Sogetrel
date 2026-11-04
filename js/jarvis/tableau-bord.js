@@ -116,11 +116,11 @@ export function dessinerTableauBord(s, jour, { derniereSauvegarde = undefined, m
     lignes.push(rangee(['7 jours     ', 'dim'], [String(n).padStart(4) + ' ', n ? 'fort' : 'dim'], [etincelle(s.aVenir).join(' '), 'proche']));
     lignes.push(rangee([' '.repeat(17), ''], [initiales.join(' '), 'dim']));
   }
-  // Dernière sauvegarde (cliquable : lance « sauvegarde »)
+  // Dernière sauvegarde (cliquable : lance « backup »)
   if (derniereSauvegarde !== undefined) {
     const [texte, classe] = ageSauvegarde(derniereSauvegarde, maintenant);
     lignes.push(separation('sauvegarde'));
-    lignes.push(rangee(['dernière    ', 'dim', 'sauvegarde'], [texte, classe, 'sauvegarde']));
+    lignes.push(rangee(['dernière    ', 'dim', 'backup'], [texte, classe, 'backup']));
   }
   lignes.push(bas());
 

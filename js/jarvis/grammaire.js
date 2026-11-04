@@ -41,7 +41,7 @@ export const COMMANDES = Object.freeze([
   { id: 'attachement', verbes: ['attachement'], resume: 'crée l\'attachement d\'un dossier',
     forme: 'attachement ‹dossier|fichier›',
     emplacements: [{ nom: 'cible', sorte: 'dossier-ou-fichier' }] },
-  { id: 'sauvegarde', verbes: ['sauvegarde', 'backup'], resume: 'sauvegarde la base dans un dossier', forme: 'sauvegarde', emplacements: [] },
+  { id: 'sauvegarde', verbes: ['backup', 'sauvegarde'], resume: 'sauvegarde la base dans un dossier', forme: 'backup', emplacements: [] },
   { id: 'cancel', verbes: ['cancel', 'undo'], resume: 'annule la dernière action', forme: 'cancel', emplacements: [] },
   { id: 'clear', verbes: ['clear', 'cls'], resume: 'vide l\'écran', forme: 'clear', emplacements: [] },
   { id: 'help', verbes: ['help', '?'], resume: 'aide',

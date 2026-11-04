@@ -107,7 +107,7 @@ async function sauvegardeAutomatique() {
   sauvegardeEnCours = true;
   try {
     if (await dossier.queryPermission({ mode: 'readwrite' }) !== 'granted') {
-      if (!autorisationSignalee) invite.ecran.journal(`<span class="dim">sauvegarde automatique en attente : le navigateur redemande l'accès au dossier ·</span> <button type="button" class="lien c-verbe" data-commande="sauvegarde">sauvegarde</button>`, 'info');
+      if (!autorisationSignalee) invite.ecran.journal(`<span class="dim">sauvegarde automatique en attente : le navigateur redemande l'accès au dossier ·</span> <button type="button" class="lien c-verbe" data-commande="backup">backup</button>`, 'info');
       autorisationSignalee = true;
       return;
     }

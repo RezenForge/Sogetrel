@@ -169,7 +169,7 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 | Annuler | `cancel` (aussi `undo`) : défait la dernière modification | `cancel` |
 | Importer | `import` : ouvre l'explorateur de fichiers, lit un classeur Excel (R10) | `import` |
 | Attachement | `attachement fichier` (choisir la référence) · `attachement ‹dossier›` (créer, R11) | `attachement 501404` |
-| Sauvegarder | `sauvegarde` (aussi `backup`) : choisir un dossier ; fichier `gcblo-sauvegarde_AAAA-MM-JJ_HHhMM-SS.json` ; seules les **3 plus récentes** y restent (les plus anciennes sont supprimées, les autres fichiers jamais touchés) | `sauvegarde` |
+| Sauvegarder | `backup` (aussi `sauvegarde`) : choisir un dossier ; fichier `gcblo-sauvegarde_AAAA-MM-JJ_HHhMM-SS.json` ; seules les **3 plus récentes** y restent (les plus anciennes sont supprimées, les autres fichiers jamais touchés) | `sauvegarde` |
 | Vider l'écran | `clear` | `clear` |
 | Aide | `help [commande]` (aussi `?`) ; chaque commande de la liste est cliquable | `help set` |
 
@@ -193,7 +193,7 @@ Ce qui est cliquable :
 
 **Vues à jour** (04/11/2026, remplace le grisé) : quand un dossier change, les listes et fiches déjà affichées se mettent à jour sur place (mêmes dossiers, même ordre). Un dossier supprimé disparaît des listes ; sa fiche passe en grisé.
 
-**Sauvegarde** (04/11/2026) : les dossiers n'existent que dans le navigateur ; `sauvegarde` en écrit une copie dans un dossier choisi (Chrome, Edge ; ailleurs, téléchargement). Le tableau de bord affiche la date de la dernière sauvegarde (rouge au-delà de 7 jours, cliquable). **Sauvegarde automatique toutes les 3 heures** (`SAUVEGARDE_AUTO_HEURES`), tant que l'appli est ouverte, dans le dernier dossier choisi (retenu dans le navigateur). Si le navigateur redemande l'autorisation d'écrire dans ce dossier (après une fermeture, par exemple), un message cliquable le signale une fois dans le volet : un clic sur `sauvegarde` suffit.
+**Sauvegarde** (04/11/2026) : les dossiers n'existent que dans le navigateur ; `backup` en écrit une copie dans un dossier choisi (Chrome, Edge ; ailleurs, téléchargement). Le tableau de bord affiche la date de la dernière sauvegarde (rouge au-delà de 7 jours, cliquable). **Sauvegarde automatique toutes les 3 heures** (`SAUVEGARDE_AUTO_HEURES`), tant que l'appli est ouverte, dans le dernier dossier choisi avec `backup` (retenu dans le navigateur). Si le navigateur redemande l'autorisation d'écrire dans ce dossier (après une fermeture, par exemple), un message cliquable le signale une fois dans le volet : un clic sur `backup` suffit.
 
 **Console vidée** (04/11/2026) : `ls` (`list`) et `info` vident la console, qui ne montre que la liste et son bilan ; la commande elle-même s'écrit dans le volet de droite, comme les autres (même lancée d'un clic sur le tableau de bord). Sans aucun résultat, tout s'affiche dans le volet et la liste déjà affichée reste en place.
 
@@ -361,3 +361,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | `ls`/`info` : la ligne de commande va dans le volet ; sans résultat, tout va dans le volet et la console ne change pas |
 | 04/11/2026 | Commande `sauvegarde` (`js/sauvegarde.js`) : dossier choisi, nom daté, 3 sauvegardes gardées ; dernière sauvegarde dans le tableau de bord |
 | 04/11/2026 | Sauvegarde automatique toutes les 3 h dans le dernier dossier choisi ; autorisation à renouveler signalée dans le volet |
+| 04/11/2026 | La commande s'appelle `backup` (anglais, comme les autres) ; `sauvegarde` reste compris |
