@@ -67,8 +67,7 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
 
   const commandes = {
     ls(v) {
-      const { liste, collee, masques } = resultatLs(criteresListe(v), regles, store.tous());
-      const note = masques ? ` · ${masques} attach masqué${masques > 1 ? 's' : ''}` : '';
+      const { liste, collee } = resultatLs(criteresListe(v), regles, store.tous());
       if (collee) {
         // Liste collée (colonne de GCBLO) : trouvés dans l'ordre collé, puis introuvables et ambigus
         if (liste.length) ecran.tableau(liste);
@@ -79,9 +78,9 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
         if (collee.ambigus.length) info(`<span class="dim">plusieurs dossiers possibles : ${esc(collee.ambigus.slice(0, 10).join(', '))}</span>`);
         return;
       }
-      if (!liste.length) return info(store.tous().length ? `aucun dossier ne correspond${note}` : 'aucun dossier enregistré');
+      if (!liste.length) return info(store.tous().length ? 'aucun dossier ne correspond' : 'aucun dossier enregistré');
       ecran.tableau(liste);
-      info(`<span class="dim">${pluriel(liste.length, 'dossier', 'dossiers')}${note} · Ctrl+clic ou Maj+clic : sélectionner</span>`);
+      info(`<span class="dim">${pluriel(liste.length, 'dossier', 'dossiers')}</span>`);
       // Écarts d'affect : ce que dit la colonne I pour chacun (correction : double-clic sur la case affect)
       if (criteresListe(v).ecartAffect) {
         const affects = lireAffectsClasseur();
