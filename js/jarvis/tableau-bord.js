@@ -67,7 +67,16 @@ function rangeeBarre(libelle, n, total, classe, commande) {
 /** Libellé à gauche, montant aligné à droite. */
 const rangeeMontant = (libelle, montant, classe = 'fort', commande) => rangee([libelle.padEnd(INTERIEUR - 16), 'dim', commande], [euros(montant).padStart(16), classe]);
 
-export function dessinerTableauBord(s, jour) {
+/** « aujourd'hui 09:30 », « hier », « il y a 4 j », « jamais » ; en rouge au-delà de 7 jours. */
+export function ageSauvegarde(iso, maintenant) {
+  if (!iso) return ['jamais', 'retard'];
+  const d = new Date(iso), jours = Math.floor((new Date(maintenant).setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0)) / 86400000);
+  const heure = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const texte = jours <= 0 ? `aujourd'hui ${heure}` : jours === 1 ? `hier ${heure}` : `il y a ${jours} j`;
+  return [texte, jours > 7 ? 'retard' : jours > 2 ? 'proche' : 'st-ATTACH'];
+}
+
+export function dessinerTableauBord(s, jour, { derniereSauvegarde = undefined, maintenant = new Date() } = {}) {
   const date = depuisJour(jour).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' }).replace('.', '');
   const total = s.total;
   const lignes = [cadre('tableau de bord', date)];
@@ -106,6 +115,12 @@ export function dessinerTableauBord(s, jour) {
     const n = s.aVenir.reduce((a, b) => a + b, 0);
     lignes.push(rangee(['7 jours     ', 'dim'], [String(n).padStart(4) + ' ', n ? 'fort' : 'dim'], [etincelle(s.aVenir).join(' '), 'proche']));
     lignes.push(rangee([' '.repeat(17), ''], [initiales.join(' '), 'dim']));
+  }
+  // Dernière sauvegarde (cliquable : lance « sauvegarde »)
+  if (derniereSauvegarde !== undefined) {
+    const [texte, classe] = ageSauvegarde(derniereSauvegarde, maintenant);
+    lignes.push(separation('sauvegarde'));
+    lignes.push(rangee(['dernière    ', 'dim', 'sauvegarde'], [texte, classe, 'sauvegarde']));
   }
   lignes.push(bas());
 

@@ -22,6 +22,7 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `import` | lit un classeur Excel : onglets 33, 16, 17, 79, 86, lignes `GCBLO` en colonne E, dossier en D, commune en G, valorisation en H, affect en I, FCI en J |
 | `attachement fichier` | choisit le classeur d'attachement de référence (gardé dans le navigateur) |
 | `attachement ‹dossier›` | remplit une copie de la référence (X5 commune, AG5 date, U6 GCBLO, paliers 30/60 en lignes 30-31) et l'enregistre en `‹GCBLO›.xlsx` ; le dossier passe au statut Attach |
+| `sauvegarde` | choisit un dossier et y écrit une sauvegarde datée ; seules les 3 plus récentes y restent |
 | `cancel` | défait la dernière modification |
 | `clear` | vide l'écran |
 | `help [commande]` | la liste des commandes, ou le détail d'une commande |
@@ -75,6 +76,7 @@ js/xlsx.js               lit un classeur Excel (.xlsx, .xlsm) et en écrit une c
 js/import-excel.js       quels dossiers et FCI prendre dans le classeur (commande import)
 js/attachement.js        quelles cellules remplir dans l'attachement d'un dossier
 js/info.js               retrouve les dossiers d'une liste collée (commande info)
+js/sauvegarde.js         nom, contenu et rotation des sauvegardes
 js/coffre.js             garde la référence d'attachement dans le navigateur (IndexedDB)
 js/jarvis/grammaire.js   les commandes, sous forme de tableau (vide : en refonte)
 js/jarvis/analyse.js     comprend la ligne tapée (ne modifie rien)
@@ -83,5 +85,5 @@ js/jarvis/actions.js     exécute une commande via les règles
 js/jarvis/menus.js       le menu ⋯ d'un dossier : des commandes écrites à l'avance
 js/jarvis/tableau-bord.js le tableau de bord ASCII, toujours visible à droite
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   169 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
+tests/                   175 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
 ```

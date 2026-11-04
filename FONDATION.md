@@ -104,6 +104,7 @@ js/
   import-excel.js          R10 : quels dossiers et FCI prendre dans le classeur
   attachement.js           R11 : quelles cellules remplir pour un dossier
   info.js                  retrouve les dossiers d'une liste collée (commande info)
+  sauvegarde.js            nom, contenu et rotation des sauvegardes (3 gardées)
   coffre.js                garde des fichiers dans le navigateur (IndexedDB) : la référence d'attachement
   ui/
     registre.js            la liste des dossiers
@@ -168,6 +169,7 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 | Annuler | `cancel` (aussi `undo`) : défait la dernière modification | `cancel` |
 | Importer | `import` : ouvre l'explorateur de fichiers, lit un classeur Excel (R10) | `import` |
 | Attachement | `attachement fichier` (choisir la référence) · `attachement ‹dossier›` (créer, R11) | `attachement 501404` |
+| Sauvegarder | `sauvegarde` (aussi `backup`) : choisir un dossier ; fichier `gcblo-sauvegarde_AAAA-MM-JJ_HHhMM-SS.json` ; seules les **3 plus récentes** y restent (les plus anciennes sont supprimées, les autres fichiers jamais touchés) | `sauvegarde` |
 | Vider l'écran | `clear` | `clear` |
 | Aide | `help [commande]` (aussi `?`) ; chaque commande de la liste est cliquable | `help set` |
 
@@ -190,6 +192,8 @@ Ce qui est cliquable :
 - **chaque commande** dans la liste de `help` → `help ‹commande›`.
 
 **Vues à jour** (04/11/2026, remplace le grisé) : quand un dossier change, les listes et fiches déjà affichées se mettent à jour sur place (mêmes dossiers, même ordre). Un dossier supprimé disparaît des listes ; sa fiche passe en grisé.
+
+**Sauvegarde** (04/11/2026) : les dossiers n'existent que dans le navigateur ; `sauvegarde` en écrit une copie dans un dossier choisi (Chrome, Edge ; ailleurs, téléchargement). Le tableau de bord affiche la date de la dernière sauvegarde (rouge au-delà de 7 jours, cliquable).
 
 **Console vidée** (04/11/2026) : `ls` (`list`) et `info` vident la console, qui ne montre que la liste et son bilan ; la commande elle-même s'écrit dans le volet de droite, comme les autres (même lancée d'un clic sur le tableau de bord). Sans aucun résultat, tout s'affiche dans le volet et la liste déjà affichée reste en place.
 
@@ -355,3 +359,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | `help` s'affiche aussi dans le volet de droite |
 | 04/11/2026 | `ls`, `list` et `info` vident la console avant d'afficher |
 | 04/11/2026 | `ls`/`info` : la ligne de commande va dans le volet ; sans résultat, tout va dans le volet et la console ne change pas |
+| 04/11/2026 | Commande `sauvegarde` (`js/sauvegarde.js`) : dossier choisi, nom daté, 3 sauvegardes gardées ; dernière sauvegarde dans le tableau de bord |

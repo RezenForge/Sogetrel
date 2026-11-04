@@ -11,11 +11,15 @@ import { creerStore, supportNavigateur, supportMemoire } from './store.js';
 import { creerDossiers } from './dossiers.js';
 import { creerReglages } from './reglages.js';
 import { creerCoffre } from './coffre.js';
+import { aSupprimer } from './sauvegarde.js';
 import { aujourdhui } from './dates.js';
 import { convertirV1, lireV1Navigateur } from './reprise-v1.js';
 import { creerInvite } from './jarvis/invite.js';
 import { creerActions, esc } from './jarvis/actions.js';
 import { dessinerTableauBord } from './jarvis/tableau-bord.js';
+
+/** Date de la dernière sauvegarde (affichée dans le tableau de bord). */
+const CLE_DERNIERE_SAUVEGARDE = 'gcblo.v2.derniereSauvegarde';
 
 /* 1. Les données. Si le navigateur refuse le stockage, on travaille en mémoire (et on prévient). */
 let stockageOk = true;
@@ -109,13 +113,46 @@ const actions = creerActions({
     setTimeout(() => URL.revokeObjectURL(url), 2000);
     return 'telecharge';
   },
-  coffre: creerCoffre()
+  coffre: creerCoffre(),
+  // Sauvegarde : on choisit un dossier (Chrome, Edge), le fichier y est écrit, et seules
+  // les 3 sauvegardes les plus récentes y restent. Ailleurs : téléchargement simple.
+  sauvegarderDans: async (nom, texte) => {
+    const noter = () => { try { localStorage.setItem(CLE_DERNIERE_SAUVEGARDE, new Date().toISOString()); } catch { /* facultatif */ } dessinerBord(); };
+    if (!window.showDirectoryPicker) {
+      const url = URL.createObjectURL(new Blob([texte], { type: 'application/json' }));
+      const a = document.createElement('a'); a.href = url; a.download = nom; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      noter();
+      return { etat: 'telecharge' };
+    }
+    await avantExplorateur();
+    let dossier;
+    try {
+      // « id » : le navigateur rouvre l'explorateur dans le dernier dossier choisi
+      dossier = await window.showDirectoryPicker({ id: 'gcblo-sauvegardes', mode: 'readwrite' });
+    } catch (e) {
+      invite.focus();
+      if (e.name === 'AbortError') return { etat: 'annule' };
+      throw e;
+    }
+    const fichier = await dossier.getFileHandle(nom, { create: true });
+    const flux = await fichier.createWritable();
+    await flux.write(texte); await flux.close();
+    const noms = [];
+    for await (const [n, h] of dossier.entries()) if (h.kind === 'file') noms.push(n);
+    const supprimes = aSupprimer(noms);
+    for (const n of supprimes) await dossier.removeEntry(n);
+    noter();
+    invite.focus();
+    return { etat: 'enregistre', dossier: dossier.name, supprimes };
+  }
 });
 invite.brancher(analyse => actions.executer(analyse));
 
 /* 5. Le tableau de bord à droite : redessiné à chaque changement, et chaque minute (date, retards). */
 const tableauBord = document.getElementById('tableauBord');
-const dessinerBord = () => { tableauBord.innerHTML = `<div class="dessin">${dessinerTableauBord(regles.statistiques(), regles.aujourdhui()).html}</div>`; };
+const derniereSauvegarde = () => { try { return localStorage.getItem(CLE_DERNIERE_SAUVEGARDE); } catch { return null; } };
+function dessinerBord() { tableauBord.innerHTML = `<div class="dessin">${dessinerTableauBord(regles.statistiques(), regles.aujourdhui(), { derniereSauvegarde: derniereSauvegarde(), maintenant: new Date() }).html}</div>`; }
 store.ecouter(dessinerBord);
 setInterval(dessinerBord, 60 * 1000);
 dessinerBord();

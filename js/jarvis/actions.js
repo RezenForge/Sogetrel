@@ -17,6 +17,7 @@
  *   choisirFichier(types)    → Promise<File|null>  (ouvre l'explorateur de fichiers)
  *   enregistrerFichier(nom, octets) → Promise<'enregistre'|'telecharge'|'annule'>  (explorateur « Enregistrer sous »)
  *   coffre                   fichiers gardés dans le navigateur (la référence d'attachement)
+ *   sauvegarderDans(nom, texte) → Promise<{ etat: 'enregistre'|'telecharge'|'annule', dossier?, supprimes? }>
  */
 import { criteresListe } from './analyse.js';
 import { COMMANDES, SORTES, MOTS_TYPE, MOTS_STATUT, CHAMPS, plat } from './grammaire.js';
@@ -25,6 +26,7 @@ import { IMPORT_EXCEL } from '../config.js';
 import { lireClasseur, modifierClasseur, contientMacros } from '../xlsx.js';
 import { cellulesAttachement } from '../attachement.js';
 import { chercherListe } from '../info.js';
+import { contenuSauvegarde, nomSauvegarde, GARDER } from '../sauvegarde.js';
 import { extraireDossiers } from '../import-excel.js';
 import { typeParCode, statutParCode } from '../config.js';
 
@@ -35,7 +37,7 @@ const SEUIL_CONFIRMATION = 3;
 /** Le mot « cancel », cliquable : un clic lance la commande. */
 const LIEN_ANNULE = '<button type="button" class="lien c-verbe" data-commande="cancel">cancel</button>';
 
-export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre }) {
+export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre, sauvegarderDans }) {
   let annulation = null;       // { libelle, faire() } : de quoi défaire la dernière modification
 
   // Comme les outils Linux : un succès s'écrit simplement, une erreur est préfixée du nom du programme
@@ -178,6 +180,18 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       if (passe) annulation = { libelle: `statut Attach de ${d.gcblo}`, faire: () => regles.restaurer([m.avant]) };
       ok(`${esc(nom)} ${r === 'telecharge' ? 'téléchargé' : 'enregistré'}${palier ? ` <span class="dim">· ${esc(palier.nom)}</span>` : ''}`
         + (passe ? ` <span class="dim">·</span> statut → <span class="st-ATTACH">Attach</span> <span class="dim">·</span> ${LIEN_ANNULE}` : ''));
+    },
+
+    /** Sauvegarde toute la base dans un dossier choisi ; seules les 3 plus récentes y sont gardées. */
+    async sauvegarde() {
+      const maintenant = new Date(), dossiers = store.tous();
+      const nom = nomSauvegarde(maintenant);
+      let r;
+      try { r = await sauvegarderDans(nom, contenuSauvegarde(dossiers, maintenant)); } catch (e) { return erreur(`sauvegarde impossible : ${esc(e.message)}`); }
+      if (r.etat === 'annule') return info('aucun dossier choisi');
+      if (r.etat === 'telecharge') return ok(`${esc(nom)} téléchargé <span class="dim">· ${pluriel(dossiers.length, 'dossier', 'dossiers')}</span>`);
+      ok(`${esc(nom)} <span class="dim">· ${pluriel(dossiers.length, 'dossier', 'dossiers')} · dans ${esc(r.dossier)}</span>`);
+      if (r.supprimes?.length) info(`<span class="dim">${GARDER} sauvegardes gardées · supprimée${r.supprimes.length > 1 ? 's' : ''} : ${esc(r.supprimes.join(', '))}</span>`);
     },
 
     cancel() {
