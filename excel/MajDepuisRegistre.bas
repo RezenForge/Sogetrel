@@ -323,7 +323,7 @@ End Function
 ' Renvoie un dictionnaire : GCBLO -> Array(FCI separes par un espace, code statut)
 Private Function LireRegistre(chemin As String) As Object
     Dim flux As Object, texte As String, lignes() As String, entetes() As String, champs() As String
-    Dim iG As Long, iF As Long, iS As Long, i As Long, k As Long, d As Object, cle As String
+    Dim iGcblo As Long, iFci As Long, iStatut As Long, i As Long, k As Long, d As Object, cle As String
 
     On Error GoTo Echec
     Set flux = CreateObject("ADODB.Stream")
@@ -337,24 +337,24 @@ Private Function LireRegistre(chemin As String) As Object
     lignes = Split(texte, vbLf)
     If UBound(lignes) < 0 Then GoTo MauvaisFormat
 
-    iG = -1: iF = -1: iS = -1
+    iGcblo = -1: iFci = -1: iStatut = -1
     entetes = Split(lignes(0), ";")
     For k = 0 To UBound(entetes)
         Select Case UCase$(Trim$(entetes(k)))
-            Case "GCBLO": iG = k
-            Case "FCI": iF = k
-            Case "CODE STATUT": iS = k
+            Case "GCBLO": iGcblo = k
+            Case "FCI": iFci = k
+            Case "CODE STATUT": iStatut = k
         End Select
     Next k
-    If iG < 0 Or iF < 0 Or iS < 0 Then GoTo MauvaisFormat
+    If iGcblo < 0 Or iFci < 0 Or iStatut < 0 Then GoTo MauvaisFormat
 
     Set d = CreateObject("Scripting.Dictionary")
     For i = 1 To UBound(lignes)
         If Trim$(lignes(i)) <> "" Then
             champs = Split(lignes(i), ";")
-            If UBound(champs) >= Application.Max(iG, iF, iS) Then
-                cle = NormaliserGcblo(champs(iG))
-                If cle <> "" Then d(cle) = Array(Application.Trim(champs(iF)), UCase$(Trim$(champs(iS))))
+            If UBound(champs) >= Application.Max(iGcblo, iFci, iStatut) Then
+                cle = NormaliserGcblo(champs(iGcblo))
+                If cle <> "" Then d(cle) = Array(Application.Trim(champs(iFci)), UCase$(Trim$(champs(iStatut))))
             End If
         End If
     Next i
