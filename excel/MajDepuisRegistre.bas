@@ -16,8 +16,11 @@ Attribute VB_Name = "MajDepuisRegistre"
 '   - colonne E : "VALIDÉ GDP" pour les dossiers en Attach dans le registre
 '
 ' Rien n'est efface. Chaque changement est note dans l'onglet "Journal registre"
-' (date, onglet, ligne, GCBLO, colonne, avant, apres). Les cas laisses de cote
+' (date, onglet, ligne, GCBLO, colonne, avant, apres, remarque). Les cas laisses de cote
 ' (cellule protegee, formule...) y sont notes aussi.
+' A la fin, une fenetre "Compte rendu" montre ce qui a ete fait cette fois-ci
+' (vert = modifie, orange = laisse de cote, lien "voir" vers la cellule).
+' Classeur temporaire jamais enregistre : il se ferme sans question.
 '
 ' Lancer : Alt+F8 > MajDepuisRegistre. La premiere fois, la macro demande ou se
 ' trouve registre-gcblo.csv ; le chemin est garde sur ce PC (pas dans le classeur).
@@ -36,6 +39,7 @@ Private Const APPLI As String = "RegistreGCBLO"
 Private journal As Worksheet
 Private nbModifs As Long
 Private nbIgnores As Long
+Private faits As Collection          ' ce que la macro a fait, pour la fenetre de compte rendu
 
 ' Textes avec accents, construits ici pour ne pas dependre de l'encodage du module
 Private Function ValideGdp() As String
@@ -65,6 +69,7 @@ Public Sub MajDepuisRegistre()
 
     Set journal = FeuilleJournal()
     nbModifs = 0: nbIgnores = 0
+    Set faits = New Collection
 
     For Each nomOnglet In Split(ONGLETS, ",")
         Set ws = Nothing
@@ -108,13 +113,17 @@ Fin:
     Application.EnableEvents = True
     Application.ScreenUpdating = True
 
-    MsgBox "Registre : " & registre.Count & " dossiers lus." & vbCrLf & _
-           "Lignes concern" & ChrW(233) & "es : " & vus & vbCrLf & _
-           "Cellules modifi" & ChrW(233) & "es : " & nbModifs & vbCrLf & _
-           "Laiss" & ChrW(233) & "es de c" & ChrW(244) & "t" & ChrW(233) & " : " & nbIgnores & _
-           IIf(absents <> "", vbCrLf & "Onglets introuvables :" & absents, "") & _
-           IIf(nbModifs + nbIgnores > 0, vbCrLf & vbCrLf & "D" & ChrW(233) & "tail : onglet " & ONGLET_JOURNAL, "") & _
-           erreur, IIf(erreur = "", vbInformation, vbExclamation), "Mise " & ChrW(224) & " jour depuis le registre"
+    Dim bilan As String
+    bilan = registre.Count & " dossiers dans le registre  " & ChrW(183) & "  " & vus & " lignes concern" & ChrW(233) & "es  " & ChrW(183) & "  " & _
+             nbModifs & " cellule(s) modifi" & ChrW(233) & "e(s)  " & ChrW(183) & "  " & nbIgnores & " laiss" & ChrW(233) & "e(s) de c" & ChrW(244) & "t" & ChrW(233) & _
+             IIf(absents <> "", "  " & ChrW(183) & "  onglets introuvables :" & absents, "")
+
+    If nbModifs + nbIgnores = 0 And erreur = "" Then
+        MsgBox "Tout est d" & ChrW(233) & "j" & ChrW(224) & " " & ChrW(224) & " jour." & vbCrLf & vbCrLf & Replace(bilan, "  " & ChrW(183) & "  ", vbCrLf), _
+               vbInformation, "Mise " & ChrW(224) & " jour depuis le registre"
+    Else
+        CompteRendu bilan, erreur
+    End If
 End Sub
 
 '------------------------------------------------------------------------------
@@ -147,26 +156,27 @@ Private Sub Ecrire(ws As Worksheet, ligne As Long, colonne As String, gcblo As S
     Dim c As Range
     Set c = ws.Cells(ligne, colonne)
     If c.HasFormula Then
-        Noter ws, ligne, gcblo, colonne, avant, "(non modifi" & ChrW(233) & " : formule) " & apres
+        Noter ws, ligne, gcblo, colonne, avant, apres, "Non modifi" & ChrW(233) & " : la cellule contient une formule"
         nbIgnores = nbIgnores + 1
         Exit Sub
     End If
     On Error Resume Next
     c.Value = apres
     If Err.Number <> 0 Then
-        Noter ws, ligne, gcblo, colonne, avant, "(non modifi" & ChrW(233) & " : " & Err.Description & ") " & apres
+        Noter ws, ligne, gcblo, colonne, avant, apres, "Non modifi" & ChrW(233) & " : " & Err.Description
         nbIgnores = nbIgnores + 1
         Err.Clear
     Else
-        Noter ws, ligne, gcblo, colonne, avant, apres
+        Noter ws, ligne, gcblo, colonne, avant, apres, ""
         nbModifs = nbModifs + 1
     End If
     On Error GoTo 0
 End Sub
 
 Private Sub Noter(ws As Worksheet, ligne As Long, gcblo As String, colonne As String, _
-                  avant As String, apres As String)
+                  avant As String, apres As String, remarque As String)
     Dim r As Long
+    faits.Add Array(ws.Name, ligne, gcblo, colonne, avant, apres, remarque)
     r = journal.Cells(journal.Rows.Count, 1).End(xlUp).Row + 1
     journal.Cells(r, 1).Value = Now
     journal.Cells(r, 2).Value = "'" & ws.Name
@@ -175,6 +185,80 @@ Private Sub Noter(ws As Worksheet, ligne As Long, gcblo As String, colonne As St
     journal.Cells(r, 5).Value = colonne
     journal.Cells(r, 6).Value = "'" & avant
     journal.Cells(r, 7).Value = "'" & apres
+    journal.Cells(r, 8).Value = remarque
+    If journal.Cells(1, 8).Value = "" Then journal.Cells(1, 8).Value = "Remarque": journal.Cells(1, 8).Font.Bold = True
+End Sub
+
+'------------------------------------------------------------------------------
+' Compte rendu dans une fenetre a part : un classeur temporaire, jamais enregistre,
+' qui se ferme sans question. Le classeur partage n'est pas touche.
+Private Sub CompteRendu(bilan As String, erreur As String)
+    Dim wb As Workbook, ws As Worksheet, f As Variant, r As Long, n As Long
+    Dim vert As Long, orange As Long, quoi As String
+
+    On Error Resume Next
+    Application.ScreenUpdating = False
+    Set wb = Workbooks.Add(xlWBATWorksheet)
+    Set ws = wb.Worksheets(1)
+    ws.Name = "Compte rendu"
+    ActiveWindow.DisplayGridlines = False
+    ActiveWindow.Caption = "Compte rendu " & ChrW(8212) & " mise " & ChrW(224) & " jour depuis le registre"
+
+    vert = RGB(226, 239, 218): orange = RGB(252, 228, 214)
+
+    With ws.Range("A1")
+        .Value = "Mise " & ChrW(224) & " jour de " & ThisWorkbook.Name & " depuis le registre GCBLO"
+        .Font.Bold = True: .Font.Size = 14
+    End With
+    ws.Range("A2").Value = Format(Now, "dddd d mmmm yyyy") & " " & ChrW(224) & " " & Format(Now, "hh:mm")
+    ws.Range("A2").Font.Color = RGB(110, 110, 110)
+    ws.Range("A3").Value = bilan
+    If erreur <> "" Then
+        ws.Range("A4").Value = Trim$(Replace(erreur, vbCrLf, ""))
+        ws.Range("A4").Font.Color = RGB(192, 0, 0): ws.Range("A4").Font.Bold = True
+    End If
+
+    r = 6
+    ws.Range(ws.Cells(r, 1), ws.Cells(r, 8)).Value = Array("Onglet", "Ligne", "GCBLO", "Changement", "Avant", "Apr" & ChrW(232) & "s", "R" & ChrW(233) & "sultat", "Aller")
+    With ws.Range(ws.Cells(r, 1), ws.Cells(r, 8))
+        .Font.Bold = True: .Interior.Color = RGB(64, 64, 64): .Font.Color = RGB(255, 255, 255)
+    End With
+
+    For Each f In faits
+        r = r + 1: n = n + 1
+        If f(3) = COL_FCI Then quoi = "J " & ChrW(183) & " FCI" Else quoi = "E " & ChrW(183) & " " & ValideGdp()
+        ws.Cells(r, 1).Value = "'" & f(0)
+        ws.Cells(r, 2).Value = f(1)
+        ws.Cells(r, 3).Value = f(2)
+        ws.Cells(r, 4).Value = quoi
+        ws.Cells(r, 5).Value = "'" & f(4)
+        ws.Cells(r, 6).Value = "'" & f(5)
+        If f(6) = "" Then
+            ws.Cells(r, 7).Value = "Modifi" & ChrW(233)
+            ws.Range(ws.Cells(r, 1), ws.Cells(r, 8)).Interior.Color = vert
+        Else
+            ws.Cells(r, 7).Value = f(6)
+            ws.Range(ws.Cells(r, 1), ws.Cells(r, 8)).Interior.Color = orange
+        End If
+        ' Lien vers la cellule dans le classeur partage
+        ws.Hyperlinks.Add Anchor:=ws.Cells(r, 8), Address:=ThisWorkbook.FullName, _
+            SubAddress:="'" & f(0) & "'!" & f(3) & f(1), TextToDisplay:="voir"
+    Next f
+
+    ws.Range("A6").AutoFilter
+    ws.Columns("A:D").AutoFit
+    ws.Columns("E:F").ColumnWidth = 45
+    ws.Columns("G").ColumnWidth = 40
+    ws.Columns("H").ColumnWidth = 7
+    ws.Range(ws.Cells(7, 5), ws.Cells(r, 7)).WrapText = True
+    ws.Range(ws.Cells(6, 1), ws.Cells(r, 8)).VerticalAlignment = xlTop
+    ws.Range("A7").Select
+    ActiveWindow.FreezePanes = True
+    ws.Range("A1").Select
+
+    wb.Saved = True                  ' se ferme sans demander d'enregistrer
+    Application.ScreenUpdating = True
+    wb.Activate
 End Sub
 
 Private Function FeuilleJournal() As Worksheet
@@ -186,7 +270,8 @@ Private Function FeuilleJournal() As Worksheet
         Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))
         ws.Name = ONGLET_JOURNAL
         ws.Range("A1:G1").Value = Array("Date", "Onglet", "Ligne", "GCBLO", "Colonne", "Avant", "Apr" & ChrW(232) & "s")
-        ws.Range("A1:G1").Font.Bold = True
+        ws.Range("H1").Value = "Remarque"
+        ws.Range("A1:H1").Font.Bold = True
         ws.Columns("A").NumberFormat = "dd/mm/yyyy hh:mm"
     End If
     Set FeuilleJournal = ws

@@ -98,7 +98,7 @@ Un dossier **clos** n'a plus d'alerte de relance.
     La macro **`MajDepuisRegistre`** (`excel/MajDepuisRegistre.bas`), lancée dans le classeur (Alt+F8), lit ce CSV et, sur les onglets 33, 16, 17, 79, 86, pour chaque ligne dont D est un GCBLO du registre et E vaut `GCBLO` (ou déjà `VALIDÉ GDP`) :
     - **J** : `Numéro de commande FCI : ‹fci›`. Registre sans FCI → rien. J contient déjà un des FCI du registre → rien (un dossier sur plusieurs lignes garde un FCI par ligne). Sinon le texte après la mention est remplacé, ou la mention est ajoutée à la fin ; le reste de J est gardé.
     - **E** : `VALIDÉ GDP` pour les dossiers **Attach**.
-    - Rien n'est effacé ; une cellule à formule ou protégée est laissée et signalée. Chaque changement est noté dans l'onglet **Journal registre**. Le chemin du CSV est demandé la première fois et gardé sur le PC (pas dans le classeur).
+    - Rien n'est effacé ; une cellule à formule ou protégée est laissée et signalée. Chaque changement est noté dans l'onglet **Journal registre**. À la fin, une **fenêtre de compte rendu** (classeur temporaire, jamais enregistré) liste ce qui a été fait : vert = modifié, orange = laissé de côté avec la raison, lien « voir » vers la cellule ; si rien n'a changé, un simple message « Tout est déjà à jour ». Le chemin du CSV est demandé la première fois et gardé sur le PC (pas dans le classeur).
     Dans l'autre sens, les nouveaux GCBLO du classeur entrent avec `import` (R10). Les lignes passées en `VALIDÉ GDP` ne sont plus relues par `import` : ces dossiers sont déjà au registre.
 
 Toutes ces règles vivent dans **un seul fichier** (`js/dossiers.js`), et chacune a un test.
@@ -400,3 +400,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | `ls` masque les dossiers Attach sauf `ls attach` (le bilan indique combien sont masqués) |
 | 04/11/2026 | Case FCI orange pendant 2 jours après une relance FCI, puis rouge à nouveau |
 | 04/11/2026 | R14 : `registre-gcblo.csv` écrit à chaque sauvegarde ; macro `MajDepuisRegistre` pour IMMO-COORDI-DISSIM.xlsm (J = FCI, E = VALIDÉ GDP pour Attach, journal des changements) |
+| 04/11/2026 | Macro : fenêtre de compte rendu à la fin (modifié en vert, laissé de côté en orange, lien vers la cellule) |
