@@ -1,0 +1,50 @@
+/**
+ * tableau-bord.test.js — le tableau de bord ASCII, à droite de la console.
+ * Ce qui compte : toutes les lignes ont la même largeur (sinon le cadre se casse),
+ * et les chiffres affichés sont les bons.
+ */
+import { groupe, test, egal, vrai } from './outil.js';
+import { dessinerTableauBord, barre, etincelle, LARGEUR } from '../js/jarvis/tableau-bord.js';
+import { creerStore, supportMemoire } from '../js/store.js';
+import { creerDossiers } from '../js/dossiers.js';
+
+const S = {
+  total: 85, parType: { NUM21: 52, AIR: 30, SOGETREL: 3 },
+  parStatut: { A_FAIRE: 30, EN_VALIDATION: 15, MAD: 12, REFUSE: 3, LITIGE: 2, ANNULE: 3, ATTACH: 20 },
+  retard: 14, proche: 2, sansFci: 7, aVenir: [2, 0, 5, 1, 0, 0, 3],
+  valo: { total: 4321.5, parStatut: { A_FAIRE: 1000, EN_VALIDATION: 500, MAD: 300, REFUSE: 0, LITIGE: 21.5, ANNULE: 100, ATTACH: 2400 }, sans: 4 }
+};
+const largeur = l => [...l].length;
+const vide = { total: 0, parType: { NUM21: 0, AIR: 0, SOGETREL: 0 }, parStatut: { A_FAIRE: 0, EN_VALIDATION: 0, MAD: 0, REFUSE: 0, LITIGE: 0, ANNULE: 0, ATTACH: 0 },
+  retard: 0, proche: 0, sansFci: 0, aVenir: [0, 0, 0, 0, 0, 0, 0], valo: { total: 0, parStatut: {}, sans: 0 } };
+
+groupe('Tableau de bord ASCII', () => {
+  test('toutes les lignes ont la même largeur', () => egal(dessinerTableauBord(S, '2026-11-04').texte.filter(l => largeur(l) !== LARGEUR), []));
+  test('largeur tenue aussi sans aucun dossier', () => egal(dessinerTableauBord(vide, '2026-11-04').texte.filter(l => largeur(l) !== LARGEUR), []));
+  test('cadre, date et sections', () => {
+    const t = dessinerTableauBord(S, '2026-11-04').texte;
+    vrai(t[0].startsWith('┌─ tableau de bord') && t[0].includes('mer 04/11') && t.at(-1).startsWith('└'));
+    vrai(['affect', 'statut DFT', 'avancement', 'valorisation', 'relances'].every(s => t.some(l => l.includes(s))));
+  });
+  test('les 7 statuts DFT', () => vrai(['À faire', 'En valid.', 'Mis à disp', 'Refusé', 'Litige', 'Annulé', 'Attach'].every(s => dessinerTableauBord(S, '2026-11-04').texte.some(l => l.includes(s)))));
+  test('avancement : clos = mis à dispo + annulé + attach', () => vrai(dessinerTableauBord(S, '2026-11-04').texte.some(l => l.includes('41 %') && l.includes('clos'))));   // 35 / 85
+  test('valorisation : total, attaché, à attacher (hors annulé)', () => {
+    const t = dessinerTableauBord(S, '2026-11-04').texte.map(l => l.replace(/\s+/g, ' '));
+    vrai(t.some(l => l.includes('total 4 321,50 €')));
+    vrai(t.some(l => l.includes('attaché 2 400,00 €')));
+    vrai(t.some(l => l.includes('à attacher 1 821,50 €')));
+  });
+  test('barre et étincelle', () => { egal(barre(1, 1000, 10)[0], '█'); egal(etincelle([0, 1, 4]).join(''), '·▂█'); });
+});
+
+groupe('Statistiques — valorisation', () => {
+  test('total, par statut, dossiers sans valorisation', () => {
+    const r = creerDossiers(creerStore(supportMemoire()));
+    r.creer({ type: 'AIR', gcblo: 'SBA501001-THF010', valorisation: 31.5 });
+    const d = r.creer({ type: 'AIR', gcblo: 'SBA501002-THF010', valorisation: 58.4 }).dossier;
+    r.modifier(d.id, { statutDft: 'ATTACH' });
+    r.creer({ type: 'AIR', gcblo: 'SBA501003-THF010' });
+    const v = r.statistiques().valo;
+    egal([v.total, v.parStatut.ATTACH, v.parStatut.A_FAIRE, v.sans], [89.9, 58.4, 31.5, 1]);
+  });
+});

@@ -15,6 +15,7 @@ import { aujourdhui } from './dates.js';
 import { convertirV1, lireV1Navigateur } from './reprise-v1.js';
 import { creerInvite } from './jarvis/invite.js';
 import { creerActions, esc } from './jarvis/actions.js';
+import { dessinerTableauBord } from './jarvis/tableau-bord.js';
 
 /* 1. Les données. Si le navigateur refuse le stockage, on travaille en mémoire (et on prévient). */
 let stockageOk = true;
@@ -112,11 +113,18 @@ const actions = creerActions({
 });
 invite.brancher(analyse => actions.executer(analyse));
 
-/* 5. Prévenir si l'enregistrement échoue. */
+/* 5. Le tableau de bord à droite : redessiné à chaque changement, et chaque minute (date, retards). */
+const tableauBord = document.getElementById('tableauBord');
+const dessinerBord = () => { tableauBord.innerHTML = `<pre class="dessin">${dessinerTableauBord(regles.statistiques(), regles.aujourdhui()).html}</pre>`; };
+store.ecouter(dessinerBord);
+setInterval(dessinerBord, 60 * 1000);
+dessinerBord();
+
+/* 6. Prévenir si l'enregistrement échoue. */
 store.ecouter(() => invite.ecran.marquerPerime());
 store.ecouter(e => { if (!e.enregistre) invite.ecran.ligne('gcblo: enregistrement impossible : les dernières modifications ne sont pas gardées', 'err'); });
 
-/* 6. Écran de départ : vide, seulement les avertissements utiles. */
+/* 7. Écran de départ : vide, seulement les avertissements utiles. */
 const e = invite.ecran;
 if (reprise?.dossiers.length) e.ligne(`${reprise.dossiers.length} dossiers repris de la version 1${reprise.ignores ? ` (${reprise.ignores} ignorés)` : ''}`, 'ok');
 if (!stockageOk) e.ligne('gcblo: ce navigateur bloque l\'enregistrement : les données seront perdues à la fermeture', 'err');

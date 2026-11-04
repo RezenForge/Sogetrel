@@ -115,6 +115,7 @@ js/
     completion.js          propositions classées, texte fantôme, aperçu de l'effet
     actions.js             commande validée → appel aux règles de dossiers.js
     menus.js               le menu ⋯ d'un dossier : des commandes écrites à l'avance
+    tableau-bord.js        le tableau de bord ASCII, à droite de la console
     invite.js              la ligne de saisie, la liste de propositions, le fil
     lumiere.js             la lumière : ses états et ses transitions
 tests/
@@ -182,7 +183,7 @@ Ce que la console affiche est cliquable, pour le quotidien, mais **un clic ne fa
 
 Ce qui est cliquable :
 - **le GCBLO** d'un dossier, dans une liste ou une fiche → `open ‹gcblo›` ;
-- **`⋯`** à côté d'un dossier → un menu court, construit selon l'état du dossier au moment du clic (`js/jarvis/menus.js`) : Ouvrir, puis les statuts où il peut passer (`→ Refusé`), et Supprimer en dernier (en rouge, avec confirmation). Sur téléphone, le menu s'ouvre en bas de l'écran avec de grands boutons ;
+- **`⋯`** à côté d'un dossier → un menu court, construit selon l'état du dossier au moment du clic (`js/jarvis/menus.js`) : Ouvrir, puis les statuts où il peut passer (`→ Refusé`), et Supprimer en dernier (en rouge, avec confirmation). ;
 - **une valeur de la fiche** (`open`) **ou d'une liste** (`ls` : affect, commune, valo, FCI, relance, statut), au **double-clic** : elle devient une zone de saisie (une liste pour l'affect et le statut). Entrée ou un clic ailleurs valide, Échap annule. La validation lance `edit ‹gcblo› ‹champ› ‹valeur›` ; la fiche ou la liste se met à jour sur place ;
 - **`cancel`** dans le message qui suit une modification ;
 - **chaque commande** dans la liste de `help` → `help ‹commande›`.
@@ -190,6 +191,8 @@ Ce qui est cliquable :
 **Lignes anciennes** : quand un dossier change, les listes et fiches déjà affichées passent en grisé (elles ne sont plus à jour). Un clic dessus agit toujours sur l'état actuel du dossier.
 
 Pas de barre d'outils fixe : les clics restent à l'intérieur de ce que la console affiche.
+
+**Écran** (04/11/2026) : pour ordinateur seulement. À gauche la console ; à droite, toujours visible, le **tableau de bord** dessiné en caractères (affect, statut DFT, avancement, valorisation, relances), redessiné à chaque changement de dossier et chaque minute.
 
 **Textes courts** (03/11/2026) : la console n'explique pas ce que fait chaque chose. Pas de phrase d'aide sous les résultats, des libellés de quelques mots (`6 dossiers`, `annulé : 1 modification`), une aide (`help`) en une ligne par commande. Le détail reste dans ce document.
 
@@ -340,3 +343,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | `info` : un début de GCBLO seul (`SBA501023`) retrouve le dossier complet (fins -THF010, -THF011, -ACF010, -ACF011…) ; plusieurs dossiers possibles → tous affichés |
 | 04/11/2026 | Statuts Litige, Annulé (clos) et Attach (clos, ligne en vert clair) ; colonne RELANCE retirée de la liste ; « STATUT » devient « STATUT DFT » |
 | 04/11/2026 | `attachement ‹dossier›` : le dossier passe au statut Attach une fois le fichier enregistré |
+| 04/11/2026 | Affichage téléphone abandonné (ordinateur seulement) ; tableau de bord ASCII toujours visible à droite (`js/jarvis/tableau-bord.js`) : affect, statut DFT, avancement, valorisation (total, attaché, à attacher), relances ; redessiné à chaque changement |

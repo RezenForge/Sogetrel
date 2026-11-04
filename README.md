@@ -81,6 +81,7 @@ js/jarvis/analyse.js     comprend la ligne tapée (ne modifie rien)
 js/jarvis/completion.js  propositions, texte grisé, aperçu (ne modifie rien)
 js/jarvis/actions.js     exécute une commande via les règles
 js/jarvis/menus.js       le menu ⋯ d'un dossier : des commandes écrites à l'avance
+js/jarvis/tableau-bord.js le tableau de bord ASCII, toujours visible à droite
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   157 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
+tests/                   165 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
 ```

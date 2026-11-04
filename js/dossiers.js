@@ -318,6 +318,8 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
       const parType = Object.fromEntries(TYPES.map(t => [t.code, 0]));
       const parStatut = Object.fromEntries(STATUTS.map(s => [s.code, 0]));
       let retard = 0, proche = 0, sansFci = 0;
+      // Valorisation (euros) : total, par statut, et nombre de dossiers sans valorisation
+      const valo = { total: 0, parStatut: Object.fromEntries(STATUTS.map(s => [s.code, 0])), sans: 0 };
       const aVenir = [0, 0, 0, 0, 0, 0, 0];   // relances prévues aujourd'hui, demain… J+6 (dossiers non clos)
       for (const d of liste) {
         parType[d.type]++;
@@ -325,12 +327,17 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
         const e = etatRelance(d, ref);
         if (e === 'retard') retard++; else if (e === 'proche') proche++;
         if (!d.fci.length) sansFci++;
+        if (d.valorisation === null || d.valorisation === undefined) valo.sans++;
+        else { valo.total += d.valorisation; valo.parStatut[d.statutDft] += d.valorisation; }
         if (d.dateRelance && !statutParCode(d.statutDft)?.clos) {
           const ecart = ecartJours(d.dateRelance, ref);
           if (ecart >= 0 && ecart < 7) aVenir[ecart]++;
         }
       }
-      return { total: liste.length, parType, parStatut, retard, proche, sansFci, aVenir };
+      const arrondi = v => Math.round(v * 100) / 100;
+      valo.total = arrondi(valo.total);
+      for (const c in valo.parStatut) valo.parStatut[c] = arrondi(valo.parStatut[c]);
+      return { total: liste.length, parType, parStatut, retard, proche, sansFci, aVenir, valo };
     }
   };
 }

@@ -2,14 +2,15 @@
  * base.css — la mise en page et les composants, sans couleur en dur
  * (toutes les couleurs viennent de terminal.css).
  *
- * Écran unique : la page ne défile jamais. Seule la zone de sortie défile ;
- * la ligne de commande reste collée en bas, au-dessus du clavier sur téléphone.
+ * Écran unique, pour ordinateur : la page ne défile jamais. À gauche la console
+ * (la zone de sortie défile, la ligne de commande reste en bas) ; à droite le
+ * tableau de bord, toujours visible. L'affichage téléphone a été abandonné (04/11/2026).
  */
 *, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; }
 body {
   margin: 0; height: 100dvh; overflow: hidden;
-  display: flex; flex-direction: column;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr) auto;
   background: var(--fond); color: var(--texte);
   font: 16px/1.4 var(--police);
   -webkit-text-size-adjust: 100%;
@@ -20,9 +21,20 @@ body {
 
 /* ---------------- Zone de sortie ---------------- */
 .ecran {
-  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
-  padding: max(12px, env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) 10px max(14px, env(safe-area-inset-left, 0px));
+  grid-column: 1; grid-row: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: 12px 14px 10px;
 }
+
+/* ---------------- Tableau de bord (à droite, toujours visible) ---------------- */
+.tableau-bord {
+  grid-column: 2; grid-row: 1 / span 2; overflow-y: auto;
+  padding: 12px 16px; border-left: 1px solid var(--trait);
+  line-height: 1.25;
+}
+.tableau-bord .cadre { color: var(--pale); }
+.tableau-bord .cadre-titre { color: var(--texte); font-weight: 700; }
+.tableau-bord .vide { color: var(--pale); opacity: .35; }
+.tableau-bord .fort { color: var(--texte); font-weight: 700; }
 .l { white-space: pre-wrap; overflow-wrap: anywhere; }
 .l + .echo { margin-top: 10px; }
 .echo { color: var(--texte); }
@@ -40,13 +52,6 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .l:has(> pre) { overflow-x: auto; white-space: normal; }
 /* Listes : pas de zone de défilement propre, pour que l'en-tête puisse rester collé en haut de l'écran */
 .l:has(> pre.tableau) { overflow-x: visible; }
-/* Liste : FCI, commune et valo en colonnes sur grand écran, sur une seconde ligne sur téléphone */
-.tableau .col-etroit { display: none; }
-@media (max-width: 760px) {
-  .tableau .col-large { display: none; }
-  /* seconde ligne en retrait sous le GCBLO ; si elle est trop longue, elle revient à la ligne au même retrait */
-  .tableau .col-etroit { display: block; padding-left: 7ch; white-space: normal; line-height: 1.35; margin-bottom: .35em; }
-}
 .tableau .valo { color: var(--texte); }
 .tableau .rangee { display: block; }
 .tableau .rangee-ATTACH { background: var(--ligne-ATTACH); }
@@ -80,8 +85,6 @@ pre { margin: 0; font: inherit; white-space: pre; }
 /* Listes et fiches qui ne sont plus à jour (un dossier a changé depuis) */
 .vue.perime { opacity: .5; }
 .vue.perime:hover { opacity: .8; }
-/* Doigt : lignes plus hautes pour viser sans se tromper */
-@media (pointer: coarse) { .tableau { line-height: 1.9; } .points { padding: 4px 4px; } }
 
 .menu {
   position: fixed; z-index: 20; min-width: 240px; max-width: calc(100vw - 16px); padding: 4px 0;
@@ -94,12 +97,6 @@ pre { margin: 0; font: inherit; white-space: pre; }
 }
 .menu-choix:hover, .menu-choix:focus-visible { background: var(--trait); outline: none; }
 .menu-cmd { color: var(--pale); font-size: 11px; }
-/* Téléphone : le menu s'ouvre en bas de l'écran, grands boutons */
-@media (max-width: 640px) {
-  .menu { left: 0; right: 0; bottom: 0; max-width: none; padding: 6px 0 max(10px, env(safe-area-inset-bottom, 0px)); }
-  .menu-choix { padding: 12px max(16px, env(safe-area-inset-left, 0px)); }
-  .menu-titre { padding: 8px 16px 10px; }
-}
 
 /* Fiche et liste : valeurs modifiables au double-clic */
 .editable { cursor: text; border-radius: 2px; }
@@ -112,9 +109,9 @@ pre { margin: 0; font: inherit; white-space: pre; }
 
 /* ---------------- Zone de saisie ---------------- */
 .saisie-zone {
-  position: relative; flex: none;
+  grid-column: 1; grid-row: 2; position: relative;
   background: var(--fond-saisie);
-  padding: 2px max(14px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+  padding: 2px 14px 8px;
 }
 .ligne { display: flex; align-items: center; gap: 8px; }
 .invite { flex: none; color: var(--texte); cursor: text; max-width: 70%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -137,7 +134,7 @@ pre { margin: 0; font: inherit; white-space: pre; }
 
 /* Propositions : au-dessus de la ligne de saisie */
 .propositions {
-  position: absolute; left: max(14px, env(safe-area-inset-left, 0px)); bottom: 100%;
+  position: absolute; left: 14px; bottom: 100%;
   width: min(640px, calc(100% - 28px)); max-height: min(300px, 45dvh); overflow-y: auto;
   margin: 0 0 6px; padding: 4px 0; list-style: none;
   background: var(--fond-menu); box-shadow: 0 0 0 1px var(--trait), 0 -6px 18px rgba(0, 0, 0, .5);
@@ -150,10 +147,3 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .propositions li.retard { color: inherit; font-weight: inherit; }
 .propositions li.retard .p-detail { color: var(--retard); }
 
-/* Téléphone : propositions plus grandes pour le doigt, détail sous le libellé */
-@media (max-width: 640px) {
-  body { font-size: 14px; }
-  .propositions { width: calc(100% - 28px); }
-  .propositions li { flex-direction: column; gap: 0; padding: 8px 12px; }
-  .invite { max-width: 45%; }
-}

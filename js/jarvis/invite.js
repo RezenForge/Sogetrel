@@ -108,22 +108,18 @@ export function creerInvite({ racine, contexte }) {
       // Chaque cellule est éditable au double-clic, comme dans la fiche (data-champ, data-dossier)
       const ed = (cle, html) => `<span class="editable" data-champ="${cle}" data-dossier="${esc(d.id)}" title="double-clic pour modifier">${html}</span>`;
       // Ordre des colonnes : AFFECT GCBLO COMMUNE VALO FCI STATUT DFT
-      // Grand écran : commune, valo et FCI en colonnes au milieu de la ligne
-      const large = `<span class="col-large">${ed('commune', col(coupe(commune, 22) || '—', 22))} ${ed('valo', `<span class="valo">${esc((valo || '—').padStart(11))}</span>`)}  ${ed('fci', `<span class="dim">${col(fci || '—', 15)}</span>`)} </span>`;
-      // Téléphone : les mêmes informations, dans le même ordre, sur une seconde ligne en retrait
-      const infos = [['commune', commune], ['valo', valo], ['fci', fci]].filter(([, t]) => t).map(([cle, t]) => ed(cle, esc(t)));
-      const etroit = infos.length ? `<span class="col-etroit dim">${infos.join(' · ')}</span>` : '';
+      const milieu = `${ed('commune', col(coupe(commune, 22) || '—', 22))} ${ed('valo', `<span class="valo">${esc((valo || '—').padStart(11))}</span>`)}  ${ed('fci', `<span class="dim">${col(fci || '—', 15)}</span>`)} `;
       // Une ligne = un bloc : le statut peut colorer toute la ligne (Attach : vert clair)
       return `<span class="rangee rangee-${d.statutDft}">`
         + `${ed('affect', `<span class="ty-${d.type}">${col(TYPE_COURT[d.type] || d.type, 6)}</span>`)} `
         + `${lienDossier(d)} `
-        + large
+        + milieu
         + ed('statut', `<span class="st-${d.statutDft}">${col(STATUT_COURT[d.statutDft] || d.statutDft, 11)}</span>`)
-        + boutonMenu(d) + etroit + '</span>';
+        + boutonMenu(d) + '</span>';
     });
     // L'en-tête reste visible en haut de l'écran tant que la liste défile (CSS : sticky)
     const entete = `<span class="entete dim">${'AFFECT'.padEnd(7)}${'GCBLO'.padEnd(17)}`
-      + `<span class="col-large">${'COMMUNE'.padEnd(23)}${'VALO'.padStart(11)}  ${'FCI'.padEnd(16)}</span>STATUT DFT</span>`;
+      + `${'COMMUNE'.padEnd(23)}${'VALO'.padStart(11)}  ${'FCI'.padEnd(16)}STATUT DFT</span>`;
     return `<pre class="tableau">${entete}${lignes.join('')}</pre>`;
   }
 
@@ -136,7 +132,7 @@ export function creerInvite({ racine, contexte }) {
       defiler();
     },
     /**
-     * Liste de dossiers, alignée (police à chasse fixe), courte pour tenir sur téléphone.
+     * Liste de dossiers, alignée (police à chasse fixe).
      * Le GCBLO est cliquable (→ « open ») ; ⋯ ouvre le menu d'actions du dossier.
      */
     tableau(dossiers) {
@@ -355,13 +351,11 @@ export function creerInvite({ racine, contexte }) {
         + `<span class="${o.classe || ''}">${esc(o.libelle)}</span></button>`).join('');
     racine.body.appendChild(menuEl);
     menuBouton = bouton; bouton.setAttribute('aria-expanded', 'true');
-    // Sur grand écran, le menu s'ouvre contre le bouton ; sur téléphone, en bas (CSS)
-    if (!matchMedia('(max-width: 640px)').matches) {
-      const r = bouton.getBoundingClientRect(), h = menuEl.offsetHeight, w = menuEl.offsetWidth;
-      const haut = r.bottom + h + 8 > innerHeight ? Math.max(8, r.top - h - 4) : r.bottom + 4;
-      menuEl.style.top = `${haut}px`;
-      menuEl.style.left = `${Math.max(8, Math.min(r.right - w, innerWidth - w - 8))}px`;
-    }
+    // Le menu s'ouvre contre le bouton
+    const r = bouton.getBoundingClientRect(), h = menuEl.offsetHeight, w = menuEl.offsetWidth;
+    const haut = r.bottom + h + 8 > innerHeight ? Math.max(8, r.top - h - 4) : r.bottom + 4;
+    menuEl.style.top = `${haut}px`;
+    menuEl.style.left = `${Math.max(8, Math.min(r.right - w, innerWidth - w - 8))}px`;
     menuEl.querySelector('.menu-choix')?.focus();
   }
 
@@ -371,8 +365,8 @@ export function creerInvite({ racine, contexte }) {
     if (cmd) { e.preventDefault(); lancer(cmd.dataset.commande); return; }
     if (points) { e.preventDefault(); menuEl && points.getAttribute('aria-expanded') === 'true' ? fermerMenu() : ouvrirMenu(points, points.dataset.menuDossier); return; }
     if (menuEl && !e.target.closest('.menu')) fermerMenu();
-    // Clic ailleurs dans l'écran : on revient à la saisie (sauf sur téléphone : pas de clavier imposé)
-    if (e.target.closest('#ecran') && !e.target.closest('.edition, .editable') && !getSelection().toString() && matchMedia('(pointer: fine)').matches) champ.focus();
+    // Clic ailleurs dans l'écran : on revient à la saisie
+    if (e.target.closest('#ecran') && !e.target.closest('.edition, .editable') && !getSelection().toString()) champ.focus();
   });
   /* ---------------- Fiche : double-clic sur un champ pour le modifier ---------------- */
 
@@ -433,7 +427,7 @@ export function creerInvite({ racine, contexte }) {
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fermerMenu(); champ.focus(); }
     else if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && i >= 0) { e.preventDefault(); choix[(i + (e.key === 'ArrowDown' ? 1 : -1) + choix.length) % choix.length].focus(); }
   }, true);
-  ecranEl.addEventListener('scroll', () => { if (menuEl && !matchMedia('(max-width: 640px)').matches) fermerMenu(); });
+  ecranEl.addEventListener('scroll', () => { if (menuEl) fermerMenu(); });
 
   return {
     ecran,
