@@ -47,6 +47,7 @@ export function creerInvite({ racine, contexte }) {
   let surCollage = null;         // reçoit le texte d'une liste collée
   let listeDemandee = false;
   let commandeEnCours = '';
+  const vivantes = new Map();    // vues redessinées à chaque changement (élément → dessiner)
   const choisis = new Set();     // sélection multiple dans les listes (Ctrl+clic, Maj+clic) : ids des dossiers
   let dernierChoisi = null;      // la commande en train de s'exécuter (une liste retient son « ls »)
 
@@ -193,8 +194,14 @@ export function creerInvite({ racine, contexte }) {
      * Un dossier a changé : les listes et fiches affichées se mettent à jour sur place
      * (même ordre, mêmes dossiers). Un dossier supprimé disparaît des listes ; sa fiche passe en grisé.
      */
+    /** Une vue redessinée à chaque changement des dossiers (écran « Aujourd'hui »). dessiner() → HTML */
+    vueVivante(dessiner) {
+      ecran.ligne(dessiner(), 'vue');
+      vivantes.set(sortie.lastElementChild, dessiner);
+    },
     rafraichirVues() {
       const dossiers = contexte().dossiers, parId = new Map(dossiers.map(d => [d.id, d]));
+      for (const [el, dessiner] of vivantes) { if (!el.isConnected) vivantes.delete(el); else el.innerHTML = dessiner(); }
       racine.querySelectorAll('.vue[data-liste]').forEach(vue => {
         if (vue.querySelector('.edition')) return;          // saisie en cours : on n'y touche pas
         vue.innerHTML = tableauHtml(vue.dataset.liste.split(',').map(i => parId.get(i)).filter(Boolean), vue.dataset.triActuel || '');

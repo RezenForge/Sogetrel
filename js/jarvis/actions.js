@@ -23,7 +23,7 @@
  *   ecrireDansDossier(dossier, nom, octets) → Promise  (écrit ou remplace un fichier dans ce dossier)
  *   ouvrirMail(lien)         ouvre un lien mailto: dans la messagerie
  */
-import { criteresListe, resultatLs } from './analyse.js';
+import { criteresListe, resultatLs, analyser } from './analyse.js';
 import { COMMANDES, SORTES, MOTS_TYPE, MOTS_STATUT, CHAMPS, plat } from './grammaire.js';
 import { lireDate } from './analyse.js';
 import { IMPORT_EXCEL } from '../config.js';
@@ -34,7 +34,7 @@ import { contenuSauvegarde, nomSauvegarde, lireSauvegarde, GARDER } from '../sau
 import { extraireDossiers, appliquerImport } from '../import-excel.js';
 import { lireAffectsClasseur, noterAffectsClasseur, ecartAffect } from '../affects-classeur.js';
 import { typeParCode, statutParCode } from '../config.js';
-import { pointDuJour } from './aujourdhui.js';
+import { CARTES, carteHtml } from './aujourdhui.js';
 import { relanceRecente } from '../dossiers.js';
 import { depuisJour } from '../dates.js';
 
@@ -320,21 +320,28 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
 
     clear() { ecran.vider(); },
 
-    /** « Aujourd'hui » : ce qui demande une action, chaque ligne cliquable (→ ls des dossiers concernés). */
+    /**
+     * « Aujourd'hui » : ce qui demande une action, en cartes (une par sujet). L'en-tête d'une carte lance
+     * le « ls » correspondant ; chaque dossier a son action en un clic (relancer, affecter…).
+     * La vue se redessine seule quand les dossiers changent (une action faite disparaît de la carte).
+     */
     today() {
-      const jour = regles.aujourdhui();
-      const titre = depuisJour(jour).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-      const affects = lireAffectsClasseur();
-      const lignes = pointDuJour(regles.statistiques(), { ecartsAffect: store.tous().filter(d => ecartAffect(d, affects)).length });
-      const html = [`<div class="jour-titre">aujourd'hui <span class="dim">· ${esc(titre)}</span></div>`];
-      if (!store.tous().length) html.push('<div class="dim">aucun dossier enregistré · <button type="button" class="lien c-verbe" data-commande="import">import</button> pour commencer</div>');
-      else if (!lignes.length) html.push('<div class="jour-ok">✓ rien d\'urgent</div>');
-      for (const l of lignes) {
-        html.push(`<button type="button" class="jour-ligne" data-commande="${esc(l.commande)}" title="${esc(l.commande)}">`
-          + `<span class="jour-n ${l.classe}">${l.n}</span><span class="jour-libelle">${esc(l.libelle)}</span>`
-          + `${l.conseil ? `<span class="jour-conseil dim">${esc(l.conseil)}</span>` : ''}<span class="jour-cmd c-verbe">${esc(l.commande)}</span></button>`);
-      }
-      ecran.ligne(`<div class="jour">${html.join('')}</div>`, 'vue');
+      ecran.vueVivante(() => {
+        const jour = regles.aujourdhui(), dossiers = store.tous();
+        const titre = depuisJour(jour).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+        const affects = lireAffectsClasseur();
+        const ctxAnalyse = { dossiers, aujourdhui: jour, regles };
+        const cartes = CARTES.map(c => {
+          const a = analyser(c.commande, c.commande.length, ctxAnalyse);
+          return [c, resultatLs(criteresListe(a.valeurs), regles, dossiers).liste];
+        }).filter(([, l]) => l.length);
+        const total = new Set(cartes.flatMap(([, l]) => l.map(d => d.id))).size;
+        const tete = `<header class="jour-tete"><div><div class="jour-titre">Aujourd'hui</div><div class="jour-date dim">${esc(titre)}</div></div>`
+          + (dossiers.length ? `<div class="jour-bilan ${total ? '' : 'ok'}">${total ? `<b>${total}</b> dossier${total > 1 ? 's' : ''} à traiter` : '✓ rien d\'urgent'}</div>` : '') + '</header>';
+        if (!dossiers.length) return `<div class="jour">${tete}<div class="jour-vide">Aucun dossier enregistré · <button type="button" class="lien c-verbe" data-commande="import">import</button> pour commencer</div></div>`;
+        if (!cartes.length) return `<div class="jour">${tete}<div class="jour-vide ok">Tout est à jour : aucune relance en retard, aucun FCI attendu, aucun écart.</div></div>`;
+        return `<div class="jour">${tete}<div class="jour-cartes">${cartes.map(([c, l]) => carteHtml(c, l, { jour, affects }, esc)).join('')}</div></div>`;
+      });
     },
 
     /** Recharge la page, en allant chercher la dernière version publiée (comme Ctrl+F5). */

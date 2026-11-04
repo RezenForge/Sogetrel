@@ -96,3 +96,17 @@ groupe('Aujourd\'hui — ce qui demande une action', () => {
     [[2, 'ls fci-retard'], [1, 'ls litige'], [4, 'ls ecart-affect'], [3, 'ls sans-affect'], [1, 'ls proches']]));
   test('rien à faire : liste vide', () => egal(pointDuJour({ parType: {}, parStatut: {} }), []));
 });
+
+import { CARTES, carteHtml, PAR_CARTE } from '../js/jarvis/aujourdhui.js';
+import { esc } from '../js/jarvis/actions.js';
+groupe('Aujourd\'hui — cartes', () => {
+  const fci = CARTES.find(c => c.commande === 'ls fci-retard');
+  const D = (g, h = []) => ({ id: g, gcblo: g, type: 'AIR', fci: [], dateAffectation: '2026-11-01', historique: h });
+  const ctx = { jour: '2026-11-04', affects: {} };
+  test('une ligne par dossier, avec l\'action en un clic', () => {
+    const html = carteHtml(fci, [D('SBA501404-THF010')], ctx, esc);
+    vrai(html.includes('data-commande="relance SBA501404-THF010 fci"') && html.includes('affecté il y a 3 j') && html.includes('data-commande="ls fci-retard"'));
+  });
+  test('relance récente : « ✓ relancé », atténué', () => vrai(carteHtml(fci, [D('SBA501404-THF010', [{ date: new Date().toISOString(), action: 'mail', detail: 'Relance FCI préparée' }])], { ...ctx, jour: new Date().toISOString().slice(0, 10) }, esc).includes('jc-action fait')));
+  test(`au-delà de ${PAR_CARTE} : « + N autres »`, () => vrai(carteHtml(fci, Array.from({ length: 8 }, (_, i) => D(`SBA50140${i}-THF010`)), ctx, esc).includes('+ 3 autres')));
+});

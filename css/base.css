@@ -184,20 +184,50 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .propositions li.retard .p-detail { color: var(--retard); }
 
 
-/* ---------------- Refonte 04/11/2026 : écran « Aujourd'hui » (commande today) ---------------- */
-.jour { display: flex; flex-direction: column; gap: 2px; max-width: 110ch; white-space: normal; }
-.jour-titre { font-weight: 700; margin-bottom: 6px; }
-.jour-ok { color: var(--accent); }
-.jour-ligne {
-  display: grid; grid-template-columns: 4ch 36ch minmax(0, 1fr) auto; align-items: baseline; gap: 0 12px;
-  font: inherit; color: var(--texte); text-align: left; background: none; border: 0; border-radius: 3px;
-  padding: 3px 8px; margin: 0 -8px; cursor: pointer;
+/* ---------------- Écran « Aujourd'hui » (commande today) : des cartes ---------------- */
+.jour { white-space: normal; display: flex; flex-direction: column; gap: 14px; padding: 4px 0 10px; }
+.jour-tete { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-bottom: 10px; border-bottom: 1px solid var(--trait); }
+.jour-titre { font-size: 22px; font-weight: 700; letter-spacing: .01em; line-height: 1.1; }
+.jour-date { font-size: 14px; margin-top: 2px; }
+.jour-bilan { font-size: 15px; color: var(--pale); }
+.jour-bilan b { color: var(--texte); font-size: 18px; }
+.jour-bilan.ok, .jour-vide.ok { color: var(--accent); }
+.jour-vide { padding: 14px 16px; border: 1px dashed var(--trait); border-radius: 6px; }
+.jour-cartes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 58ch), 1fr)); gap: 12px; align-items: start; }
+
+/* Une carte : bandeau coloré à gauche selon l'urgence (rouge retard, orange à surveiller…) */
+.jc { --c: var(--pale); border: 1px solid var(--trait); border-left: 3px solid var(--c); border-radius: 6px; background: var(--fond-menu); overflow: hidden; }
+.jc[data-niveau="retard"] { --c: var(--erreur); } .jc[data-niveau="proche"] { --c: var(--proche); }
+.jc[data-niveau="st-LITIGE"] { --c: var(--statut-LITIGE); } .jc[data-niveau="st-REFUSE"] { --c: var(--statut-REFUSE); }
+.jc-tete {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%;
+  font: inherit; color: var(--texte); text-align: left; background: none; border: 0; padding: 10px 12px 8px; cursor: pointer;
 }
-.jour-ligne:hover { background: var(--repere-ligne); }
-.jour-n { font-weight: 700; text-align: right; }
-.jour-conseil { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.jour-cmd { opacity: 0; }
-.jour-ligne:hover .jour-cmd, .jour-ligne:focus-visible .jour-cmd { opacity: 1; }
+.jc-tete:hover { background: var(--repere-ligne); }
+.jc-n { font-size: 24px; font-weight: 700; color: var(--c); min-width: 2ch; text-align: right; line-height: 1; }
+.jc-titres { display: flex; flex-direction: column; min-width: 0; }
+.jc-libelle { font-weight: 700; }
+.jc-conseil { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jc-voir { font-size: 13px; color: var(--pale); opacity: 0; transition: opacity .15s; }
+.jc-tete:hover .jc-voir { opacity: 1; }
+.jc-corps { display: flex; flex-direction: column; padding: 0 6px 6px; }
+.jc-ligne {
+  display: grid; grid-template-columns: 17ch 7ch minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  padding: 4px 6px; border-top: 1px solid var(--trait);
+}
+.jc-ligne:hover { background: var(--repere-ligne); }
+.jc-gcblo { font: inherit; text-align: left; padding: 0; }
+.jc-affect { font-size: 13px; }
+.jc-indice { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jc-actions { display: flex; gap: 6px; }
+.jc-action {
+  font: inherit; font-size: 13px; color: var(--texte); background: var(--fond); border: 1px solid var(--trait);
+  border-radius: 4px; padding: 1px 9px; cursor: pointer; white-space: nowrap;
+}
+.jc-action:hover { border-color: var(--c); color: var(--c); }
+.jc-action.fait { color: var(--pale); border-style: dashed; }
+.jc-plus { font: inherit; font-size: 13px; color: var(--pale); background: none; border: 0; border-top: 1px solid var(--trait); width: 100%; padding: 6px 12px; text-align: left; cursor: pointer; }
+.jc-plus:hover { color: var(--texte); background: var(--repere-ligne); }
 
 /* Tri : chaque titre de colonne est un bouton (même largeur que le texte, aucun décalage) */
 .entete .tri { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; white-space: pre; }
