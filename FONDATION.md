@@ -96,7 +96,7 @@ Un dossier **clos** n'a plus d'alerte de relance.
 
 14. **Classeur partagé (IMMO-COORDI-DISSIM.xlsm)** : à chaque sauvegarde (commande `sauvegarde` ou automatique toutes les 3 h), le registre écrit aussi **`registre-gcblo.csv`** dans le même dossier, toujours sous ce nom (remplacé à chaque fois, hors rotation). UTF-8 avec BOM, séparateur `;`, en-têtes `GCBLO;AFFECT;STATUT DFT;CODE STATUT;FCI;COMMUNE;VALO;DATE;MODIFIE LE`, plusieurs FCI séparés par un espace (`js/export-excel.js`).
     La macro **`MajDepuisRegistre`** (`excel/MajDepuisRegistre.bas`), lancée dans le classeur (Alt+F8), lit ce CSV et, sur les onglets 33, 16, 17, 79, 86, pour chaque ligne dont D est un GCBLO du registre et E vaut `GCBLO` (ou déjà `FACTU`) :
-    - **J** : `Numéro de commande FCI : ‹fci›`. Registre sans FCI → rien. J contient déjà un des FCI du registre → rien (un dossier sur plusieurs lignes garde un FCI par ligne). Sinon le texte après la mention est remplacé, ou la mention est ajoutée à la fin ; le reste de J est gardé.
+    - **J** : `Numéro de commande FCI : ‹fci›`. Registre sans FCI → rien. un des FCI du registre se trouve déjà n'importe où dans J → rien (un dossier sur plusieurs lignes garde un FCI par ligne). Sinon le texte après la mention est remplacé, ou la mention est ajoutée à la fin ; le reste de J est gardé.
     - **E** : `FACTU` pour les dossiers **Attach** (seulement si E vaut `GCBLO`).
     - Rien n'est effacé ; une cellule à formule ou protégée est laissée et signalée. À la fin, une **fenêtre de compte rendu** (classeur temporaire, jamais enregistré) liste ce qui a été fait : vert = modifié, orange = laissé de côté avec la raison, lien « voir » vers la cellule ; si rien n'a changé, un simple message « Tout est déjà à jour ». Le chemin du CSV est demandé la première fois et gardé sur le PC (pas dans le classeur). **Relancer la macro ne change rien de plus** : un FCI déjà présent et un `FACTU` déjà posé ne sont pas réécrits (« Tout est déjà à jour »).
     Dans l'autre sens, les nouveaux GCBLO du classeur entrent avec `import` (R10). Les lignes passées en `FACTU` ne sont plus relues par `import` : ces dossiers sont déjà au registre.
@@ -401,4 +401,5 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | Case FCI orange pendant 2 jours après une relance FCI, puis rouge à nouveau |
 | 04/11/2026 | R14 : `registre-gcblo.csv` écrit à chaque sauvegarde ; macro `MajDepuisRegistre` pour IMMO-COORDI-DISSIM.xlsm (J = FCI, E = VALIDÉ GDP pour Attach, journal des changements) |
 | 04/11/2026 | Macro : fenêtre de compte rendu à la fin (modifié en vert, laissé de côté en orange, lien vers la cellule) |
+| 04/11/2026 | Macro : J n'est pas touché si un FCI du registre s'y trouve déjà, à n'importe quel endroit |
 | 04/11/2026 | Macro : E = `FACTU` (et non VALIDÉ GDP) pour les dossiers Attach ; onglet Journal registre retiré, le compte rendu suffit |

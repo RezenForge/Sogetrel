@@ -99,7 +99,7 @@ tests/                   217 tests (classeur d'essai fictif : tests/donnees) : r
 
 Le registre écrit `registre-gcblo.csv` à chaque sauvegarde (manuelle ou toutes les 3 h). La macro `MajDepuisRegistre` met le classeur à jour depuis ce fichier, sans rien effacer :
 
-- colonne **J** : `Numéro de commande FCI : ‹fci›` ;
+- colonne **J** : `Numéro de commande FCI : ‹fci›`, sauf si le FCI s'y trouve déjà (à n'importe quel endroit) ;
 - colonne **E** : `FACTU` pour les dossiers en Attach ;
 - à la fin, une fenêtre « Compte rendu » montre ce qui a été fait (vert = modifié, orange = laissé de côté, lien « voir » vers la cellule). Elle se ferme sans demander d'enregistrer.
 

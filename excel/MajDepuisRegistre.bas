@@ -8,8 +8,8 @@ Attribute VB_Name = "MajDepuisRegistre"
 ' et dont la colonne E vaut "GCBLO" (ou deja "FACTU") :
 '   - colonne J : "Numéro de commande FCI : <fci>" tenu a jour depuis le registre
 '       * registre sans FCI          -> la cellule n'est pas touchee
-'       * J contient deja un FCI du registre -> pas touchee (plusieurs lignes,
-'         plusieurs FCI : chaque ligne garde le sien)
+'       * un FCI du registre est deja quelque part dans J -> pas touchee
+'         (plusieurs lignes, plusieurs FCI : chaque ligne garde le sien)
 '       * sinon : le texte apres "Numéro de commande FCI :" est remplace,
 '         ou la mention est ajoutee a la fin si elle n'existe pas ;
 '         le reste du texte de J est garde
@@ -165,7 +165,14 @@ End Function
 '------------------------------------------------------------------------------
 ' Nouveau texte de J. Garde le texte autour de la mention "Numéro de commande FCI :".
 Private Function TexteFci(ByVal ancien As String, ByVal fciRegistre As String) As String
-    Dim re As Object, m As Object, f As Variant, actuel As String
+    Dim re As Object, m As Object, f As Variant
+
+    ' Un FCI du registre est deja quelque part dans J : on n'y touche pas
+    For Each f In Split(fciRegistre, " ")
+        If f <> "" Then
+            If InStr(1, ancien, f, vbTextCompare) > 0 Then TexteFci = ancien: Exit Function
+        End If
+    Next f
 
     Set re = CreateObject("VBScript.RegExp")
     re.IgnoreCase = True
@@ -173,11 +180,6 @@ Private Function TexteFci(ByVal ancien As String, ByVal fciRegistre As String) A
 
     If re.Test(ancien) Then
         Set m = re.Execute(ancien)(0)
-        actuel = UCase$(m.SubMatches(0))
-        ' Le FCI deja ecrit fait partie de ceux du registre : on n'y touche pas
-        For Each f In Split(fciRegistre, " ")
-            If f <> "" And actuel = UCase$(f) Then TexteFci = ancien: Exit Function
-        Next f
         TexteFci = Left$(ancien, m.FirstIndex) & MentionFci() & fciRegistre & Mid$(ancien, m.FirstIndex + m.Length + 1)
     ElseIf Trim$(ancien) = "" Then
         TexteFci = MentionFci() & fciRegistre
