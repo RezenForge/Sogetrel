@@ -17,7 +17,7 @@ import { proposer, apercu } from './completion.js';
 import { esc } from './actions.js';
 import { STATUTS, typeParCode, statutParCode } from '../config.js';
 import { formater } from '../dates.js';
-import { formaterMontant } from '../dossiers.js';
+import { formaterMontant, fciEnRetard } from '../dossiers.js';
 import { ressembleAUneListe } from '../collage.js';
 import { plat, MOTS_TYPE, MOTS_STATUT, motPourCode } from './grammaire.js';
 import { optionsDossier } from './menus.js';
@@ -76,12 +76,12 @@ export function creerInvite({ racine, contexte }) {
    */
   function ficheHtml(d) {
     const alerte = contexte().regles.etatRelance(d);
-    const champ = (nom, cle, valeur) => `<span class="dim">${esc(nom.padEnd(14))}</span><span class="editable" data-champ="${cle}" title="double-clic pour modifier">${valeur}</span>`;
+    const champ = (nom, cle, valeur, classe = '') => `<span class="dim">${esc(nom.padEnd(14))}</span><span class="editable${classe ? ` ${classe}` : ''}" data-champ="${cle}" title="double-clic pour modifier">${valeur}</span>`;
     const lignes = [
       `<b>${lienDossier(d)}</b> ${boutonMenu(d)}`,
       champ('affect', 'affect', d.type ? `<span class="ty-${d.type}">${esc(typeParCode(d.type).libelle)}</span>` : '<span class="dim">—</span>'),
       champ('statut DFT', 'statut', `<span class="st-${d.statutDft}">${esc(statutParCode(d.statutDft).libelle)}</span>`),
-      champ('FCI', 'fci', copieFci(d, esc(d.fci.join(', ') || 'aucun'))),
+      champ('FCI', 'fci', copieFci(d, esc(d.fci.join(', ') || 'aucun')), fciEnRetard(d, contexte().aujourdhui) ? 'fci-retard' : ''),
       champ('commune', 'commune', esc(d.commune || '—')),
       champ('valorisation', 'valo', d.valorisation !== null && d.valorisation !== undefined ? esc(formaterMontant(d.valorisation)) : '—'),
       champ('date', 'date', d.dateAffectation ? esc(formater(d.dateAffectation)) : '—'),
@@ -116,9 +116,11 @@ export function creerInvite({ racine, contexte }) {
       const commune = d.commune || '';
       const valo = d.valorisation !== null && d.valorisation !== undefined ? formaterMontant(d.valorisation).replace(/\s/g, ' ') : '';
       // Chaque cellule est éditable au double-clic, comme dans la fiche (data-champ, data-dossier)
-      const ed = (cle, html) => `<span class="editable" data-champ="${cle}" data-dossier="${esc(d.id)}" title="double-clic pour modifier">${html}</span>`;
+      const ed = (cle, html, classe = '') => `<span class="editable${classe ? ` ${classe}` : ''}" data-champ="${cle}" data-dossier="${esc(d.id)}" title="double-clic pour modifier">${html}</span>`;
+      // R13 : affecté depuis plus de 24 h et toujours sans FCI → la case FCI en rouge clair
+      const fciRouge = fciEnRetard(d, contexte().aujourdhui) ? 'fci-retard' : '';
       // Ordre des colonnes : AFFECT GCBLO COMMUNE VALO FCI STATUT DFT
-      const milieu = `${ed('commune', col(coupe(commune, 22) || '—', 22))} ${ed('valo', `<span class="valo">${esc((valo || '—').padStart(11))}</span>`)}  ${ed('fci', copieFci(d, `<span class="dim">${col(fci || '—', 15)}</span>`))} `;
+      const milieu = `${ed('commune', col(coupe(commune, 22) || '—', 22))} ${ed('valo', `<span class="valo">${esc((valo || '—').padStart(11))}</span>`)}  ${ed('fci', copieFci(d, `<span class="dim">${col(fci || '—', 15)}</span>`), fciRouge)} `;
       // Une ligne = un bloc : le statut peut colorer toute la ligne (Attach : vert clair)
       return `<span class="rangee rangee-${d.statutDft}">`
         // Date (d'affectation) : jour/mois seulement (l'année se voit en ouvrant le champ au double-clic)

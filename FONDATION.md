@@ -92,6 +92,8 @@ Un dossier **clos** n'a plus d'alerte de relance.
     - **Objets** : `Affectation GCBLO ‹affect› | ‹GCBLO›`, `Relance GCBLO ‹affect› | ‹GCBLO›`, `Relance GCBLO DFT ‹affect› | ‹GCBLO›`. Les textes sont dans `js/mails.js` (vouvoiement pour NUM21, tutoiement « Jérémie » pour AIR).
     - Le volet résume le mail (lien pour le rouvrir, destinataires, copie) ; l'historique du dossier note « Mail d'affectation préparé » ou « Relance FCI/DFT préparée ». L'envoi reste fait à la main dans la messagerie.
 
+13. **FCI attendu** : un dossier **affecté** (affect et date) qui n'a **toujours pas de FCI 24 h après sa date** (le lendemain) et n'est pas clos voit sa case FCI passer en **rouge clair** (liste et fiche). Le tableau de bord compte ces dossiers (« FCI > 24 h », cliquable) ; `ls fci-retard` les liste ; c'est le moment d'un `relance ‹dossier› fci`. Délai réglable : `FCI_ATTENDU_JOURS` dans `config.js`.
+
 Toutes ces règles vivent dans **un seul fichier** (`js/dossiers.js`), et chacune a un test.
 
 ---
@@ -384,3 +386,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | R12 : commandes `affect` et `relance` (mails préparés, `js/mails.js`) ; dossier sans affect possible (import, `ls sans-affect`) ; menu ⋯ : affecter, relancer |
 | 04/11/2026 | Colonne DATE (d'affectation) en tête de liste (jour/mois ; année au double-clic), modifiable ; `affect` la met au jour même (aussi pour un dossier déjà au bon affect mais sans date) ; vide à l'import ; filtres `ls 12/03`, `ls 03/2026` |
 | 04/11/2026 | « date affect » renommé « date » (colonne DATE, fiche, `edit ‹dossier› date …`) |
+| 04/11/2026 | R13 : case FCI en rouge clair 24 h après la date sans FCI ; `ls fci-retard` ; « FCI > 24 h » au tableau de bord |

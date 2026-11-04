@@ -46,6 +46,7 @@
   --statut-LITIGE: #fcaf3e;
   --statut-ANNULE: #888a85;
   --statut-ATTACH: #8ae234;
+  --fond-fci-retard: rgba(239, 41, 41, .2);   /* FCI attendu depuis plus de 24 h */
   --ligne-ATTACH: rgba(138, 226, 52, .13);   /* fond vert clair d'une ligne au statut Attach */
 
   /* Alertes de relance */

@@ -359,3 +359,18 @@ groupe('Date affect', () => {
     vrai(analyser('ls 31/02 ', 9, ctx).erreurs.length > 0);
   });
 });
+
+groupe('R13 — FCI attendu depuis plus de 24 h', () => {
+  test('affecté hier sans FCI : en retard ; aujourd\'hui, avec FCI, sans affect, sans date ou clos : non', async () => {
+    const { fciEnRetard } = await import('../js/dossiers.js');
+    const d = (o = {}) => ({ type: 'NUM21', dateAffectation: '2026-11-03', fci: [], statutDft: 'A_FAIRE', ...o });
+    egal([d(), d({ dateAffectation: '2026-11-04' }), d({ fci: ['F26154200726'] }), d({ type: null }), d({ dateAffectation: null }), d({ statutDft: 'ATTACH' })].map(x => fciEnRetard(x, '2026-11-04')),
+      [true, false, false, false, false, false]);
+  });
+  test('filtre et compte', () => {
+    const r = creerDossiers(creerStore(supportMemoire()), { horloge: () => new Date(2026, 10, 4, 9) });
+    r.creer({ type: 'AIR', gcblo: 'SBA501001-THF010', dateAffectation: '2026-11-01' });
+    r.creer({ type: 'AIR', gcblo: 'SBA501002-THF010' });
+    egal([r.filtrer({ fciRetard: true }).map(x => x.gcblo), r.statistiques().fciRetard], [['SBA501001-THF010'], 1]);
+  });
+});

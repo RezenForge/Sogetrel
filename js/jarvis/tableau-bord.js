@@ -111,6 +111,7 @@ export function dessinerTableauBord(s, jour, { derniereSauvegarde = undefined, m
   lignes.push(rangee(['en retard   ', 'dim', 'ls retard'], [String(s.retard).padStart(4) + ' ', s.retard ? 'retard' : 'dim'], ...points(s.retard, 'retard')));
   lignes.push(rangee(['sous 3 jours', 'dim', 'ls proches'], [String(s.proche).padStart(4) + ' ', s.proche ? 'proche' : 'dim'], ...points(s.proche, 'proche')));
   lignes.push(rangee(['sans FCI    ', 'dim', 'ls sans-fci'], [String(s.sansFci).padStart(4), s.sansFci ? 'fort' : 'dim']));
+  if (s.fciRetard !== undefined) lignes.push(rangee(['FCI > 24 h  ', 'dim', 'ls fci-retard'], [String(s.fciRetard).padStart(4), s.fciRetard ? 'retard' : 'dim']));
   if (s.aVenir) {
     const initiales = s.aVenir.map((_, i) => depuisJour(ajouterJours(jour, i)).toLocaleDateString('fr-FR', { weekday: 'narrow' }).toUpperCase());
     const n = s.aVenir.reduce((a, b) => a + b, 0);

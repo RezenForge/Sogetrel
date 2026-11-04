@@ -14,7 +14,7 @@
  *   const regles = creerDossiers(store);                       // en temps normal
  *   const regles = creerDossiers(store, { horloge: () => d }); // tests : heure fixe
  */
-import { TYPES, STATUTS, STATUT_PAR_DEFAUT, FORMATS, RELANCE, EMAIL, typeParCode, statutParCode } from './config.js';
+import { TYPES, STATUTS, STATUT_PAR_DEFAUT, FORMATS, RELANCE, EMAIL, FCI_ATTENDU_JOURS, typeParCode, statutParCode } from './config.js';
 import { aujourdhui, ajouterJours, ecartJours, estJour, formater } from './dates.js';
 
 /* ---------------- Lecture et nettoyage des saisies ---------------- */
@@ -61,6 +61,15 @@ export const formaterMontant = v => (v === null || v === undefined ? '' : new In
 
 /** Champs ajoutés après coup : un dossier plus ancien les reçoit vides. */
 const PAR_DEFAUT = Object.freeze({ commune: '', valorisation: null, type: null });
+
+/**
+ * R13 — FCI en retard : le dossier est affecté (affect et date), n'est pas clos, n'a pas de FCI,
+ * et sa date est passée depuis au moins FCI_ATTENDU_JOURS jour(s) (24 h).
+ */
+export function fciEnRetard(d, jour) {
+  return !!(d.type && d.dateAffectation && !d.fci.length && !statutParCode(d.statutDft)?.clos
+    && ecartJours(d.dateAffectation, jour) <= -FCI_ATTENDU_JOURS);
+}
 
 export function etatRelance(dossier, jour) {
   if (!dossier.dateRelance || statutParCode(dossier.statutDft)?.clos) return null;
@@ -285,7 +294,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
      * `texte` cherche dans le GCBLO, les FCI et le commentaire (sans tenir compte
      * des majuscules, des accents ni des tirets).
      */
-    filtrer({ texte = '', type = '', statut = '', retard = false, proche = false, sansFci = false, sansValo = false, sansAffect = false, dates = [] } = {}, liste = store.tous()) {
+    filtrer({ texte = '', type = '', statut = '', retard = false, proche = false, sansFci = false, fciRetard = false, sansValo = false, sansAffect = false, dates = [] } = {}, liste = store.tous()) {
       const plat = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/-/g, '');
       const mots = plat(texte).split(/\s+/).filter(Boolean);
       const ref = jour();
@@ -297,6 +306,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
         (!retard || etatRelance(d, ref) === 'retard') &&
         (!proche || etatRelance(d, ref) === 'proche') &&
         (!sansFci || d.fci.length === 0) &&
+        (!fciRetard || fciEnRetard(d, ref)) &&
         (!sansValo || d.valorisation === null || d.valorisation === undefined) &&
         (!sansAffect || !d.type) &&
         // Date d'affectation : un jour (« 12/03 ») ou un mois (« 03/2026 ») ; plusieurs = l'un ou l'autre
@@ -329,7 +339,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
       const ref = jour();
       const parType = { ...Object.fromEntries(TYPES.map(t => [t.code, 0])), SANS: 0 };   // SANS : dossiers sans affect
       const parStatut = Object.fromEntries(STATUTS.map(s => [s.code, 0]));
-      let retard = 0, proche = 0, sansFci = 0;
+      let retard = 0, proche = 0, sansFci = 0, fciRetard = 0;
       // Valorisation (euros) : total, par statut, et nombre de dossiers sans valorisation
       const valo = { total: 0, parStatut: Object.fromEntries(STATUTS.map(s => [s.code, 0])), sans: 0 };
       const aVenir = [0, 0, 0, 0, 0, 0, 0];   // relances prévues aujourd'hui, demain… J+6 (dossiers non clos)
@@ -339,6 +349,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
         const e = etatRelance(d, ref);
         if (e === 'retard') retard++; else if (e === 'proche') proche++;
         if (!d.fci.length) sansFci++;
+        if (fciEnRetard(d, ref)) fciRetard++;
         if (d.valorisation === null || d.valorisation === undefined) valo.sans++;
         else { valo.total += d.valorisation; valo.parStatut[d.statutDft] += d.valorisation; }
         if (d.dateRelance && !statutParCode(d.statutDft)?.clos) {
@@ -349,7 +360,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
       const arrondi = v => Math.round(v * 100) / 100;
       valo.total = arrondi(valo.total);
       for (const c in valo.parStatut) valo.parStatut[c] = arrondi(valo.parStatut[c]);
-      return { total: liste.length, parType, parStatut, retard, proche, sansFci, aVenir, valo };
+      return { total: liste.length, parType, parStatut, retard, proche, sansFci, fciRetard, aVenir, valo };
     }
   };
 }

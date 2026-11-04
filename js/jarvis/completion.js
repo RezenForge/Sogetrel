@@ -106,6 +106,7 @@ export function proposer(analyse, ctx) {
       { inserer: 'retard ', libelle: 'retard', detail: 'relance en retard', sorte: 'valeur' },
       { inserer: 'proches ', libelle: 'proches', detail: 'relance sous 3 jours', sorte: 'valeur' },
       { inserer: 'sans-fci ', libelle: 'sans-fci', detail: 'sans FCI', sorte: 'valeur' },
+      { inserer: 'fci-retard ', libelle: 'fci-retard', detail: 'affecté depuis plus de 24 h, sans FCI', sorte: 'valeur' },
       { inserer: 'sans-valo ', libelle: 'sans-valo', detail: 'sans valorisation', sorte: 'valeur' },
       { inserer: 'sans-affect ', libelle: 'sans-affect', detail: 'sans affect', sorte: 'valeur' }], mot); break;
     case 'date': liste = commencePar(dates(ctx), mot); break;
