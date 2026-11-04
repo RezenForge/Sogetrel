@@ -49,9 +49,9 @@ export function creerInvite({ racine, contexte }) {
 
   /*
    * Où s'écrit la sortie : la console, ou le volet de droite (sous le tableau de bord) pour
-   * les commandes qui ne doivent pas faire défiler la console (open, set, edit, cancel).
+   * les commandes qui ne doivent pas faire défiler la console (open, set, edit, cancel, help).
    */
-  const DANS_LE_VOLET = new Set(['open', 'set', 'edit', 'cancel']);
+  const DANS_LE_VOLET = new Set(['open', 'set', 'edit', 'cancel', 'help']);
   let sortie = ecranEl;
   const defiler = () => { sortie.scrollTop = sortie.scrollHeight; };
 

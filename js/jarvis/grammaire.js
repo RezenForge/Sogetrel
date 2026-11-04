@@ -88,7 +88,7 @@ export const SORTES = Object.freeze({
   periode: 'jour, demain, semaine',
   'nouveau-gcblo': 'AAA000000-AAA000',
   type: 'num21, air ou sogetrel',
-  'statut-ou-type': 'a-faire, en-validation, mis-a-dispo, refuse, ou un affect',
+  'statut-ou-type': 'a-faire, en-validation, mis-a-dispo, refuse, litige, annule, attach, ou un affect',
   filtre: 'affect, statut, retard, proches, sans-fci, sans-valo, texte',
   date: 'demain, lundi, +3, 12/11',
   fci: 'F + 11 chiffres',
