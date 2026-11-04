@@ -341,7 +341,8 @@ export function criteresListe(valeurs) {
     else Object.assign(c, v);
   }
   // Les dossiers Attach (attachement fait) ne s'affichent que si on les demande : « ls attach »
-  c.masquer = c.statut.length ? [] : ['ATTACH'];
+  // … et les dossiers annulés, sauf « ls annule »
+  c.masquer = c.statut.length ? [] : ['ATTACH', 'ANNULE'];
   return c;
 }
 

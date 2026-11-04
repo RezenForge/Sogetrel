@@ -16,7 +16,7 @@ import { proposer, apercu } from './completion.js';
 import { esc } from './actions.js';
 import { STATUTS, typeParCode, statutParCode } from '../config.js';
 import { formater } from '../dates.js';
-import { formaterMontant, etatFci } from '../dossiers.js';
+import { formaterMontant, etatFci, relanceRecente } from '../dossiers.js';
 import { ressembleAUneListe } from '../collage.js';
 import { plat, MOTS_TYPE, MOTS_STATUT, motPourCode } from './grammaire.js';
 import { optionsDossier } from './menus.js';
@@ -110,6 +110,22 @@ export function creerInvite({ racine, contexte }) {
     }
   }
 
+  /**
+   * Colonne RELANCE : un badge FCI et/ou DFT si cette relance a été préparée récemment,
+   * c'est-à-dire tant que la protection anti-doublon est active (aujourd'hui ou hier).
+   * Largeur fixe (8 caractères) pour garder l'alignement.
+   */
+  function relanceHtml(d) {
+    const jour = contexte().aujourdhui;
+    const badge = motif => {
+      const r = relanceRecente(d, motif, jour);
+      if (!r) return '   ';
+      const quand = `${r.jours === 0 ? "aujourd'hui" : 'hier'} à ${new Date(r.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+      return `<span class="badge badge-${motif}" title="relance ${motif.toUpperCase()} préparée ${quand} · une nouvelle relance demandera confirmation">${motif.toUpperCase()}</span>`;
+    };
+    return `${badge('fci')} ${badge('dft')}  `;
+  }
+
   function tableauHtml(dossiers, tri = '') {
     const col = (t, n) => esc(String(t).padEnd(n).slice(0, n));
     const coupe = (t, n) => (t.length > n ? t.slice(0, n - 1) + '…' : t);
@@ -131,6 +147,7 @@ export function creerInvite({ racine, contexte }) {
         + `${ed('affect', `<span class="ty-${d.type || 'SANS'}">${col(TYPE_COURT[d.type] || '—', 6)}</span>`)} `
         + `${lienDossier(d)} `
         + milieu
+        + relanceHtml(d)
         + ed('statut', `<span class="st-${d.statutDft}">${col(STATUT_COURT[d.statutDft] || d.statutDft, 11)}</span>`)
         + boutonMenu(d) + '</span>';
     });
@@ -143,7 +160,7 @@ export function creerInvite({ racine, contexte }) {
       return `<button type="button" class="tri${marque ? ' trie' : ''}" data-tri="${col}" title="trier par ${libelle.toLowerCase()}">${esc(texte)}</button>`;
     };
     const entete = `<span class="entete dim">${titre('date', 'DATE', 7)}${titre('affect', 'AFFECT', 7)}${titre('gcblo', 'GCBLO', 17)}`
-      + `${titre('commune', 'COMMUNE', 23)}${titre('valo', 'VALO', 11, true)}  ${titre('fci', 'FCI', 16)}${titre('statut', 'STATUT DFT', 10)}</span>`;
+      + `${titre('commune', 'COMMUNE', 23)}${titre('valo', 'VALO', 11, true)}  ${titre('fci', 'FCI', 16)}${'RELANCE'.padEnd(9)}${titre('statut', 'STATUT DFT', 10)}</span>`;
     return `<pre class="tableau">${entete}${lignes.join('')}</pre>`;
   }
 

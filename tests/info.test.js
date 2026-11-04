@@ -73,3 +73,13 @@ groupe('ls — tri (tri:colonne, clic sur l\'en-tête)', () => {
   test('décroissant avec « - »', () => egal(ls('ls tri:valo-'), ['SBA', 'LRO', 'POI']));
   test('avec un filtre, par commune', () => egal(ls('ls air tri:commune'), ['SBA', 'POI']));
 });
+
+groupe('ls — dossiers Attach et Annulé masqués', () => {
+  const regles = creerDossiers(creerStore(supportMemoire()));
+  regles.creer({ type: 'AIR', gcblo: 'SBA501404-THF010' });
+  for (const [g, st] of [['LRO500767-THF010', 'ANNULE'], ['POI500001-THF010', 'ATTACH']]) regles.modifier(regles.creer({ type: 'AIR', gcblo: g }).dossier.id, { statutDft: st });
+  const ls = texte => { const dossiers = regles.filtrer({}); return resultatLs(criteresListe(analyser(texte, texte.length, { dossiers, aujourdhui: '2026-11-04', regles }).valeurs), regles, dossiers).liste.map(d => d.gcblo.slice(0, 3)); };
+  test('ls : ni annulés ni attach', () => egal(ls('ls'), ['SBA']));
+  test('ls annule : les annulés', () => egal(ls('ls annule'), ['LRO']));
+  test('ls air annule attach : les deux', () => egal(ls('ls air annule attach').sort(), ['LRO', 'POI']));
+});

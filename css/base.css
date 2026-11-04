@@ -233,3 +233,8 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .notif-fermer { font: inherit; color: var(--pale); background: none; border: 0; cursor: pointer; padding: 0 2px; }
 .notif-fermer:hover { color: var(--texte); }
 @keyframes notif-entre { from { opacity: 0; transform: translateY(6px); } }
+
+/* Colonne RELANCE : badges FCI / DFT tant que la relance est récente (protection anti-doublon) */
+.badge { border-radius: 3px; }
+.badge-fci { color: var(--fond); background: var(--proche); }
+.badge-dft { color: var(--fond); background: var(--statut-EN_VALIDATION); }
