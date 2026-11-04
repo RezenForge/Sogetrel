@@ -123,7 +123,7 @@ export const MAILS = Object.freeze({
 });
 
 /** Sauvegarde automatique : toutes les N heures, tant que l'appli est ouverte (dans le dernier dossier choisi). */
-export const SAUVEGARDE_AUTO_HEURES = 3;
+export const SAUVEGARDE_AUTO_HEURES = 1;
 
 /** Où et sous quelle version les données sont enregistrées dans le navigateur. */
 export const STOCKAGE = Object.freeze({

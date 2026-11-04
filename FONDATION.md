@@ -94,7 +94,7 @@ Un dossier **clos** n'a plus d'alerte de relance.
 
 13. **FCI attendu** : un dossier **affecté** (affect et date) qui n'a **toujours pas de FCI 24 h après sa date** (le lendemain) et n'est pas clos voit sa case FCI passer en **rouge clair** (liste et fiche). `ls fci-retard` les liste ; c'est le moment d'un `relance ‹dossier› fci` : un **clic droit sur la case rouge** le lance. Après une relance FCI (clic droit ou commande), la case passe en **orange pendant 2 jours** (le jour de la relance et le lendemain), puis redevient rouge si le FCI n'est toujours pas arrivé (`FCI_RELANCE_JOURS`). La date de relance est lue dans l'historique du dossier. Délai réglable : `FCI_ATTENDU_JOURS` dans `config.js`.
 
-14. **Classeur partagé (IMMO-COORDI-DISSIM.xlsm)** : à chaque sauvegarde (commande `sauvegarde` ou automatique toutes les 3 h), le registre écrit aussi **`registre-gcblo.csv`** dans le même dossier, toujours sous ce nom (remplacé à chaque fois, hors rotation). UTF-8 avec BOM, séparateur `;`, en-têtes `GCBLO;AFFECT;STATUT DFT;CODE STATUT;FCI;COMMUNE;VALO;DATE;MODIFIE LE`, plusieurs FCI séparés par un espace (`js/export-excel.js`).
+14. **Classeur partagé (IMMO-COORDI-DISSIM.xlsm)** : à chaque sauvegarde (commande `sauvegarde` ou automatique toutes les heures), le registre écrit aussi **`registre-gcblo.csv`** dans le même dossier, toujours sous ce nom (remplacé à chaque fois, hors rotation). UTF-8 avec BOM, séparateur `;`, en-têtes `GCBLO;AFFECT;STATUT DFT;CODE STATUT;FCI;COMMUNE;VALO;DATE;MODIFIE LE`, plusieurs FCI séparés par un espace (`js/export-excel.js`).
     La macro **`MajDepuisRegistre`** (`excel/MajDepuisRegistre.bas`), lancée dans le classeur (Alt+F8), lit ce CSV et, sur les onglets 33, 16, 17, 79, 86, pour chaque ligne dont D est un GCBLO du registre et E vaut `GCBLO` (ou déjà `FACTU`) :
     - **J** : `Numéro de commande FCI : ‹fci›`. Registre sans FCI → rien. un des FCI du registre se trouve déjà n'importe où dans J → rien (un dossier sur plusieurs lignes garde un FCI par ligne). Sinon le texte après la mention est remplacé, ou la mention est ajoutée à la fin ; le reste de J est gardé.
     - **E** : `FACTU` pour les dossiers **Attach** (seulement si E vaut `GCBLO`).
@@ -189,7 +189,7 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 | Annuler | `cancel` (aussi `undo`) : défait la dernière modification | `cancel` |
 | Importer | `import` : ouvre l'explorateur de fichiers, lit un classeur Excel (R10) | `import` |
 | Attachement | `attachement fichier` (choisir la référence) · `attachement ‹dossiers›` (créer, R11) ; plusieurs dossiers (`*`, un statut, une liste) : un dossier de destination pour tous les fichiers, confirmation | `attachement 501404`, `attachement *`, `attachement mis-a-dispo` |
-| Sauvegarder | `sauvegarde` : la première fois, choisir un dossier ; ensuite, directement dans ce dossier (le navigateur peut seulement redemander « Autoriser » après une fermeture) ; `sauvegarde dossier` pour en changer ; fichier `gcblo-sauvegarde_AAAA-MM-JJ_HHhMM-SS.json` ; seules les **3 plus récentes** y restent (les plus anciennes sont supprimées, les autres fichiers jamais touchés) | `sauvegarde`, `sauvegarde dossier` |
+| Sauvegarder | `sauvegarde` : la première fois, choisir un dossier ; ensuite, directement dans ce dossier (le navigateur peut seulement redemander « Autoriser » après une fermeture) ; `sauvegarde dossier` pour en changer ; fichier `gcblo-sauvegarde_AAAA-MM-JJ_HHhMM-SS.json` ; seules les **10 plus récentes** y restent (les plus anciennes sont supprimées, les autres fichiers jamais touchés) | `sauvegarde`, `sauvegarde dossier` |
 | Restaurer | `restore` : choisir une sauvegarde (l'explorateur s'ouvre dans le dossier des sauvegardes) ; remplace toute la base après confirmation ; annulable (`cancel`) ; les dossiers illisibles ou en double sont ignorés | `restore` |
 | Affecter (mail) | `affect ‹GCBLO› ‹num21\|air\|sogetrel›` : affect donné (dossier créé s'il n'existe pas) et mail d'affectation ouvert (R12) | `affect SBA501404-THF010 num21` |
 | Relancer (mail) | `relance ‹dossier› ‹fci\|dft›` : mail de relance ouvert (fci seulement sans FCI) (R12) | `relance 501404 dft` |
@@ -217,7 +217,7 @@ Ce qui est cliquable :
 
 **Vues à jour** (04/11/2026, remplace le grisé) : quand un dossier change, les listes et fiches déjà affichées se mettent à jour sur place (mêmes dossiers, même ordre). Un dossier supprimé disparaît des listes ; sa fiche passe en grisé.
 
-**Sauvegarde** (04/11/2026) : les dossiers n'existent que dans le navigateur ; `sauvegarde` en écrit une copie dans un dossier choisi (Chrome, Edge ; ailleurs, téléchargement). Le tableau de bord affiche la date de la dernière sauvegarde (rouge au-delà de 7 jours, cliquable). **Sauvegarde automatique toutes les 3 heures** (`SAUVEGARDE_AUTO_HEURES`), tant que l'appli est ouverte, dans le dernier dossier choisi avec `sauvegarde` (retenu dans le navigateur). Si le navigateur redemande l'autorisation d'écrire dans ce dossier (après une fermeture, par exemple), un message cliquable le signale une fois dans le volet : un clic sur `sauvegarde` suffit (petite question « Autoriser » du navigateur, pas d'explorateur).
+**Sauvegarde** (04/11/2026) : les dossiers n'existent que dans le navigateur ; `sauvegarde` en écrit une copie dans un dossier choisi (Chrome, Edge ; ailleurs, téléchargement). Le tableau de bord affiche la date de la dernière sauvegarde (rouge au-delà de 7 jours, cliquable). **Sauvegarde automatique toutes les heureseures** (`SAUVEGARDE_AUTO_HEURES`), tant que l'appli est ouverte, dans le dernier dossier choisi avec `sauvegarde` (retenu dans le navigateur). Si le navigateur redemande l'autorisation d'écrire dans ce dossier (après une fermeture, par exemple), un message cliquable le signale une fois dans le volet : un clic sur `sauvegarde` suffit (petite question « Autoriser » du navigateur, pas d'explorateur).
 
 **`*` = la liste affichée** (04/11/2026) : partout où plusieurs dossiers sont permis (`set`, `delete`, `attachement`), `*` désigne tous les dossiers de la dernière liste affichée dans la console (`ls`, `info`), comme le `*` des terminaux. Exemple : `ls litige` puis `set * to annule` (confirmation au-delà de 3 dossiers).
 
@@ -386,7 +386,7 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | `ls`, `list` et `info` vident la console avant d'afficher |
 | 04/11/2026 | `ls`/`info` : la ligne de commande va dans le volet ; sans résultat, tout va dans le volet et la console ne change pas |
 | 04/11/2026 | Commande `sauvegarde` (`js/sauvegarde.js`) : dossier choisi, nom daté, 3 sauvegardes gardées ; dernière sauvegarde dans le tableau de bord |
-| 04/11/2026 | Sauvegarde automatique toutes les 3 h dans le dernier dossier choisi ; autorisation à renouveler signalée dans le volet |
+| 04/11/2026 | Sauvegarde automatique toutes les heures dans le dernier dossier choisi ; autorisation à renouveler signalée dans le volet |
 | 04/11/2026 | `backup` retiré (malentendu : c'était `restore`) ; commande `restore` |
 | 04/11/2026 | Clic droit sur un GCBLO ou un FCI : copie dans le presse-papiers |
 | 04/11/2026 | `ls` : plusieurs affects ou statuts s'ajoutent (`ls num21 sogetrel`, `ls litige attach`) ; catégories différentes combinées (`ls air litige`) |
@@ -402,6 +402,7 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | R14 : `registre-gcblo.csv` écrit à chaque sauvegarde ; macro `MajDepuisRegistre` pour IMMO-COORDI-DISSIM.xlsm (J = FCI, E = VALIDÉ GDP pour Attach, journal des changements) |
 | 04/11/2026 | Macro : fenêtre de compte rendu à la fin (modifié en vert, laissé de côté en orange, lien vers la cellule) |
 | 04/11/2026 | Macro : J n'est pas touché si un FCI du registre s'y trouve déjà, à n'importe quel endroit |
+| 04/11/2026 | Sauvegarde automatique toutes les heures ; roulement de 10 sauvegardes (au lieu de 3 h et 3) |
 | 04/11/2026 | Tableau de bord : partie « relances » retirée ; ligne « - » dans affect pour les dossiers sans affect (toujours affichée, clic : `ls sans-affect`) |
 | 04/11/2026 | Explorateur de fichiers lancé au clavier : bouton « ▸ ouvrir l'explorateur » à cliquer à la souris (sinon Windows cache le pointeur) ; Échap abandonne. Lancé à la souris : ouverture directe |
 | 04/11/2026 | `sauvegarde` réutilise le dossier déjà choisi sans ouvrir l'explorateur ; `sauvegarde dossier` pour en changer |

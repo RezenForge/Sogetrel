@@ -11,11 +11,11 @@ groupe('Sauvegarde', () => {
     const c = JSON.parse(contenuSauvegarde([{ id: '1', gcblo: 'SBA501404-THF010' }], new Date(2026, 10, 4, 9, 30)));
     egal([c.app, c.dossiers.length], ['Registre GCBLO', 1]); vrai(c.sauvegardeLe.startsWith('2026-11-04'));
   });
-  test('rotation : seules les 3 plus récentes restent', () => egal(aSupprimer([
-    'gcblo-sauvegarde_2026-11-01_08h00-00.json', 'gcblo-sauvegarde_2026-11-04_09h30-05.json', 'notes.txt',
-    'gcblo-sauvegarde_2026-11-03_17h12-40.json', 'gcblo-sauvegarde_2026-10-28_10h00-00.json', 'gcblo-sauvegarde_2026-11-02_12h00-00.json'
-  ]), ['gcblo-sauvegarde_2026-11-01_08h00-00.json', 'gcblo-sauvegarde_2026-10-28_10h00-00.json']));
-  test('moins de 3 : rien à supprimer, autres fichiers jamais touchés', () => egal(aSupprimer(['gcblo-sauvegarde_2026-11-04_09h30-05.json', 'rapport.xlsx']), []));
+  test('rotation : seules les 10 plus récentes restent', () => {
+    const noms = Array.from({ length: 12 }, (_, i) => `gcblo-sauvegarde_2026-11-04_${String(i + 8).padStart(2, '0')}h00-00.json`);
+    egal(aSupprimer([...noms.slice().reverse(), 'notes.txt']), ['gcblo-sauvegarde_2026-11-04_09h00-00.json', 'gcblo-sauvegarde_2026-11-04_08h00-00.json']);
+  });
+  test('moins de 10 : rien à supprimer, autres fichiers jamais touchés', () => egal(aSupprimer(['gcblo-sauvegarde_2026-11-04_09h30-05.json', 'rapport.xlsx']), []));
 });
 
 groupe('Sauvegarde — tableau de bord', () => {

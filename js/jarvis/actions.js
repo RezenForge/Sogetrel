@@ -266,7 +266,7 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       if (echecs.length) erreur(`échec : ${esc(echecs.join(', '))}`);
     },
 
-    /** Sauvegarde toute la base dans un dossier choisi ; seules les 3 plus récentes y sont gardées. */
+    /** Sauvegarde toute la base dans un dossier choisi ; seules les 10 plus récentes y sont gardées. */
     async sauvegarde(v = {}) {
       const maintenant = new Date();
       const nom = nomSauvegarde(maintenant);

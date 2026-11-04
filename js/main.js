@@ -255,7 +255,7 @@ const actions = creerActions({
     });
   },
   // Sauvegarde : on choisit un dossier (Chrome, Edge), le fichier y est écrit, et seules
-  // les 3 sauvegardes les plus récentes y restent. Ailleurs : téléchargement simple.
+  // les 10 sauvegardes les plus récentes y restent. Ailleurs : téléchargement simple.
   // Sauvegarde : on choisit un dossier (Chrome, Edge) ; il est retenu pour les sauvegardes automatiques
   // Le dossier déjà choisi est réutilisé sans rien demander ; « sauvegarde dossier » (changer) en choisit un autre
   sauvegarderDans: async (nom, texte, { changer = false } = {}) => {
@@ -296,7 +296,7 @@ function dessinerBord() { tableauBord.innerHTML = `<div class="dessin">${dessine
 store.ecouter(dessinerBord);
 setInterval(() => { dessinerBord(); sauvegardeAutomatique(); }, 60 * 1000);
 dessinerBord();
-setTimeout(sauvegardeAutomatique, 3000);   // à l'ouverture, si la dernière date de plus de 3 h
+setTimeout(sauvegardeAutomatique, 3000);   // à l'ouverture, si la dernière date de plus d'une heure
 
 /* 6. Prévenir si l'enregistrement échoue. */
 store.ecouter(() => invite.ecran.rafraichirVues());

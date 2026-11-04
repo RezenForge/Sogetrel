@@ -22,7 +22,7 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `import` | lit un classeur Excel : onglets 33, 16, 17, 79, 86, lignes `GCBLO` en colonne E, dossier en D, commune en G, valorisation en H, affect en I, FCI en J |
 | `attachement fichier` | choisit le classeur d'attachement de référence (gardé dans le navigateur) |
 | `attachement ‹dossiers›` | remplit une copie de la référence (X5 commune, AG5 date, U6 GCBLO, paliers 30/60 en lignes 30-31) et l'enregistre en `‹GCBLO›.xlsx` ; le dossier passe au statut Attach |
-| `sauvegarde` · `sauvegarde dossier` | la première fois, choisit un dossier ; ensuite, sauvegarde directement dans ce dossier sans rien redemander (`sauvegarde dossier` pour en changer). Écrit une sauvegarde datée ; seules les 3 plus récentes y restent. Ensuite, sauvegarde automatique toutes les 3 h dans ce dossier, tant que l'appli est ouverte. Écrit aussi `registre-gcblo.csv` pour le classeur partagé (voir plus bas) |
+| `sauvegarde` · `sauvegarde dossier` | la première fois, choisit un dossier ; ensuite, sauvegarde directement dans ce dossier sans rien redemander (`sauvegarde dossier` pour en changer). Écrit une sauvegarde datée ; seules les 10 plus récentes y restent. Ensuite, sauvegarde automatique toutes les heures dans ce dossier, tant que l'appli est ouverte. Écrit aussi `registre-gcblo.csv` pour le classeur partagé (voir plus bas) |
 | `restore` | recharge une sauvegarde : remplace toute la base après confirmation (annulable) |
 | `*` | dans `set`, `delete`, `attachement` : tous les dossiers de la liste affichée (ex. `ls litige` puis `set * to annule`, `attachement *`) |
 | `affect ‹GCBLO› ‹num21\|air\|sogetrel›` | donne l'affect (crée le dossier s'il n'existe pas) et ouvre le mail d'affectation |
@@ -97,7 +97,7 @@ tests/                   221 tests (classeur d'essai fictif : tests/donnees) : r
 
 ## Classeur partagé IMMO-COORDI-DISSIM.xlsm
 
-Le registre écrit `registre-gcblo.csv` à chaque sauvegarde (manuelle ou toutes les 3 h). La macro `MajDepuisRegistre` met le classeur à jour depuis ce fichier, sans rien effacer :
+Le registre écrit `registre-gcblo.csv` à chaque sauvegarde (manuelle ou toutes les heures). La macro `MajDepuisRegistre` met le classeur à jour depuis ce fichier, sans rien effacer :
 
 - colonne **J** : `Numéro de commande FCI : ‹fci›`, sauf si le FCI s'y trouve déjà (à n'importe quel endroit) ;
 - colonne **E** : `FACTU` pour les dossiers en Attach ;
@@ -107,4 +107,4 @@ La relancer ne change rien de plus : un FCI déjà présent et un `FACTU` déjà
 
 **Installer la macro (une fois)** : dans le classeur, Alt+F11, *Fichier › Importer un fichier…*, choisir `excel/MajDepuisRegistre.bas`, enregistrer. **Lancer** : Alt+F8 › `MajDepuisRegistre`. La première fois, elle demande où est `registre-gcblo.csv` (le dossier des sauvegardes). `ChoisirCsvRegistre` permet d'en changer.
 
-**Dans l'autre sens**, la macro écrit aussi `classeur-gcblo.csv` dans le même dossier : les lignes « GCBLO » du classeur ouvert, même non enregistrées. À chaque sauvegarde (manuelle ou toutes les 3 h), le registre lit ce fichier et crée les nouveaux GCBLO, ou complète ce qui manque, comme `import`. Rien n'est remplacé. La commande `import` reste possible.
+**Dans l'autre sens**, la macro écrit aussi `classeur-gcblo.csv` dans le même dossier : les lignes « GCBLO » du classeur ouvert, même non enregistrées. À chaque sauvegarde (manuelle ou toutes les heures), le registre lit ce fichier et crée les nouveaux GCBLO, ou complète ce qui manque, comme `import`. Rien n'est remplacé. La commande `import` reste possible.

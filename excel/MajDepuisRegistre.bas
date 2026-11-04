@@ -3,7 +3,7 @@ Attribute VB_Name = "MajDepuisRegistre"
 ' MajDepuisRegistre - met a jour IMMO-COORDI-DISSIM.xlsm depuis le Registre GCBLO
 '
 ' Lit le fichier registre-gcblo.csv ecrit par le Registre a chaque sauvegarde
-' (manuelle ou automatique toutes les 3 h), puis, sur les onglets 33, 16, 17, 79, 86,
+' (manuelle ou automatique toutes les heures), puis, sur les onglets 33, 16, 17, 79, 86,
 ' pour chaque ligne dont la colonne D est un GCBLO du registre
 ' et dont la colonne E vaut "GCBLO" (ou deja "FACTU") :
 '   - colonne J : "Numéro de commande FCI : <fci>" tenu a jour depuis le registre

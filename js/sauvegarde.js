@@ -11,7 +11,7 @@
  */
 import { STOCKAGE, FORMATS, typeParCode, statutParCode } from './config.js';
 
-export const GARDER = 3;
+export const GARDER = 10;
 const MOTIF = /^gcblo-sauvegarde_\d{4}-\d{2}-\d{2}_\d{2}h\d{2}-\d{2}\.json$/;
 const deux = n => String(n).padStart(2, '0');
 
