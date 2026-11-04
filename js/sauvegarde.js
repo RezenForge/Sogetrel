@@ -30,7 +30,7 @@ export function aSupprimer(noms, garder = GARDER) {
 }
 
 /** Un dossier de sauvegarde est-il complet et cohérent ? (sinon il est ignoré à la restauration) */
-const dossierValide = d => d && typeof d.id === 'string' && FORMATS.gcblo.test(d.gcblo ?? '') && typeParCode(d.type) && statutParCode(d.statutDft)
+const dossierValide = d => d && typeof d.id === 'string' && FORMATS.gcblo.test(d.gcblo ?? '') && (!d.type || typeParCode(d.type)) && statutParCode(d.statutDft)
   && Array.isArray(d.fci) && Array.isArray(d.historique);
 
 export function lireSauvegarde(texte) {

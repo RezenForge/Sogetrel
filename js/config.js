@@ -101,6 +101,22 @@ export const ATTACHEMENT = Object.freeze({
   ])
 });
 
+/**
+ * R12 — Mails d'affectation et de relance (commandes « affect » et « relance »).
+ * Destinataires selon l'affect, boîte BL selon les 3 premières lettres du GCBLO, copie fixe.
+ */
+export const MAILS = Object.freeze({
+  destinataires: Object.freeze({
+    NUM21: Object.freeze(['oelmahdaoui@numerus21.fr', 'azaamoun@numerus21.fr', 'lsettar@numerus21.fr']),
+    AIR: Object.freeze(['jeremie-sannier@air-reseaux.com'])
+  }),
+  boites: Object.freeze([
+    Object.freeze({ prefixes: Object.freeze(['SBA', 'LRO', 'POI', 'ANG', 'NIO']), adresse: 'info_lpc_BL@sogetrel.fr', mention: '@info_lpc_BL' }),
+    Object.freeze({ prefixes: Object.freeze(['MED', 'BOR', 'EST', 'LIB', 'ARC']), adresse: 'info_aquitaine_BL@sogetrel.fr', mention: '@info_aquitaine_BL' })
+  ]),
+  copie: Object.freeze(['Romain.BOUTINEAU@sogetrel.fr'])
+});
+
 /** Sauvegarde automatique : toutes les N heures, tant que l'appli est ouverte (dans le dernier dossier choisi). */
 export const SAUVEGARDE_AUTO_HEURES = 3;
 

@@ -63,7 +63,7 @@ function dossiers(mot, ctx, enCours, analyse) {
     .map(d => {
       const e = alerte(d);
       const relance = d.dateRelance ? ` · relance ${formater(d.dateRelance).slice(0, 5)}${e === 'retard' ? ' (retard)' : ''}` : '';
-      return { inserer: d.gcblo + ' ', libelle: d.gcblo, detail: `${typeParCode(d.type)?.libelle} · ${statutParCode(d.statutDft)?.libelle}${relance}`, sorte: 'dossier', alerte: e };
+      return { inserer: d.gcblo + ' ', libelle: d.gcblo, detail: `${typeParCode(d.type)?.libelle || 'sans affect'} · ${statutParCode(d.statutDft)?.libelle}${relance}`, sorte: 'dossier', alerte: e };
     })];
 }
 
@@ -94,6 +94,8 @@ export function proposer(analyse, ctx) {
     case 'verbe': liste = verbes(mot, ctx); break;
     case 'mot': liste = [{ inserer: ec.slot.mot + ' ', libelle: ec.slot.mot, detail: '', sorte: 'mot' }]; break;
     case 'dossier': liste = dossiers(mot, ctx, ec, analyse); break;
+    case 'gcblo': liste = dossiers(mot, ctx, ec, analyse); break;
+    case 'motif-relance': liste = commencePar([{ inserer: 'fci ', libelle: 'fci', detail: 'numéro de commande', sorte: 'valeur' }, { inserer: 'dft ', libelle: 'dft', detail: 'DFT, docs GCB1 et GCB2', sorte: 'valeur' }], mot); break;
     case 'attachement': liste = [...commencePar([{ inserer: 'fichier ', libelle: 'fichier', detail: 'choisir la référence', sorte: 'valeur' },
       ...STATUTS.map(st => ({ inserer: motPourCode(MOTS_STATUT, st.code) + ' ', libelle: motPourCode(MOTS_STATUT, st.code), detail: `tous les dossiers ${st.libelle}`, sorte: 'valeur' }))], mot),
       ...dossiers(mot, ctx, ec, analyse)]; break;
@@ -104,7 +106,8 @@ export function proposer(analyse, ctx) {
       { inserer: 'retard ', libelle: 'retard', detail: 'relance en retard', sorte: 'valeur' },
       { inserer: 'proches ', libelle: 'proches', detail: 'relance sous 3 jours', sorte: 'valeur' },
       { inserer: 'sans-fci ', libelle: 'sans-fci', detail: 'sans FCI', sorte: 'valeur' },
-      { inserer: 'sans-valo ', libelle: 'sans-valo', detail: 'sans valorisation', sorte: 'valeur' }], mot); break;
+      { inserer: 'sans-valo ', libelle: 'sans-valo', detail: 'sans valorisation', sorte: 'valeur' },
+      { inserer: 'sans-affect ', libelle: 'sans-affect', detail: 'sans affect', sorte: 'valeur' }], mot); break;
     case 'date': liste = commencePar(dates(ctx), mot); break;
     case 'ville': {
       // Villes déjà consultées, et la période dès qu'un nom de ville est commencé
@@ -148,6 +151,8 @@ export function apercu(analyse, ctx) {
   switch (c.id) {
     case 'ls': return `→ ${n(ctx.regles.filtrer(criteresListe(v)))}`;
     case 'open': return `→ fiche de ${v.cible.gcblo}`;
+    case 'affect': return `→ ${v.cible.gcblo}${v.cible.dossier ? '' : ' (nouveau)'} : affect → ${typeParCode(v.affect).libelle}${v.affect === 'SOGETREL' ? '' : ' · mail d’affectation'}`;
+    case 'relance': return `→ mail de relance ${v.motif.toUpperCase()} · ${v.cible.gcblo}`;
     case 'import': return `→ onglets ${IMPORT_EXCEL.onglets.join(', ')}`;
     case 'attachement': {
       if (v.cibles.some(c => c.fichier)) return '→ choisir la référence';

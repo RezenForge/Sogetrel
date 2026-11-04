@@ -20,7 +20,7 @@
  */
 export const COMMANDES = Object.freeze([
   { id: 'ls', verbes: ['ls', 'list'], resume: 'liste les dossiers',
-    forme: 'ls [affect] [statut] [retard|proches] [sans-fci] [sans-valo] [texte]',
+    forme: 'ls [affect] [statut] [retard|proches] [sans-fci] [sans-valo] [sans-affect] [texte]',
     emplacements: [{ nom: 'filtres', sorte: 'filtre', optionnel: true, multiple: true }] },
   { id: 'open', verbes: ['open'], resume: 'fiche d\'un dossier',
     forme: 'open ‹dossier›',
@@ -28,6 +28,12 @@ export const COMMANDES = Object.freeze([
   { id: 'set', verbes: ['set'], resume: 'change statut ou affect',
     forme: 'set ‹dossiers› to ‹statut|affect›',
     emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }, { mot: 'to' }, { nom: 'valeur', sorte: 'statut-ou-type' }] },
+  { id: 'affect', verbes: ['affect'], resume: 'affecte un GCBLO et prépare le mail',
+    forme: 'affect ‹GCBLO› ‹num21|air|sogetrel›',
+    emplacements: [{ nom: 'cible', sorte: 'gcblo' }, { nom: 'affect', sorte: 'type' }] },
+  { id: 'relance', verbes: ['relance'], resume: 'prépare un mail de relance',
+    forme: 'relance ‹dossier› ‹fci|dft›',
+    emplacements: [{ nom: 'cible', sorte: 'dossier' }, { nom: 'motif', sorte: 'motif-relance' }] },
   { id: 'info', verbes: ['info'], resume: 'infos des GCBLO collés',
     forme: 'info ‹GCBLO…›',
     emplacements: [{ nom: 'liste', sorte: 'texte' }] },
@@ -68,7 +74,7 @@ export const PERIODES = Object.freeze({ jour: 'jour', aujourdhui: 'jour', demain
 
 /** Groupes de dossiers utilisables à la place d'une référence (là où plusieurs dossiers sont acceptés). */
 export const GROUPES = Object.freeze({ retard: 'retard', proches: 'proche' });
-export const MOTS_FILTRE = Object.freeze({ retard: 'retard', 'en-retard': 'retard', proches: 'proche', 'sans-fci': 'sansFci', sansfci: 'sansFci', 'sans-valo': 'sansValo', sansvalo: 'sansValo' });
+export const MOTS_FILTRE = Object.freeze({ retard: 'retard', 'en-retard': 'retard', proches: 'proche', 'sans-fci': 'sansFci', sansfci: 'sansFci', 'sans-valo': 'sansValo', sansvalo: 'sansValo', 'sans-affect': 'sansAffect' });
 
 /**
  * Champs modifiables avec « edit » (et au double-clic dans une fiche) : mot affiché → champ du dossier.
@@ -91,11 +97,13 @@ export const SORTES = Object.freeze({
   'nouveau-gcblo': 'AAA000000-AAA000',
   type: 'num21, air ou sogetrel',
   'statut-ou-type': 'a-faire, en-validation, mis-a-dispo, refuse, litige, annule, attach, ou un affect',
-  filtre: 'affect, statut, retard, proches, sans-fci, sans-valo, texte',
+  filtre: 'affect, statut, retard, proches, sans-fci, sans-valo, sans-affect, texte',
   date: 'demain, lundi, +3, 12/11',
   fci: 'F + 11 chiffres',
   texte: 'texte libre',
   commande: 'une commande',
+  gcblo: 'GCBLO existant ou nouveau (créé), ou morceau d\'un existant',
+  'motif-relance': 'fci (numéro de commande) ou dft',
   champ: 'affect, statut, commune, valo, fci, affectation, relance, commentaire, gcblo',
   'dossier-ou-fichier': 'un dossier, ou « fichier » pour choisir la référence',
   attachement: 'des dossiers, * (la liste affichée), un statut (tous ses dossiers), ou « fichier » pour choisir la référence'

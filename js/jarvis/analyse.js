@@ -106,6 +106,15 @@ export function accepter(sorte, mot, ctx, { multiple = false } = {}) {
       // « fichier » : choisir le classeur de référence ; sinon un dossier
       if (p === 'fichier') return { ok: true, valeur: { fichier: true } };
       { const r = accepter('dossier', mot, ctx); return r.ok ? { ok: true, valeur: { dossier: r.valeur } } : r; }
+    case 'gcblo': {
+      // Un GCBLO complet, existant ou non (« affect » le crée), ou un morceau d'un dossier existant
+      const g = normaliserGcblo(mot);
+      if (FORMATS.gcblo.test(g)) return { ok: true, valeur: { gcblo: g, dossier: ctx.dossiers.find(d => d.gcblo === g) || null } };
+      const r = accepter('dossier', mot, ctx);
+      return r.ok ? { ok: true, valeur: { gcblo: r.valeur.gcblo, dossier: r.valeur } } : { ...r, erreur: `${r.erreur} (GCBLO complet pour en créer un)` };
+    }
+    case 'motif-relance':
+      return ['fci', 'dft'].includes(p) ? { ok: true, valeur: p } : { ok: false, erreur: `relance « ${mot} » : fci ou dft` };
     case 'attachement': {
       // « fichier » (la référence), un statut (tous ses dossiers), ou des dossiers (dont * et les groupes)
       if (p === 'fichier') return { ok: true, valeur: { fichier: true } };
@@ -119,7 +128,7 @@ export function accepter(sorte, mot, ctx, { multiple = false } = {}) {
       const g = normaliserGcblo(mot);
       if (!FORMATS.gcblo.test(g)) return { ok: false, erreur: `« ${mot} » : format attendu AAA000000-AAA000` };
       const existant = ctx.dossiers.find(d => d.gcblo === g);
-      if (existant) return { ok: false, erreur: `${g} existe déjà (${typeParCode(existant.type)?.libelle})` };
+      if (existant) return { ok: false, erreur: `${g} existe déjà (${typeParCode(existant.type)?.libelle || 'sans affect'})` };
       return { ok: true, valeur: g };
     }
     case 'type':
@@ -168,6 +177,7 @@ const MOTS_CONNUS = {
   date: ['demain', 'apres-demain', 'aujourdhui', ...JOURS],
   dossier: Object.keys(GROUPES),
   'dossier-ou-fichier': ['fichier'],
+  'motif-relance': ['fci', 'dft'],
   attachement: ['fichier', ...Object.keys(GROUPES), ...Object.keys(MOTS_STATUT)],
   champ: Object.keys(CHAMPS),
   periode: Object.keys(PERIODES),
@@ -177,7 +187,7 @@ const MOTS_CONNUS = {
 export const debutPossible = (sorte, mot) => !!plat(mot) && (MOTS_CONNUS[sorte] || []).some(m => m.startsWith(plat(mot)));
 
 /** Le rôle d'un mot (pour sa couleur), selon la sorte de son emplacement. */
-const ROLE = { dossier: 'dossier', 'dossier-ou-fichier': 'dossier', attachement: 'dossier', 'nouveau-gcblo': 'dossier', texte: 'texte' };
+const ROLE = { dossier: 'dossier', gcblo: 'dossier', 'dossier-ou-fichier': 'dossier', attachement: 'dossier', 'nouveau-gcblo': 'dossier', texte: 'texte' };
 const roleDe = sorte => ROLE[sorte] || 'valeur';
 
 /* ---------------- Analyse ---------------- */

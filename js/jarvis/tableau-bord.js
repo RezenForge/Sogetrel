@@ -84,6 +84,7 @@ export function dessinerTableauBord(s, jour, { derniereSauvegarde = undefined, m
 
   lignes.push(separation('affect'));
   TYPES.forEach(t => lignes.push(rangeeBarre(t.libelle, s.parType[t.code], total, `ty-${t.code}`, `ls ${motPourCode(MOTS_TYPE, t.code)}`)));
+  if (s.parType.SANS) lignes.push(rangeeBarre('Sans aff.', s.parType.SANS, total, 'proche', 'ls sans-affect'));
 
   lignes.push(separation('statut DFT'));
   STATUTS.forEach(st => lignes.push(rangeeBarre(COURT[st.code] || st.libelle, s.parStatut[st.code], total, `st-${st.code}`, `ls ${motPourCode(MOTS_STATUT, st.code)}`)));

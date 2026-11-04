@@ -25,6 +25,8 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `sauvegarde` | choisit un dossier et y écrit une sauvegarde datée ; seules les 3 plus récentes y restent. Ensuite, sauvegarde automatique toutes les 3 h dans ce dossier, tant que l'appli est ouverte |
 | `restore` | recharge une sauvegarde : remplace toute la base après confirmation (annulable) |
 | `*` | dans `set`, `delete`, `attachement` : tous les dossiers de la liste affichée (ex. `ls litige` puis `set * to annule`, `attachement *`) |
+| `affect ‹GCBLO› ‹num21\|air\|sogetrel›` | donne l'affect (crée le dossier s'il n'existe pas) et ouvre le mail d'affectation |
+| `relance ‹dossier› ‹fci\|dft›` | ouvre le mail de relance (fci : seulement si le dossier n'a pas de FCI) |
 | `cancel` | défait la dernière modification |
 | `clear` | vide l'écran |
 | `help [commande]` | la liste des commandes, ou le détail d'une commande |
@@ -79,6 +81,7 @@ js/import-excel.js       quels dossiers et FCI prendre dans le classeur (command
 js/attachement.js        quelles cellules remplir dans l'attachement d'un dossier
 js/info.js               retrouve les dossiers d'une liste collée (commande info)
 js/sauvegarde.js         nom, contenu et rotation des sauvegardes
+js/mails.js              mails d'affectation et de relance (adresses : config.js)
 js/coffre.js             garde la référence d'attachement dans le navigateur (IndexedDB)
 js/jarvis/grammaire.js   les commandes, sous forme de tableau (vide : en refonte)
 js/jarvis/analyse.js     comprend la ligne tapée (ne modifie rien)

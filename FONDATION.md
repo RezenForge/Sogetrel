@@ -35,6 +35,7 @@ L'application s'ouvre par le lien GitHub Pages. Elle fonctionne sans serveur : l
 | `dateAffectation` | date | obligatoire, aujourd'hui par défaut |
 | `dateRelance` | date ou vide | facultative |
 | `statutDft` | voir ci-dessous | `A_FAIRE` par défaut |
+| `type` (affect) | `NUM21`, `AIR`, `SOGETREL`, ou vide | vide possible depuis le 04/11/2026 : import sans affect, ou création par `affect` ; commande `affect` pour le donner |
 | `commune` | ex. `Mérignac` | facultative ; reprise de l'import (colonne G) |
 | `valorisation` | montant en euros, ex. `1250.5` | facultative ; reprise de l'import (colonne H) ; servira à la commande `attachement` |
 | `commentaire` | texte libre | facultatif |
@@ -70,7 +71,7 @@ Un dossier **clos** n'a plus d'alerte de relance.
 8. **Point du jour** : à l'ouverture et sur demande, quatre listes : relances en retard, relances du jour, relances dans les 3 jours, dossiers refusés (à reprendre). Les dossiers clos n'y figurent jamais.
 9. **Création en lot** (collage d'une liste) : chaque ligne est validée comme une création normale (R1 à R6). Les lignes valides sont créées ensemble, les autres sont listées avec leur motif. Tout le lot s'annule d'un coup.
 10. **Import Excel** (commande `import`) : on choisit un classeur (.xlsx ou .xlsm). Dans les onglets **33, 16, 17, 79 et 86**, chaque ligne dont la **colonne E** vaut `GCBLO` donne un dossier : son GCBLO est en **colonne D**, sa **commune en G**, sa **valorisation en H** (euros, nombre ou texte « 1 234,56 € »), son type (NUM21, AIR, Sogetrel) en **colonne I**, son FCI est ce qui suit `Numéro de commande FCI :` dans la **colonne J**.
-    - Si le type est vide ou non reconnu, il est demandé **une fois** pour ces dossiers-là. Le type d'un dossier déjà présent n'est pas changé.
+    - Si l'affect est vide ou non reconnu, le dossier est **créé sans affect** (aucune question) ; `ls sans-affect` les retrouve, `affect ‹GCBLO› ‹affect›` le donne. L'affect d'un dossier déjà présent n'est pas changé.
     - Un dossier déjà présent n'est pas recréé : on **complète** ce qui manque (FCI absent, commune ou valorisation vides), on ne remplace rien.
     - Les lignes refusées (GCBLO mal formé, FCI ou valorisation non reconnus) sont listées avec leur onglet et leur numéro de ligne.
     - Tout l'import s'annule d'un coup (`cancel`).
@@ -83,6 +84,13 @@ Un dossier **clos** n'a plus d'alerte de relance.
     - L'explorateur de fichiers s'ouvre pour choisir **où enregistrer** le fichier, nommé `‹GCBLO›.xlsx` (ou `.xlsm` si la référence contient des macros). Les navigateurs qui ne savent pas ouvrir cet explorateur (téléphones, Firefox) le téléchargent.
     - Le reste du classeur (mise en forme, formules, macros) n'est pas touché ; Excel recalcule les formules à l'ouverture. Une ligne « Attachement créé » s'ajoute à l'historique du dossier, et le dossier **passe au statut Attach** (annulable avec `cancel` ; rien ne change si l'enregistrement est abandonné).
     - Cellules et paliers sont réglés dans `config.js` (`ATTACHEMENT`).
+
+12. **Mails d'affectation et de relance** (`js/mails.js`, adresses dans `config.js` → `MAILS`) :
+    - `affect ‹GCBLO› ‹num21|air|sogetrel›` : donne l'affect au dossier (le **crée** s'il n'existe pas ; date d'affectation = le jour même quand l'affect change), puis **ouvre le mail** dans la messagerie. Pas de mail pour Sogetrel.
+    - `relance ‹dossier› fci` : mail de relance pour le numéro de commande, **seulement si le dossier n'a pas de FCI**. `relance ‹dossier› dft` : mail de relance DFT (docs GCB1 et GCB2 sur le LINE).
+    - **Destinataires** : NUM21 → oelmahdaoui, azaamoun, lsettar (@numerus21.fr) ; AIR → jeremie-sannier@air-reseaux.com ; **plus la boîte BL** selon les 3 premières lettres du GCBLO : SBA, LRO, POI, ANG, NIO → info_lpc_BL@sogetrel.fr (mention `@info_lpc_BL`) ; MED, BOR, EST, LIB, ARC → info_aquitaine_BL@sogetrel.fr (mention `@info_aquitaine_BL`) ; autre début : pas de boîte BL, c'est signalé. **Copie** : Romain.BOUTINEAU@sogetrel.fr.
+    - **Objets** : `Affectation GCBLO ‹affect› | ‹GCBLO›`, `Relance GCBLO ‹affect› | ‹GCBLO›`, `Relance GCBLO DFT ‹affect› | ‹GCBLO›`. Les textes sont dans `js/mails.js` (vouvoiement pour NUM21, tutoiement « Jérémie » pour AIR).
+    - Le volet résume le mail (lien pour le rouvrir, destinataires, copie) ; l'historique du dossier note « Mail d'affectation préparé » ou « Relance FCI/DFT préparée ». L'envoi reste fait à la main dans la messagerie.
 
 Toutes ces règles vivent dans **un seul fichier** (`js/dossiers.js`), et chacune a un test.
 
@@ -106,6 +114,7 @@ js/
   attachement.js           R11 : quelles cellules remplir pour un dossier
   info.js                  retrouve les dossiers d'une liste collée (commande info)
   sauvegarde.js            nom, contenu et rotation des sauvegardes (3 gardées)
+  mails.js                 R12 : mails d'affectation et de relance (destinataires, objet, texte, lien mailto)
   coffre.js                garde des fichiers dans le navigateur (IndexedDB) : la référence d'attachement
   ui/
     registre.js            la liste des dossiers
@@ -172,6 +181,8 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 | Attachement | `attachement fichier` (choisir la référence) · `attachement ‹dossiers›` (créer, R11) ; plusieurs dossiers (`*`, un statut, une liste) : un dossier de destination pour tous les fichiers, confirmation | `attachement 501404`, `attachement *`, `attachement mis-a-dispo` |
 | Sauvegarder | `sauvegarde` : choisir un dossier ; fichier `gcblo-sauvegarde_AAAA-MM-JJ_HHhMM-SS.json` ; seules les **3 plus récentes** y restent (les plus anciennes sont supprimées, les autres fichiers jamais touchés) | `sauvegarde` |
 | Restaurer | `restore` : choisir une sauvegarde (l'explorateur s'ouvre dans le dossier des sauvegardes) ; remplace toute la base après confirmation ; annulable (`cancel`) ; les dossiers illisibles ou en double sont ignorés | `restore` |
+| Affecter (mail) | `affect ‹GCBLO› ‹num21\|air\|sogetrel›` : affect donné (dossier créé s'il n'existe pas) et mail d'affectation ouvert (R12) | `affect SBA501404-THF010 num21` |
+| Relancer (mail) | `relance ‹dossier› ‹fci\|dft›` : mail de relance ouvert (fci seulement sans FCI) (R12) | `relance 501404 dft` |
 | Vider l'écran | `clear` | `clear` |
 | Aide | `help [commande]` (aussi `?`) ; chaque commande de la liste est cliquable | `help set` |
 
@@ -370,3 +381,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | Clic droit sur un GCBLO ou un FCI : copie dans le presse-papiers |
 | 04/11/2026 | `ls` : plusieurs affects ou statuts s'ajoutent (`ls num21 sogetrel`, `ls litige attach`) ; catégories différentes combinées (`ls air litige`) |
 | 04/11/2026 | `*` = la liste affichée (`set * to annule`) ; attachements en série dans un dossier choisi (`attachement *`, `attachement mis-a-dispo`) ; `attachement` et `delete` dans le volet |
+| 04/11/2026 | R12 : commandes `affect` et `relance` (mails préparés, `js/mails.js`) ; dossier sans affect possible (import, `ls sans-affect`) ; menu ⋯ : affecter, relancer |

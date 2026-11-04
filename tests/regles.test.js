@@ -51,9 +51,11 @@ groupe('Création et validation', () => {
     egal(r.dossier.dateRelance, null, 'pas de relance par défaut');
     egal(r.dossier.fci, ['F26154200726']);
   });
-  test('le type est obligatoire', () => {
-    const r = environnement().regles.creer(saisie({ type: '' }));
-    vrai(!r.ok); vrai(r.erreurs.type);
+  test('l\'affect peut manquer (import, commande affect) ; un affect inconnu est refusé', () => {
+    const e = environnement();
+    const r = e.regles.creer(saisie({ type: '' }));
+    vrai(r.ok); egal(r.dossier.type, null);
+    vrai(e.regles.creer(saisie({ type: 'XYZ', gcblo: 'SBA501405-THF010' })).erreurs.type);
   });
   test('le format du GCBLO est vérifié', () => {
     const r = environnement().regles.creer(saisie({ gcblo: 'SBA5014-THF010' }));

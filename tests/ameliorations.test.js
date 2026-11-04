@@ -42,7 +42,7 @@ groupe('R9 — Création en lot', () => {
       { type: 'AIR', gcblo: 'AAA111111-THF010', fci: ['F11111111111'] },
       { type: 'AIR', gcblo: 'SBA501404-THF010' },                  // déjà présent
       { type: 'AIR', gcblo: 'AAA111111-THF010' },                  // en double dans le lot
-      { type: '', gcblo: 'BBB222222-THF010' }                      // sans type
+      { type: 'XYZ', gcblo: 'BBB222222-THF010' }                   // affect inconnu
     ]);
     egal(r.crees.map(d => d.gcblo), ['AAA111111-THF010']); egal(r.refuses.length, 3); egal(ecritures, 1);
   });

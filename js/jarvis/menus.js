@@ -20,6 +20,10 @@ export function optionsDossier(d) {
       commande: `set ${d.gcblo} to ${motPourCode(MOTS_STATUT, s.code)}`,
       classe: `st-${s.code}`
     })),
+    // R12 — mails : affecter un dossier sans affect ; relancer (FCI s'il manque, DFT)
+    ...(!d.type ? [{ libelle: 'Affecter NUM21 (mail)', commande: `affect ${d.gcblo} num21` }, { libelle: 'Affecter AIR (mail)', commande: `affect ${d.gcblo} air` }] : []),
+    ...(['NUM21', 'AIR'].includes(d.type) && !d.fci.length ? [{ libelle: 'Relance FCI (mail)', commande: `relance ${d.gcblo} fci` }] : []),
+    ...(['NUM21', 'AIR'].includes(d.type) ? [{ libelle: 'Relance DFT (mail)', commande: `relance ${d.gcblo} dft` }] : []),
     { libelle: 'Attachement', commande: `attachement ${d.gcblo}` },
     // Toujours en dernier, en rouge ; la commande demande confirmation
     { libelle: 'Supprimer', commande: `delete ${d.gcblo}`, classe: 'err' }

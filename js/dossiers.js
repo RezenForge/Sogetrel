@@ -60,7 +60,7 @@ export function lireMontant(saisie) {
 export const formaterMontant = v => (v === null || v === undefined ? '' : new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(v));
 
 /** Champs ajoutés après coup : un dossier plus ancien les reçoit vides. */
-const PAR_DEFAUT = Object.freeze({ commune: '', valorisation: null });
+const PAR_DEFAUT = Object.freeze({ commune: '', valorisation: null, type: null });
 
 export function etatRelance(dossier, jour) {
   if (!dossier.dateRelance || statutParCode(dossier.statutDft)?.clos) return null;
@@ -93,7 +93,8 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
     const commune = String(saisie.commune ?? '').trim();
     const valorisation = lireMontant(saisie.valorisation);
 
-    if (!typeParCode(saisie.type)) erreurs.type = `Type inconnu. Choisir parmi : ${TYPES.map(t => t.libelle).join(', ')}.`;
+    // L'affect peut manquer (import sans affect, création par « affect ») ; s'il est donné, il doit être connu
+    if (saisie.type && !typeParCode(saisie.type)) erreurs.type = `Affect inconnu. Choisir parmi : ${TYPES.map(t => t.libelle).join(', ')}.`;
     if (!gcblo) erreurs.gcblo = 'Le GCBLO est obligatoire.';
     else if (!FORMATS.gcblo.test(gcblo)) erreurs.gcblo = 'Format attendu : AAA000000-AAA000 (ex. SBA501404-THF010).';
     else {
@@ -107,14 +108,14 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
     if (dateRelance !== null && !estJour(dateRelance)) erreurs.dateRelance = 'Date de relance invalide.';
     if (Number.isNaN(valorisation)) erreurs.valorisation = 'Valorisation invalide : un montant en euros est attendu.';
 
-    const valeur = { type: saisie.type, gcblo, fci, dateAffectation, dateRelance, statutDft, commune, valorisation, commentaire: String(saisie.commentaire ?? '').trim() };
+    const valeur = { type: saisie.type || null, gcblo, fci, dateAffectation, dateRelance, statutDft, commune, valorisation, commentaire: String(saisie.commentaire ?? '').trim() };
     return { ok: Object.keys(erreurs).length === 0, erreurs, valeur };
   }
 
   /** Décrit en français ce qui change entre deux versions (pour l'historique). */
   function differences(avant, apres) {
     const libelles = {
-      type: ['Type', v => typeParCode(v)?.libelle],
+      type: ['Affect', v => typeParCode(v)?.libelle || 'aucun'],
       gcblo: ['GCBLO', v => v],
       fci: ['FCI', v => (v.length ? v.join(', ') : 'aucun')],
       dateAffectation: ['Affectation', formater],
@@ -179,11 +180,14 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
     },
 
     /** R11 — note dans l'historique qu'un attachement a été créé. */
-    noterAttachement(id, detail = '') {
+    noterAttachement(id, detail = '') { return this.noter(id, 'attachement', `Attachement créé${detail ? ` (${detail})` : ''}`); },
+
+    /** Ajoute une ligne à l'historique d'un dossier sans rien modifier d'autre (mail préparé, attachement…). */
+    noter(id, action, detail) {
       const d = store.parId(id);
       if (!d) return { ok: false, erreurs: { id: 'Dossier introuvable.' } };
       const date = instant();
-      store.remplacer({ ...d, modifieLe: date, historique: [...d.historique, { date, action: 'attachement', detail: `Attachement créé${detail ? ` (${detail})` : ''}` }] });
+      store.remplacer({ ...d, modifieLe: date, historique: [...d.historique, { date, action, detail }] });
       return { ok: true, dossier: store.parId(id) };
     },
 
@@ -280,7 +284,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
      * `texte` cherche dans le GCBLO, les FCI et le commentaire (sans tenir compte
      * des majuscules, des accents ni des tirets).
      */
-    filtrer({ texte = '', type = '', statut = '', retard = false, proche = false, sansFci = false, sansValo = false } = {}, liste = store.tous()) {
+    filtrer({ texte = '', type = '', statut = '', retard = false, proche = false, sansFci = false, sansValo = false, sansAffect = false } = {}, liste = store.tous()) {
       const plat = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/-/g, '');
       const mots = plat(texte).split(/\s+/).filter(Boolean);
       const ref = jour();
@@ -293,6 +297,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
         (!proche || etatRelance(d, ref) === 'proche') &&
         (!sansFci || d.fci.length === 0) &&
         (!sansValo || d.valorisation === null || d.valorisation === undefined) &&
+        (!sansAffect || !d.type) &&
         mots.every(m => plat(`${d.gcblo} ${d.fci.join(' ')} ${d.commune || ''} ${d.commentaire}`).includes(m)));
     },
 
@@ -319,14 +324,14 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
     /** Les chiffres du tableau de bord. */
     statistiques(liste = store.tous()) {
       const ref = jour();
-      const parType = Object.fromEntries(TYPES.map(t => [t.code, 0]));
+      const parType = { ...Object.fromEntries(TYPES.map(t => [t.code, 0])), SANS: 0 };   // SANS : dossiers sans affect
       const parStatut = Object.fromEntries(STATUTS.map(s => [s.code, 0]));
       let retard = 0, proche = 0, sansFci = 0;
       // Valorisation (euros) : total, par statut, et nombre de dossiers sans valorisation
       const valo = { total: 0, parStatut: Object.fromEntries(STATUTS.map(s => [s.code, 0])), sans: 0 };
       const aVenir = [0, 0, 0, 0, 0, 0, 0];   // relances prévues aujourd'hui, demain… J+6 (dossiers non clos)
       for (const d of liste) {
-        parType[d.type]++;
+        parType[d.type || 'SANS']++;
         parStatut[d.statutDft]++;
         const e = etatRelance(d, ref);
         if (e === 'retard') retard++; else if (e === 'proche') proche++;

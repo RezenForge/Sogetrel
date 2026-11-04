@@ -54,7 +54,7 @@ export function creerInvite({ racine, contexte }) {
    * Où s'écrit la sortie : la console, ou le volet de droite (sous le tableau de bord) pour
    * les commandes qui ne doivent pas faire défiler la console (open, set, edit, cancel, help).
    */
-  const DANS_LE_VOLET = new Set(['open', 'set', 'edit', 'cancel', 'help', 'sauvegarde', 'restore', 'attachement', 'delete']);
+  const DANS_LE_VOLET = new Set(['open', 'set', 'edit', 'cancel', 'help', 'sauvegarde', 'restore', 'attachement', 'delete', 'affect', 'relance']);
   const VIDE_LA_CONSOLE = new Set(['ls', 'info']);
   let sortie = ecranEl;
   const defiler = () => { sortie.scrollTop = sortie.scrollHeight; };
@@ -79,7 +79,7 @@ export function creerInvite({ racine, contexte }) {
     const champ = (nom, cle, valeur) => `<span class="dim">${esc(nom.padEnd(14))}</span><span class="editable" data-champ="${cle}" title="double-clic pour modifier">${valeur}</span>`;
     const lignes = [
       `<b>${lienDossier(d)}</b> ${boutonMenu(d)}`,
-      champ('affect', 'affect', `<span class="ty-${d.type}">${esc(typeParCode(d.type).libelle)}</span>`),
+      champ('affect', 'affect', d.type ? `<span class="ty-${d.type}">${esc(typeParCode(d.type).libelle)}</span>` : '<span class="dim">—</span>'),
       champ('statut DFT', 'statut', `<span class="st-${d.statutDft}">${esc(statutParCode(d.statutDft).libelle)}</span>`),
       champ('FCI', 'fci', copieFci(d, esc(d.fci.join(', ') || 'aucun'))),
       champ('commune', 'commune', esc(d.commune || '—')),
@@ -96,7 +96,7 @@ export function creerInvite({ racine, contexte }) {
   /** La valeur d'un champ telle qu'on la retape (pour pré-remplir la saisie en place). */
   function valeurBrute(d, cle) {
     switch (cle) {
-      case 'affect': return motPourCode(MOTS_TYPE, d.type);
+      case 'affect': return d.type ? motPourCode(MOTS_TYPE, d.type) : '-';
       case 'statut': return motPourCode(MOTS_STATUT, d.statutDft);
       case 'fci': return d.fci.join(' ');
       case 'commune': return d.commune || '';
@@ -121,7 +121,7 @@ export function creerInvite({ racine, contexte }) {
       const milieu = `${ed('commune', col(coupe(commune, 22) || '—', 22))} ${ed('valo', `<span class="valo">${esc((valo || '—').padStart(11))}</span>`)}  ${ed('fci', copieFci(d, `<span class="dim">${col(fci || '—', 15)}</span>`))} `;
       // Une ligne = un bloc : le statut peut colorer toute la ligne (Attach : vert clair)
       return `<span class="rangee rangee-${d.statutDft}">`
-        + `${ed('affect', `<span class="ty-${d.type}">${col(TYPE_COURT[d.type] || d.type, 6)}</span>`)} `
+        + `${ed('affect', `<span class="ty-${d.type || 'SANS'}">${col(TYPE_COURT[d.type] || '—', 6)}</span>`)} `
         + `${lienDossier(d)} `
         + milieu
         + ed('statut', `<span class="st-${d.statutDft}">${col(STATUT_COURT[d.statutDft] || d.statutDft, 11)}</span>`)
@@ -468,7 +468,7 @@ export function creerInvite({ racine, contexte }) {
     getSelection()?.removeAllRanges();
     const cle = cible.dataset.champ, avant = valeurBrute(d, cle);
     // Affect et statut : une liste ; le reste : une zone de saisie pré-remplie
-    const choix = cle === 'affect' ? Object.keys(MOTS_TYPE) : cle === 'statut' ? STATUTS.map(st => motPourCode(MOTS_STATUT, st.code)) : null;
+    const choix = cle === 'affect' ? [...Object.keys(MOTS_TYPE), '-'] : cle === 'statut' ? STATUTS.map(st => motPourCode(MOTS_STATUT, st.code)) : null;
     const saisie = document.createElement(choix ? 'select' : 'input');
     saisie.className = 'edition';
     if (choix) saisie.innerHTML = choix.map(c => `<option value="${esc(c)}"${c === avant ? ' selected' : ''}>${esc(c)}</option>`).join('');

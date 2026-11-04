@@ -21,6 +21,7 @@
  *   choisirSauvegarde()      → Promise<File|null>  (explorateur, ouvert si possible dans le dossier des sauvegardes)
  *   choisirDossier(id)       → Promise<dossier|'telechargement'|null>  (explorateur de dossiers ; null = abandon)
  *   ecrireDansDossier(dossier, nom, octets) → Promise  (écrit ou remplace un fichier dans ce dossier)
+ *   ouvrirMail(lien)         ouvre un lien mailto: dans la messagerie
  */
 import { criteresListe } from './analyse.js';
 import { COMMANDES, SORTES, MOTS_TYPE, MOTS_STATUT, CHAMPS, plat } from './grammaire.js';
@@ -29,6 +30,7 @@ import { IMPORT_EXCEL } from '../config.js';
 import { lireClasseur, modifierClasseur, contientMacros } from '../xlsx.js';
 import { cellulesAttachement } from '../attachement.js';
 import { chercherListe } from '../info.js';
+import { mailAffectation, mailRelance, lienMailto, AFFECTS_MAIL } from '../mails.js';
 import { contenuSauvegarde, nomSauvegarde, lireSauvegarde, GARDER } from '../sauvegarde.js';
 import { extraireDossiers } from '../import-excel.js';
 import { typeParCode, statutParCode } from '../config.js';
@@ -40,7 +42,7 @@ const SEUIL_CONFIRMATION = 3;
 /** Le mot « cancel », cliquable : un clic lance la commande. */
 const LIEN_ANNULE = '<button type="button" class="lien c-verbe" data-commande="cancel">cancel</button>';
 
-export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre, sauvegarderDans, choisirSauvegarde, choisirDossier, ecrireDansDossier }) {
+export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre, sauvegarderDans, choisirSauvegarde, choisirDossier, ecrireDansDossier, ouvrirMail = () => {} }) {
   let annulation = null;       // { libelle, faire() } : de quoi défaire la dernière modification
 
   // Comme les outils Linux : un succès s'écrit simplement, une erreur est préfixée du nom du programme
@@ -70,6 +72,39 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       ok(`${v.cibles.length === 1 ? esc(v.cibles[0].gcblo) : pluriel(r.modifies, 'dossier modifié', 'dossiers modifiés')} : ${esc(libelle)}${r.inchanges ? ` (${r.inchanges} déjà à jour)` : ''} <span class="dim">·</span> ${LIEN_ANNULE}`);
     },
 
+    /**
+     * R12 — Affecte un GCBLO (le crée s'il n'existe pas) et prépare le mail d'affectation.
+     * Pas de mail pour Sogetrel. Le dossier, s'il change d'affect, prend la date du jour comme date d'affectation.
+     */
+    affect(v) {
+      const { gcblo } = v.cible, type = v.affect;
+      const existant = v.cible.dossier && store.parId(v.cible.dossier.id);
+      let ligne;
+      if (!existant) {
+        const r = regles.creer({ gcblo, type });
+        if (!r.ok) return erreur(esc(premiereErreur(r)));
+        annulation = { libelle: `la création de ${gcblo}`, faire: () => regles.supprimer(r.dossier.id) };
+        ligne = `${esc(gcblo)} créé · affect ${esc(typeParCode(type).libelle)}`;
+      } else if (existant.type !== type) {
+        const r = regles.modifier(existant.id, { type, dateAffectation: regles.aujourdhui() });
+        if (!r.ok) return erreur(esc(premiereErreur(r)));
+        annulation = { libelle: `l'affect de ${gcblo}`, faire: () => regles.restaurer([r.avant]) };
+        ligne = `${esc(gcblo)} : affect → ${esc(typeParCode(type).libelle)}`;
+      } else ligne = `${esc(gcblo)} est déjà ${esc(typeParCode(type).libelle)}`;
+      if (!AFFECTS_MAIL.includes(type)) return ok(`${ligne} <span class="dim">· pas de mail pour ${esc(typeParCode(type).libelle)}</span>${annulation ? ` <span class="dim">·</span> ${LIEN_ANNULE}` : ''}`);
+      const mail = mailAffectation(gcblo, type);
+      ok(`${ligne} <span class="dim">·</span> ${LIEN_ANNULE}`);
+      preparerMail(mail, store.parGcblo(gcblo), 'Mail d’affectation préparé');
+    },
+
+    /** R12 — Prépare un mail de relance : « fci » (numéro de commande, seulement s'il manque) ou « dft ». */
+    relance(v) {
+      const d = store.parId(v.cible.id) || v.cible;
+      if (!AFFECTS_MAIL.includes(d.type)) return erreur(`${esc(d.gcblo)} : ${d.type ? `pas de relance pour ${esc(typeParCode(d.type).libelle)}` : 'sans affect · affect ' + esc(d.gcblo) + ' num21|air'}`);
+      if (v.motif === 'fci' && d.fci.length) return info(`${esc(d.gcblo)} a déjà un FCI (${esc(d.fci.join(', '))}) : pas de relance`);
+      preparerMail(mailRelance(d.gcblo, d.type, v.motif), d, `Relance ${v.motif.toUpperCase()} préparée`);
+    },
+
     /** Retrouve les dossiers d'une liste collée et affiche leurs infos (même liste que ls, éditable). */
     info(v) {
       const r = chercherListe(v.liste, store.tous());
@@ -88,7 +123,7 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       const nom = Object.keys(CHAMPS).find(k => CHAMPS[k] === v.champ);
       let valeur;
       switch (v.champ) {
-        case 'type': valeur = MOTS_TYPE[plat(brut)]; if (!valeur) return erreur(`affect inconnu : « ${esc(brut)} » (num21, air, sogetrel)`); break;
+        case 'type': valeur = vide ? null : MOTS_TYPE[plat(brut)]; if (!vide && !valeur) return erreur(`affect inconnu : « ${esc(brut)} » (num21, air, sogetrel)`); break;
         case 'statutDft': valeur = MOTS_STATUT[plat(brut)]; if (!valeur) return erreur(`statut inconnu : « ${esc(brut)} »`); break;
         case 'dateAffectation': valeur = lireDate(brut, regles.aujourdhui()); if (!valeur) return erreur(`date non comprise : « ${esc(brut)} »`); break;
         case 'dateRelance': valeur = vide ? null : lireDate(brut, regles.aujourdhui()); if (!vide && !valeur) return erreur(`date non comprise : « ${esc(brut)} »`); break;
@@ -131,17 +166,13 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       if (r.refuses.length > 10) erreur(`… et ${r.refuses.length - 10} autres lignes refusées`);
       if (!r.nouveaux.length && !r.completes.length) return info('rien à importer');
 
-      // Type lu en colonne I ; s'il manque ou n'est pas reconnu, il est demandé une fois pour ces dossiers-là
+      // Affect lu en colonne I ; s'il manque ou n'est pas reconnu, le dossier est créé sans affect (commande « affect » ensuite)
       const sansType = r.nouveaux.filter(n => !n.type);
-      let typeParDefaut = null;
       if (sansType.length) {
         const exemples = [...new Set(sansType.map(n => n.typeLu).filter(Boolean))].slice(0, 3);
-        if (exemples.length) info(`<span class="dim">affect non reconnu : ${esc(exemples.join(', '))}</span>`);
-        const choix = await demander(`affect des ${pluriel(sansType.length, 'dossier', 'dossiers')} sans affect ?`, Object.keys(MOTS_TYPE));
-        if (!choix) return info('import abandonné');
-        typeParDefaut = MOTS_TYPE[choix];
+        info(`<span class="dim">${pluriel(sansType.length, 'dossier créé', 'dossiers créés')} sans affect${exemples.length ? ` (non reconnu : ${esc(exemples.join(', '))})` : ''} · ls sans-affect</span>`);
       }
-      const creation = r.nouveaux.length ? regles.creerPlusieurs(r.nouveaux.map(n => ({ gcblo: n.gcblo, type: n.type || typeParDefaut, fci: n.fci, commune: n.commune, valorisation: n.valorisation })), { origine: 'import Excel' }) : { crees: [], refuses: [] };
+      const creation = r.nouveaux.length ? regles.creerPlusieurs(r.nouveaux.map(n => ({ gcblo: n.gcblo, type: n.type || null, fci: n.fci, commune: n.commune, valorisation: n.valorisation })), { origine: 'import Excel' }) : { crees: [], refuses: [] };
       const avant = [];
       for (const c of r.completes) {
         const m = regles.modifier(c.dossier.id, c.changements);
@@ -267,6 +298,16 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       COMMANDES.forEach(c => info(`<button type="button" class="lien c-verbe" data-commande="help ${esc(c.verbes[0])}">${esc(c.verbes[0])}</button>${' '.repeat(Math.max(1, 8 - c.verbes[0].length))}<span class="dim">${esc(c.resume)}</span>`));
     }
   };
+
+  /** Ouvre le mail dans la messagerie, le résume dans le volet (lien pour le rouvrir), et le note dans l'historique. */
+  function preparerMail(mail, dossier, note) {
+    const lien = lienMailto(mail);
+    ouvrirMail(lien);
+    info(`mail préparé : <a class="lien" href="${esc(lien)}">${esc(mail.objet)}</a>`);
+    info(`<span class="dim">à : ${esc(mail.a.join(', '))}<br>cc : ${esc(mail.cc.join(', '))}</span>`);
+    mail.avertissements.forEach(a => info(`<span class="proche">${esc(a)}</span>`));
+    if (dossier) regles.noter(dossier.id, 'mail', note);
+  }
 
   return {
     /** Exécute une analyse complète. */

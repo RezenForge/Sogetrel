@@ -164,6 +164,8 @@ const actions = creerActions({
     return 'telecharge';
   },
   coffre,
+  // Mail prêt : le lien mailto: ouvre la messagerie (Outlook…) avec destinataires, objet et texte
+  ouvrirMail: lien => { const a = document.createElement('a'); a.href = lien; a.click(); },
   // Plusieurs fichiers d'un coup (attachements en série) : on choisit un dossier de destination
   choisirDossier: async id => {
     if (!window.showDirectoryPicker) return 'telechargement';
