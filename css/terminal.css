@@ -47,6 +47,8 @@
   --statut-ANNULE: #888a85;
   --statut-ATTACH: #8ae234;
   --fond-fci-retard: rgba(239, 41, 41, .2);   /* FCI attendu depuis plus de 24 h */
+  --repere: rgba(130, 190, 255, .35);          /* dernier élément cliqué : bleu clair */
+  --repere-bord: rgba(130, 190, 255, .55);
   --fond-fci-relance: rgba(252, 175, 62, .22); /* … relancé il y a moins de 2 jours */
   --ligne-ATTACH: rgba(138, 226, 52, .13);   /* fond vert clair d'une ligne au statut Attach */
 

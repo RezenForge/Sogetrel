@@ -424,6 +424,45 @@ export function creerInvite({ racine, contexte }) {
     menuEl.querySelector('.menu-choix')?.focus();
   }
 
+  /* ---------------- Repère visuel : ce qu'on vient de cliquer (gauche ou droit) est surligné en bleu clair ---------------- */
+  // Le morceau le plus précis sous la souris : une case de liste ou de fiche, un lien, un morceau
+  // du tableau de bord ; à défaut le mot (span) cliqué, puis la ligne entière. Un seul repère à la fois.
+  const ZONES_REPERE = '#ecran, #volet, #tableauBord';
+  const PRECIS = '.editable, .lien, .points, .m, .entete';
+  let repere = null, repereCle = null;
+  /** De quoi retrouver l'élément quand la vue est redessinée (liste mise à jour, tableau de bord…). */
+  function cleRepere(el) {
+    const zone = el.closest(ZONES_REPERE);
+    const sel = v => CSS.escape(v);
+    if (el.dataset.champ && el.dataset.dossier) return `#${zone.id} [data-champ="${sel(el.dataset.champ)}"][data-dossier="${sel(el.dataset.dossier)}"]`;
+    const fiche = el.closest('.vue[data-fiche]');
+    if (el.dataset.champ && fiche) return `#${zone.id} .vue[data-fiche="${sel(fiche.dataset.fiche)}"] [data-champ="${sel(el.dataset.champ)}"]`;
+    if (el.dataset.commande) return `#${zone.id} [data-commande="${sel(el.dataset.commande)}"]`;
+    return null;
+  }
+  function poserRepere(el) {
+    if (repere === el) return;
+    repere?.classList.remove('repere');
+    repere = el;
+    repereCle = el ? cleRepere(el) : null;
+    el?.classList.add('repere');
+  }
+  // Vue redessinée : le repère revient sur le même élément s'il existe encore
+  new MutationObserver(() => {
+    if (!repere || repere.isConnected || !repereCle) return;
+    const el = racine.querySelector(repereCle);
+    repere = el; if (el) el.classList.add('repere'); else repereCle = null;
+  }).observe(racine.body, { childList: true, subtree: true });
+  racine.addEventListener('pointerdown', e => {
+    if (e.button !== 0 && e.button !== 2) return;
+    const t = e.target instanceof Element ? e.target : e.target.parentElement;
+    if (!t?.closest(ZONES_REPERE) || t.closest('.edition')) return;
+    const el = t.closest(PRECIS)
+      || (t.matches('span, b, i, button') && !t.closest('.cadre') ? t : null)
+      || t.closest('.rangee, .l, .bl');
+    poserRepere(el && !el.matches(ZONES_REPERE) ? el : null);
+  }, true);
+
   racine.addEventListener('click', e => {
     const cmd = e.target.closest('[data-commande]');
     const points = e.target.closest('[data-menu-dossier]');

@@ -386,6 +386,7 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | `ls`, `list` et `info` vident la console avant d'afficher |
 | 04/11/2026 | `ls`/`info` : la ligne de commande va dans le volet ; sans résultat, tout va dans le volet et la console ne change pas |
 | 04/11/2026 | Commande `sauvegarde` (`js/sauvegarde.js`) : dossier choisi, nom daté, 3 sauvegardes gardées ; dernière sauvegarde dans le tableau de bord |
+| 04/11/2026 | Repère visuel : le dernier élément cliqué (gauche ou droit) — case, lien, morceau du tableau de bord, sinon la ligne — est surligné en bleu clair ; il reste en place quand la vue se redessine |
 | 04/11/2026 | Sauvegarde automatique toutes les heures dans le dernier dossier choisi ; autorisation à renouveler signalée dans le volet |
 | 04/11/2026 | `backup` retiré (malentendu : c'était `restore`) ; commande `restore` |
 | 04/11/2026 | Clic droit sur un GCBLO ou un FCI : copie dans le presse-papiers |

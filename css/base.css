@@ -121,6 +121,8 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .editable:hover { background: var(--trait); }
 /* R13 : FCI attendu depuis plus de 24 h (affecté, toujours sans FCI) */
 .fci-retard { background: var(--fond-fci-retard); }
+/* Repère : le dernier élément cliqué (gauche ou droit), en bleu clair ; passe devant les autres fonds */
+.repere, .tableau .repere, .fci-retard.repere, .fci-relance.repere { background: var(--repere) !important; border-radius: 2px; box-shadow: 0 0 0 1px var(--repere-bord); }
 .fci-retard:hover { background: var(--fond-fci-retard); outline: 1px solid var(--retard); }
 /* Relancé il y a moins de 2 jours : orange */
 .fci-relance { background: var(--fond-fci-relance); }
