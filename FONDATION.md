@@ -100,6 +100,7 @@ js/
   xlsx.js                  lit un classeur Excel (.xlsx, .xlsm) et en écrit une copie modifiée, sans bibliothèque
   import-excel.js          R10 : quels dossiers et FCI prendre dans le classeur
   attachement.js           R11 : quelles cellules remplir pour un dossier
+  info.js                  retrouve les dossiers d'une liste collée (commande info)
   coffre.js                garde des fichiers dans le navigateur (IndexedDB) : la référence d'attachement
   ui/
     registre.js            la liste des dossiers
@@ -157,6 +158,7 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 | Afficher | `ls [type] [statut] [retard] [sans-fci] [texte]` (aussi `list`) | `ls air retard` |
 | Ouvrir | `open ‹dossier›` | `open 501404` |
 | Changer le statut ou le type | `set ‹dossiers› to ‹statut\|type›` | `set 501404 to refuse` |
+| Infos d'une liste | `info ‹GCBLO…›` : coller une colonne de GCBLO (Excel, mail…) ; affiche les dossiers trouvés comme `ls` (éditables), puis les introuvables | `info` + Ctrl+V |
 | Modifier un champ | `edit ‹dossier› ‹champ› ‹valeur›` ; champs : affect, statut, commune, valo, fci, affectation, relance, commentaire, gcblo ; `-` vide un champ facultatif | `edit 501404 commune Le Haillan` |
 | Supprimer | `delete ‹dossiers›` (aussi `rm`), confirmation demandée | `delete 501404` |
 | Annuler | `cancel` (aussi `undo`) : défait la dernière modification | `cancel` |
@@ -330,3 +332,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 03/11/2026 | Ordre des colonnes de `ls` : AFFECT GCBLO COMMUNE VALO FCI RELANCE STATUT (sur téléphone : commune · valo · FCI en seconde ligne) |
 | 03/11/2026 | Commande `edit` ; fiche éditable au double-clic (chaque modification passe par `edit`, annulable) |
 | 04/11/2026 | Listes (`ls`) éditables au double-clic, comme la fiche ; la liste se met à jour sur place |
+| 04/11/2026 | Commande `info` (`js/info.js`) ; une colonne collée dans la ligne de saisie devient une suite de mots séparés par des espaces |

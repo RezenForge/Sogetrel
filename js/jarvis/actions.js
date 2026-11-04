@@ -24,6 +24,7 @@ import { lireDate } from './analyse.js';
 import { IMPORT_EXCEL } from '../config.js';
 import { lireClasseur, modifierClasseur, contientMacros } from '../xlsx.js';
 import { cellulesAttachement } from '../attachement.js';
+import { chercherListe } from '../info.js';
 import { extraireDossiers } from '../import-excel.js';
 import { typeParCode, statutParCode } from '../config.js';
 
@@ -62,6 +63,17 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       if (!r.modifies) return info(`${v.cibles.length === 1 ? esc(v.cibles[0].gcblo) + ' est' : 'ces dossiers sont'} déjà à jour`);
       annulation = { libelle: pluriel(r.modifies, 'modification', 'modifications'), faire: () => regles.restaurer(r.avant) };
       ok(`${v.cibles.length === 1 ? esc(v.cibles[0].gcblo) : pluriel(r.modifies, 'dossier modifié', 'dossiers modifiés')} : ${esc(libelle)}${r.inchanges ? ` (${r.inchanges} déjà à jour)` : ''} <span class="dim">·</span> ${LIEN_ANNULE}`);
+    },
+
+    /** Retrouve les dossiers d'une liste collée et affiche leurs infos (même liste que ls, éditable). */
+    info(v) {
+      const r = chercherListe(v.liste, store.tous());
+      if (r.trouves.length) ecran.tableau(r.trouves);
+      const bilan = [pluriel(r.trouves.length, 'trouvé', 'trouvés'), r.introuvables.length && `${r.introuvables.length} introuvable${r.introuvables.length > 1 ? 's' : ''}`,
+        r.ambigus.length && `${r.ambigus.length} ambigu${r.ambigus.length > 1 ? 's' : ''}`].filter(Boolean);
+      info(`<span class="dim">${bilan.join(' · ')}</span>`);
+      if (r.introuvables.length) erreur(`introuvables : ${esc(r.introuvables.slice(0, 15).join(', '))}${r.introuvables.length > 15 ? ` … (+${r.introuvables.length - 15})` : ''}`);
+      if (r.ambigus.length) info(`<span class="dim">plusieurs dossiers possibles : ${esc(r.ambigus.slice(0, 10).join(', '))}</span>`);
     },
 
     /** Modifie un champ d'un dossier (aussi lancé par le double-clic dans une fiche). */

@@ -323,6 +323,17 @@ export function creerInvite({ racine, contexte }) {
   // Coller une liste (plusieurs GCBLO, ou plusieurs lignes) : traitée comme un lot, pas comme une commande
   champ.addEventListener('paste', async e => {
     const texte = e.clipboardData?.getData('text') || '';
+    // Une colonne collée (Excel…) : les retours à la ligne et tabulations deviennent des espaces,
+    // sinon le navigateur recolle les lignes bout à bout (« info » puis une colonne de GCBLO)
+    if (!surCollage && /[\r\n\t]/.test(texte.trim())) {
+      e.preventDefault();
+      const propre = texte.split(/[\r\n\t]+/).map(t => t.trim()).filter(Boolean).join(' ');
+      const debut = champ.selectionStart, avant = champ.value.slice(0, debut);
+      const insere = (avant && !/\s$/.test(avant) ? ' ' : '') + propre;
+      champ.setRangeText(insere, debut, champ.selectionEnd, 'end');
+      rafraichir();
+      return;
+    }
     if (attente || !surCollage || !ressembleAUneListe(texte)) return;
     e.preventDefault();
     const lignes = texte.split(/\r?\n/).filter(l => l.trim()).length;

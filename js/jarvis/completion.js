@@ -14,6 +14,8 @@ import { COMMANDES, MOTS_STATUT, MOTS_TYPE, GROUPES, PERIODES, JOURS, CHAMPS, pl
 import { STATUTS, TYPES, IMPORT_EXCEL, statutParCode, typeParCode } from '../config.js';
 import { formater } from '../dates.js';
 import { etatRelance } from '../dossiers.js';
+import { chercherListe } from '../info.js';
+const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`;
 import { chercherDossiers, lireDate, criteresListe } from './analyse.js';
 
 const MAX = 8;
@@ -140,6 +142,7 @@ export function apercu(analyse, ctx) {
     case 'open': return `→ fiche de ${v.cible.gcblo}`;
     case 'import': return `→ onglets ${IMPORT_EXCEL.onglets.join(', ')}`;
     case 'attachement': return v.cible.fichier ? '→ choisir la référence' : `→ ${v.cible.dossier.gcblo}.xlsx`;
+    case 'info': { const r = chercherListe(v.liste, ctx.dossiers); return `→ ${pluriel(r.trouves.length, 'trouvé', 'trouvés')}${r.introuvables.length ? ` · ${r.introuvables.length} introuvable${r.introuvables.length > 1 ? 's' : ''}` : ''}`; }
     case 'edit': return `→ ${v.cible.gcblo} : ${Object.keys(CHAMPS).find(k => CHAMPS[k] === v.champ)} → ${v.valeur}`;
     case 'delete': return `→ suppression de ${v.cibles.length === 1 ? v.cibles[0].gcblo : n(v.cibles)} (confirmation)`;
     case 'set': {
