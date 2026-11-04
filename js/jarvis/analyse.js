@@ -137,7 +137,15 @@ export function accepter(sorte, mot, ctx, { multiple = false } = {}) {
       if (MOTS_STATUT[p]) return { ok: true, valeur: { statut: MOTS_STATUT[p] } };
       if (MOTS_TYPE[p]) return { ok: true, valeur: { type: MOTS_TYPE[p] } };
       return { ok: false, erreur: `« ${mot} » n'est ni un statut ni un affect` };
-    case 'filtre':
+    case 'filtre': {
+      // Une date d'affectation : « 12/03 » (jour, année en cours), « 12/03/2026 » (jour), « 03/2026 » (mois)
+      const jm = mot.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{4}))?$/), ma = mot.match(/^(\d{1,2})\/(\d{4})$/);
+      if (ma && Number(ma[1]) >= 1 && Number(ma[1]) <= 12) return { ok: true, valeur: { date: { mois: `${ma[2]}-${ma[1].padStart(2, '0')}` } } };
+      if (jm) {
+        const jour = `${jm[3] || ctx.aujourdhui.slice(0, 4)}-${jm[2].padStart(2, '0')}-${jm[1].padStart(2, '0')}`;
+        return estJour(jour) ? { ok: true, valeur: { date: { jour } } } : { ok: false, erreur: `date non comprise : « ${mot} »` };
+      }
+    }
       if (MOTS_TYPE[p]) return { ok: true, valeur: { type: MOTS_TYPE[p] } };
       if (MOTS_STATUT[p]) return { ok: true, valeur: { statut: MOTS_STATUT[p] } };
       if (MOTS_FILTRE[p]) return { ok: true, valeur: { [MOTS_FILTRE[p]]: true } };
@@ -315,12 +323,13 @@ export function analyser(texte, curseur = texte.length, ctx = { dossiers: [], au
  * des catégories différentes se combinent (« ls air litige » : AIR ET Litige).
  */
 export function criteresListe(valeurs) {
-  const c = { texte: '', type: [], statut: [] };
+  const c = { texte: '', type: [], statut: [], dates: [] };
   for (const v of valeurs.filtres || []) {
     if (!v) continue;
     if (v.texte) c.texte = `${c.texte} ${v.texte}`.trim();
     else if (v.type) { if (!c.type.includes(v.type)) c.type.push(v.type); }
     else if (v.statut) { if (!c.statut.includes(v.statut)) c.statut.push(v.statut); }
+    else if (v.date) c.dates.push(v.date);
     else Object.assign(c, v);
   }
   return c;

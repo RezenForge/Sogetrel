@@ -88,7 +88,8 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
     const gcblo = normaliserGcblo(saisie.gcblo);
     const { fci, invalides } = lireFci(saisie.fci);
     const statutDft = saisie.statutDft || STATUT_PAR_DEFAUT;
-    const dateAffectation = saisie.dateAffectation || jour();
+    // Date d'affectation (« date affect ») : le jour même par défaut ; null = pas encore affecté (import)
+    const dateAffectation = saisie.dateAffectation === null ? null : (saisie.dateAffectation || jour());
     const dateRelance = saisie.dateRelance || null;
     const commune = String(saisie.commune ?? '').trim();
     const valorisation = lireMontant(saisie.valorisation);
@@ -104,7 +105,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
     }
     if (invalides.length) erreurs.fci = `FCI non reconnu : ${invalides.join(', ')}. Format attendu : F suivi de 11 chiffres.`;
     if (!statutParCode(statutDft)) erreurs.statutDft = `Statut inconnu. Choisir parmi : ${STATUTS.map(s => s.libelle).join(', ')}.`;
-    if (!estJour(dateAffectation)) erreurs.dateAffectation = 'Date d\'affectation invalide.';
+    if (dateAffectation !== null && !estJour(dateAffectation)) erreurs.dateAffectation = 'Date d\'affectation invalide.';
     if (dateRelance !== null && !estJour(dateRelance)) erreurs.dateRelance = 'Date de relance invalide.';
     if (Number.isNaN(valorisation)) erreurs.valorisation = 'Valorisation invalide : un montant en euros est attendu.';
 
@@ -118,7 +119,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
       type: ['Affect', v => typeParCode(v)?.libelle || 'aucun'],
       gcblo: ['GCBLO', v => v],
       fci: ['FCI', v => (v.length ? v.join(', ') : 'aucun')],
-      dateAffectation: ['Affectation', formater],
+      dateAffectation: ['Date affect', v => (v ? formater(v) : 'aucune')],
       dateRelance: ['Relance', v => (v ? formater(v) : 'aucune')],
       statutDft: ['Statut DFT', v => statutParCode(v)?.libelle],
       commune: ['Commune', v => v || 'vide'],
@@ -284,7 +285,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
      * `texte` cherche dans le GCBLO, les FCI et le commentaire (sans tenir compte
      * des majuscules, des accents ni des tirets).
      */
-    filtrer({ texte = '', type = '', statut = '', retard = false, proche = false, sansFci = false, sansValo = false, sansAffect = false } = {}, liste = store.tous()) {
+    filtrer({ texte = '', type = '', statut = '', retard = false, proche = false, sansFci = false, sansValo = false, sansAffect = false, dates = [] } = {}, liste = store.tous()) {
       const plat = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/-/g, '');
       const mots = plat(texte).split(/\s+/).filter(Boolean);
       const ref = jour();
@@ -298,6 +299,8 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
         (!sansFci || d.fci.length === 0) &&
         (!sansValo || d.valorisation === null || d.valorisation === undefined) &&
         (!sansAffect || !d.type) &&
+        // Date d'affectation : un jour (« 12/03 ») ou un mois (« 03/2026 ») ; plusieurs = l'un ou l'autre
+        (!dates.length || dates.some(f => (f.jour ? d.dateAffectation === f.jour : (d.dateAffectation || '').startsWith(`${f.mois}-`)))) &&
         mots.every(m => plat(`${d.gcblo} ${d.fci.join(' ')} ${d.commune || ''} ${d.commentaire}`).includes(m)));
     },
 

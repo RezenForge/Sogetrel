@@ -32,7 +32,7 @@ L'application s'ouvre par le lien GitHub Pages. Elle fonctionne sans serveur : l
 | `type` | `NUM21`, `AIR` ou `SOGETREL` | obligatoire |
 | `gcblo` | ex. `SBA501404-THF010` | obligatoire, format `AAA000000-AAA000`, **unique** |
 | `fci` | liste, ex. `["F26154200726"]` | 0, 1 ou plusieurs ; format `F` + 11 chiffres |
-| `dateAffectation` | date | obligatoire, aujourd'hui par défaut |
+| `dateAffectation` (« date affect ») | date ou vide | aujourd'hui par défaut ; vide à l'import ; mise au jour même par `affect` |
 | `dateRelance` | date ou vide | facultative |
 | `statutDft` | voir ci-dessous | `A_FAIRE` par défaut |
 | `type` (affect) | `NUM21`, `AIR`, `SOGETREL`, ou vide | vide possible depuis le 04/11/2026 : import sans affect, ou création par `affect` ; commande `affect` pour le donner |
@@ -170,7 +170,7 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 
 | Commande | Forme | Exemple |
 | --- | --- | --- |
-| Afficher | `ls [affects…] [statuts…] [retard\|proches] [sans-fci] [sans-valo] [texte]` (aussi `list`) ; plusieurs affects ou statuts = l'un ou l'autre | `ls num21 sogetrel litige` |
+| Afficher | `ls [affects…] [statuts…] [dates…] [retard\|proches] [sans-fci] [sans-valo] [sans-affect] [texte]` (aussi `list`) ; plusieurs affects, statuts ou dates = l'un ou l'autre ; date affect : `12/03` (jour, année en cours), `12/03/2026`, `03/2026` (mois) | `ls num21 sogetrel litige`, `ls 03/2026` |
 | Ouvrir | `open ‹dossier›` | `open 501404` |
 | Changer le statut ou le type | `set ‹dossiers› to ‹statut\|type›` | `set 501404 to refuse` |
 | Infos d'une liste | `info ‹GCBLO…›` : coller une colonne de GCBLO, complets ou seulement leur début (`SBA501023`) ; affiche les dossiers trouvés comme `ls` (éditables), puis les introuvables | `info` + Ctrl+V |
@@ -382,3 +382,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | `ls` : plusieurs affects ou statuts s'ajoutent (`ls num21 sogetrel`, `ls litige attach`) ; catégories différentes combinées (`ls air litige`) |
 | 04/11/2026 | `*` = la liste affichée (`set * to annule`) ; attachements en série dans un dossier choisi (`attachement *`, `attachement mis-a-dispo`) ; `attachement` et `delete` dans le volet |
 | 04/11/2026 | R12 : commandes `affect` et `relance` (mails préparés, `js/mails.js`) ; dossier sans affect possible (import, `ls sans-affect`) ; menu ⋯ : affecter, relancer |
+| 04/11/2026 | Colonne DATE AFFECT en tête de liste (jour/mois ; année au double-clic), modifiable ; `affect` la met au jour même (aussi pour un dossier déjà au bon affect mais sans date) ; vide à l'import ; filtres `ls 12/03`, `ls 03/2026` |

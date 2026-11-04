@@ -90,6 +90,11 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
         if (!r.ok) return erreur(esc(premiereErreur(r)));
         annulation = { libelle: `l'affect de ${gcblo}`, faire: () => regles.restaurer([r.avant]) };
         ligne = `${esc(gcblo)} : affect → ${esc(typeParCode(type).libelle)}`;
+      } else if (!existant.dateAffectation) {
+        // Déjà le bon affect mais sans date (import) : la date affect devient celle du jour
+        const r = regles.modifier(existant.id, { dateAffectation: regles.aujourdhui() });
+        if (r.ok && !r.inchange) annulation = { libelle: `la date affect de ${gcblo}`, faire: () => regles.restaurer([r.avant]) };
+        ligne = `${esc(gcblo)} est déjà ${esc(typeParCode(type).libelle)} · date affect du jour`;
       } else ligne = `${esc(gcblo)} est déjà ${esc(typeParCode(type).libelle)}`;
       if (!AFFECTS_MAIL.includes(type)) return ok(`${ligne} <span class="dim">· pas de mail pour ${esc(typeParCode(type).libelle)}</span>${annulation ? ` <span class="dim">·</span> ${LIEN_ANNULE}` : ''}`);
       const mail = mailAffectation(gcblo, type);
@@ -125,7 +130,7 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       switch (v.champ) {
         case 'type': valeur = vide ? null : MOTS_TYPE[plat(brut)]; if (!vide && !valeur) return erreur(`affect inconnu : « ${esc(brut)} » (num21, air, sogetrel)`); break;
         case 'statutDft': valeur = MOTS_STATUT[plat(brut)]; if (!valeur) return erreur(`statut inconnu : « ${esc(brut)} »`); break;
-        case 'dateAffectation': valeur = lireDate(brut, regles.aujourdhui()); if (!valeur) return erreur(`date non comprise : « ${esc(brut)} »`); break;
+        case 'dateAffectation': valeur = vide ? null : lireDate(brut, regles.aujourdhui()); if (!vide && !valeur) return erreur(`date non comprise : « ${esc(brut)} »`); break;
         case 'dateRelance': valeur = vide ? null : lireDate(brut, regles.aujourdhui()); if (!vide && !valeur) return erreur(`date non comprise : « ${esc(brut)} »`); break;
         case 'valorisation': valeur = vide ? null : brut; break;
         case 'fci': valeur = vide ? [] : brut; break;
@@ -172,7 +177,8 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
         const exemples = [...new Set(sansType.map(n => n.typeLu).filter(Boolean))].slice(0, 3);
         info(`<span class="dim">${pluriel(sansType.length, 'dossier créé', 'dossiers créés')} sans affect${exemples.length ? ` (non reconnu : ${esc(exemples.join(', '))})` : ''} · ls sans-affect</span>`);
       }
-      const creation = r.nouveaux.length ? regles.creerPlusieurs(r.nouveaux.map(n => ({ gcblo: n.gcblo, type: n.type || null, fci: n.fci, commune: n.commune, valorisation: n.valorisation })), { origine: 'import Excel' }) : { crees: [], refuses: [] };
+      // Pas de date affect à l'import : elle viendra de la commande « affect » (ou d'une saisie)
+      const creation = r.nouveaux.length ? regles.creerPlusieurs(r.nouveaux.map(n => ({ gcblo: n.gcblo, type: n.type || null, dateAffectation: null, fci: n.fci, commune: n.commune, valorisation: n.valorisation })), { origine: 'import Excel' }) : { crees: [], refuses: [] };
       const avant = [];
       for (const c of r.completes) {
         const m = regles.modifier(c.dossier.id, c.changements);

@@ -20,7 +20,7 @@
  */
 export const COMMANDES = Object.freeze([
   { id: 'ls', verbes: ['ls', 'list'], resume: 'liste les dossiers',
-    forme: 'ls [affect] [statut] [retard|proches] [sans-fci] [sans-valo] [sans-affect] [texte]',
+    forme: 'ls [affect] [statut] [date] [retard|proches] [sans-fci] [sans-valo] [sans-affect] [texte]',
     emplacements: [{ nom: 'filtres', sorte: 'filtre', optionnel: true, multiple: true }] },
   { id: 'open', verbes: ['open'], resume: 'fiche d\'un dossier',
     forme: 'open ‹dossier›',
@@ -82,7 +82,7 @@ export const MOTS_FILTRE = Object.freeze({ retard: 'retard', 'en-retard': 'retar
  */
 export const CHAMPS = Object.freeze({
   affect: 'type', statut: 'statutDft', commune: 'commune', valo: 'valorisation', fci: 'fci',
-  affectation: 'dateAffectation', relance: 'dateRelance', commentaire: 'commentaire', gcblo: 'gcblo'
+  affectation: 'dateAffectation', 'date-affect': 'dateAffectation', relance: 'dateRelance', commentaire: 'commentaire', gcblo: 'gcblo'
 });
 
 /** Jours de la semaine, dimanche = 0 (comme Date.getDay). */
@@ -97,7 +97,7 @@ export const SORTES = Object.freeze({
   'nouveau-gcblo': 'AAA000000-AAA000',
   type: 'num21, air ou sogetrel',
   'statut-ou-type': 'a-faire, en-validation, mis-a-dispo, refuse, litige, annule, attach, ou un affect',
-  filtre: 'affect, statut, retard, proches, sans-fci, sans-valo, sans-affect, texte',
+  filtre: 'affect, statut, date affect (12/03, 12/03/2026, 03/2026), retard, proches, sans-fci, sans-valo, sans-affect, texte',
   date: 'demain, lundi, +3, 12/11',
   fci: 'F + 11 chiffres',
   texte: 'texte libre',

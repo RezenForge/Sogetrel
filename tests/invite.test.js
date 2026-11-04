@@ -35,7 +35,7 @@ groupe('Découpage et dates', () => {
 
 groupe('Commandes ls, open, set, delete, cancel, clear, help', () => {
   test('ls avec filtres', () => { const { a } = A('ls air refuse'); vrai(a.complet); egal(a.valeurs.filtres, [{ type: 'AIR' }, { statut: 'REFUSE' }]); });
-  test('ls num21 sogetrel : les deux affects', async () => { const { criteresListe } = await import('../js/jarvis/analyse.js'); const { a } = A('ls num21 sogetrel litige attach'); egal(criteresListe(a.valeurs), { texte: '', type: ['NUM21', 'SOGETREL'], statut: ['LITIGE', 'ATTACH'] }); });
+  test('ls num21 sogetrel : les deux affects', async () => { const { criteresListe } = await import('../js/jarvis/analyse.js'); const { a } = A('ls num21 sogetrel litige attach'); egal(criteresListe(a.valeurs), { texte: '', type: ['NUM21', 'SOGETREL'], statut: ['LITIGE', 'ATTACH'], dates: [] }); });
   test('open un dossier par un morceau du numéro', () => egal(A('open 501404').a.valeurs.cible.gcblo, 'SBA501404-THF010'));
   test('open avec le GCBLO complet (clic)', () => vrai(A('open SBA501404-THF010').a.complet));
   test('set … to …', () => { const { a } = A('set 501404 to refuse'); vrai(a.complet); egal(a.valeurs.valeur, { statut: 'REFUSE' }); });

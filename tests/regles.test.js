@@ -331,3 +331,31 @@ groupe('ls : plusieurs affects ou statuts', () => {
   test('affects et statuts se combinent', () => egal(env().filtrer({ type: ['NUM21', 'SOGETREL'], statut: ['LITIGE'] }).map(d => d.type), ['SOGETREL']));
   test('un seul affect (ancienne écriture) toujours compris', () => egal(env().filtrer({ type: 'AIR' }).length, 1));
 });
+
+groupe('Date affect', () => {
+  const env = () => {
+    const r = creerDossiers(creerStore(supportMemoire()), { horloge: () => new Date(2026, 10, 4, 9) });
+    r.creer({ type: 'AIR', gcblo: 'SBA501001-THF010', dateAffectation: '2026-03-12' });
+    r.creer({ type: 'AIR', gcblo: 'SBA501002-THF010', dateAffectation: '2026-03-20' });
+    r.creer({ type: 'AIR', gcblo: 'SBA501003-THF010', dateAffectation: '2025-03-12' });
+    r.creer({ type: null, gcblo: 'SBA501004-THF010', dateAffectation: null });
+    return r;
+  };
+  test('peut être vide (import) ; le jour même par défaut', () => {
+    const r = env();
+    egal([r.filtrer({ texte: '501004' })[0].dateAffectation, r.creer({ type: 'AIR', gcblo: 'SBA501005-THF010' }).dossier.dateAffectation], [null, '2026-11-04']);
+  });
+  test('filtre par jour, par mois, plusieurs', () => {
+    const r = env();
+    egal(r.filtrer({ dates: [{ jour: '2026-03-12' }] }).map(d => d.gcblo), ['SBA501001-THF010']);
+    egal(r.filtrer({ dates: [{ mois: '2026-03' }] }).length, 2);
+    egal(r.filtrer({ dates: [{ jour: '2026-03-12' }, { jour: '2025-03-12' }] }).length, 2);
+  });
+  test('lecture de « ls 12/03 », « ls 03/2026 », « ls 12/03/2025 »', async () => {
+    const { analyser, criteresListe } = await import('../js/jarvis/analyse.js');
+    const r = env(), ctx = { dossiers: [], aujourdhui: '2026-11-04', regles: r };
+    const c = t => criteresListe(analyser(t, t.length, ctx).valeurs).dates;
+    egal([c('ls 12/03'), c('ls 03/2026'), c('ls 12/3/2025')], [[{ jour: '2026-03-12' }], [{ mois: '2026-03' }], [{ jour: '2025-03-12' }]]);
+    vrai(analyser('ls 31/02 ', 9, ctx).erreurs.length > 0);
+  });
+});
