@@ -84,7 +84,7 @@ export function creerInvite({ racine, contexte }) {
       champ('FCI', 'fci', copieFci(d, esc(d.fci.join(', ') || 'aucun'))),
       champ('commune', 'commune', esc(d.commune || '—')),
       champ('valorisation', 'valo', d.valorisation !== null && d.valorisation !== undefined ? esc(formaterMontant(d.valorisation)) : '—'),
-      champ('date affect', 'affectation', d.dateAffectation ? esc(formater(d.dateAffectation)) : '—'),
+      champ('date', 'date', d.dateAffectation ? esc(formater(d.dateAffectation)) : '—'),
       champ('relance', 'relance', d.dateRelance ? `<span class="${alerte || ''}">${esc(formater(d.dateRelance))}${alerte === 'retard' ? ' (en retard)' : alerte === 'proche' ? ' (proche)' : ''}</span>` : 'aucune'),
       champ('commentaire', 'commentaire', esc(d.commentaire || '—').replace(/\n/g, '<br>' + ' '.repeat(14))),
       `<span class="dim">historique</span>`,
@@ -101,7 +101,7 @@ export function creerInvite({ racine, contexte }) {
       case 'fci': return d.fci.join(' ');
       case 'commune': return d.commune || '';
       case 'valo': return d.valorisation !== null && d.valorisation !== undefined ? String(d.valorisation).replace('.', ',') : '';
-      case 'affectation': return d.dateAffectation ? formater(d.dateAffectation) : '';
+      case 'date': return d.dateAffectation ? formater(d.dateAffectation) : '';
       case 'relance': return d.dateRelance ? formater(d.dateRelance) : '';
       case 'commentaire': return (d.commentaire || '').replace(/\n/g, ' ');
       default: return '';
@@ -121,8 +121,8 @@ export function creerInvite({ racine, contexte }) {
       const milieu = `${ed('commune', col(coupe(commune, 22) || '—', 22))} ${ed('valo', `<span class="valo">${esc((valo || '—').padStart(11))}</span>`)}  ${ed('fci', copieFci(d, `<span class="dim">${col(fci || '—', 15)}</span>`))} `;
       // Une ligne = un bloc : le statut peut colorer toute la ligne (Attach : vert clair)
       return `<span class="rangee rangee-${d.statutDft}">`
-        // Date affect : jour/mois seulement (l'année se voit en ouvrant le champ au double-clic)
-        + `${ed('affectation', `<span class="dim">${col(d.dateAffectation ? formater(d.dateAffectation).slice(0, 5) : '—', 5)}</span>`)}       `
+        // Date (d'affectation) : jour/mois seulement (l'année se voit en ouvrant le champ au double-clic)
+        + `${ed('date', `<span class="dim">${col(d.dateAffectation ? formater(d.dateAffectation).slice(0, 5) : '—', 5)}</span>`)}  `
         + `${ed('affect', `<span class="ty-${d.type || 'SANS'}">${col(TYPE_COURT[d.type] || '—', 6)}</span>`)} `
         + `${lienDossier(d)} `
         + milieu
@@ -130,7 +130,7 @@ export function creerInvite({ racine, contexte }) {
         + boutonMenu(d) + '</span>';
     });
     // L'en-tête reste visible en haut de l'écran tant que la liste défile (CSS : sticky)
-    const entete = `<span class="entete dim">${'DATE AFFECT'.padEnd(12)}${'AFFECT'.padEnd(7)}${'GCBLO'.padEnd(17)}`
+    const entete = `<span class="entete dim">${'DATE'.padEnd(7)}${'AFFECT'.padEnd(7)}${'GCBLO'.padEnd(17)}`
       + `${'COMMUNE'.padEnd(23)}${'VALO'.padStart(11)}  ${'FCI'.padEnd(16)}STATUT DFT</span>`;
     return `<pre class="tableau">${entete}${lignes.join('')}</pre>`;
   }

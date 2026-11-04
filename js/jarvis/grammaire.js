@@ -82,7 +82,7 @@ export const MOTS_FILTRE = Object.freeze({ retard: 'retard', 'en-retard': 'retar
  */
 export const CHAMPS = Object.freeze({
   affect: 'type', statut: 'statutDft', commune: 'commune', valo: 'valorisation', fci: 'fci',
-  affectation: 'dateAffectation', 'date-affect': 'dateAffectation', relance: 'dateRelance', commentaire: 'commentaire', gcblo: 'gcblo'
+  date: 'dateAffectation', affectation: 'dateAffectation', relance: 'dateRelance', commentaire: 'commentaire', gcblo: 'gcblo'
 });
 
 /** Jours de la semaine, dimanche = 0 (comme Date.getDay). */
@@ -97,14 +97,14 @@ export const SORTES = Object.freeze({
   'nouveau-gcblo': 'AAA000000-AAA000',
   type: 'num21, air ou sogetrel',
   'statut-ou-type': 'a-faire, en-validation, mis-a-dispo, refuse, litige, annule, attach, ou un affect',
-  filtre: 'affect, statut, date affect (12/03, 12/03/2026, 03/2026), retard, proches, sans-fci, sans-valo, sans-affect, texte',
+  filtre: 'affect, statut, date (12/03, 12/03/2026, 03/2026), retard, proches, sans-fci, sans-valo, sans-affect, texte',
   date: 'demain, lundi, +3, 12/11',
   fci: 'F + 11 chiffres',
   texte: 'texte libre',
   commande: 'une commande',
   gcblo: 'GCBLO existant ou nouveau (créé), ou morceau d\'un existant',
   'motif-relance': 'fci (numéro de commande) ou dft',
-  champ: 'affect, statut, commune, valo, fci, affectation, relance, commentaire, gcblo',
+  champ: 'date, affect, statut, commune, valo, fci, relance, commentaire, gcblo',
   'dossier-ou-fichier': 'un dossier, ou « fichier » pour choisir la référence',
   attachement: 'des dossiers, * (la liste affichée), un statut (tous ses dossiers), ou « fichier » pour choisir la référence'
 });

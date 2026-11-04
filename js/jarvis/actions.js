@@ -93,8 +93,8 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       } else if (!existant.dateAffectation) {
         // Déjà le bon affect mais sans date (import) : la date affect devient celle du jour
         const r = regles.modifier(existant.id, { dateAffectation: regles.aujourdhui() });
-        if (r.ok && !r.inchange) annulation = { libelle: `la date affect de ${gcblo}`, faire: () => regles.restaurer([r.avant]) };
-        ligne = `${esc(gcblo)} est déjà ${esc(typeParCode(type).libelle)} · date affect du jour`;
+        if (r.ok && !r.inchange) annulation = { libelle: `la date de ${gcblo}`, faire: () => regles.restaurer([r.avant]) };
+        ligne = `${esc(gcblo)} est déjà ${esc(typeParCode(type).libelle)} · date du jour`;
       } else ligne = `${esc(gcblo)} est déjà ${esc(typeParCode(type).libelle)}`;
       if (!AFFECTS_MAIL.includes(type)) return ok(`${ligne} <span class="dim">· pas de mail pour ${esc(typeParCode(type).libelle)}</span>${annulation ? ` <span class="dim">·</span> ${LIEN_ANNULE}` : ''}`);
       const mail = mailAffectation(gcblo, type);

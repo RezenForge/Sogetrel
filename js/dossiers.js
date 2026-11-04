@@ -119,7 +119,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
       type: ['Affect', v => typeParCode(v)?.libelle || 'aucun'],
       gcblo: ['GCBLO', v => v],
       fci: ['FCI', v => (v.length ? v.join(', ') : 'aucun')],
-      dateAffectation: ['Date affect', v => (v ? formater(v) : 'aucune')],
+      dateAffectation: ['Date', v => (v ? formater(v) : 'aucune')],
       dateRelance: ['Relance', v => (v ? formater(v) : 'aucune')],
       statutDft: ['Statut DFT', v => statutParCode(v)?.libelle],
       commune: ['Commune', v => v || 'vide'],
