@@ -70,7 +70,7 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       const r = chercherListe(v.liste, store.tous());
       if (r.trouves.length) ecran.tableau(r.trouves);
       const bilan = [pluriel(r.trouves.length, 'trouvé', 'trouvés'), r.introuvables.length && `${r.introuvables.length} introuvable${r.introuvables.length > 1 ? 's' : ''}`,
-        r.ambigus.length && `${r.ambigus.length} ambigu${r.ambigus.length > 1 ? 's' : ''}`].filter(Boolean);
+        r.ambigus.length && `${r.ambigus.length} ambigu${r.ambigus.length > 1 ? 's' : ''}`, r.ignores && `${r.ignores} mot${r.ignores > 1 ? 's' : ''} ignoré${r.ignores > 1 ? 's' : ''}`].filter(Boolean);
       info(`<span class="dim">${bilan.join(' · ')}</span>`);
       if (r.introuvables.length) erreur(`introuvables : ${esc(r.introuvables.slice(0, 15).join(', '))}${r.introuvables.length > 15 ? ` … (+${r.introuvables.length - 15})` : ''}`);
       if (r.ambigus.length) info(`<span class="dim">plusieurs dossiers possibles : ${esc(r.ambigus.slice(0, 10).join(', '))}</span>`);

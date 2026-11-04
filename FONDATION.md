@@ -333,3 +333,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 03/11/2026 | Commande `edit` ; fiche éditable au double-clic (chaque modification passe par `edit`, annulable) |
 | 04/11/2026 | Listes (`ls`) éditables au double-clic, comme la fiche ; la liste se met à jour sur place |
 | 04/11/2026 | Commande `info` (`js/info.js`) ; une colonne collée dans la ligne de saisie devient une suite de mots séparés par des espaces |
+| 04/11/2026 | `info` : les GCBLO sont cherchés dans tout le texte collé (même recollés bout à bout, tirets variés) ; les mots ignorés sont comptés dans le bilan |

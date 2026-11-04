@@ -26,5 +26,9 @@ groupe('info — liste collée', () => {
     const r = chercherListe('GCBLO SBA501404-THF010 dossier', D);
     egal([noms(r), r.ignores], [['SBA501404-THF010'], 2]);
   });
+  test('colonne recollée bout à bout par le navigateur', () =>
+    egal(noms(chercherListe('SBA501404-THF010SBA501423-THF010LRO500767-THF010', D)), ['SBA501404-THF010', 'SBA501423-THF010', 'LRO500767-THF010']));
+  test('tiret long ou insécable (copié de Word, d\'un mail)', () => egal(noms(chercherListe('SBA501404–THF010 SBA501423‑THF010 LRO-500767-THF010', D)).length, 3));
+  test('GCBLO entouré de texte (« Dossier SBA501404-THF010 : ok »)', () => egal(noms(chercherListe('Dossier SBA501404-THF010 : ok', D)), ['SBA501404-THF010']));
   test('séparateurs : virgules, points-virgules, tabulations', () => egal(noms(chercherListe('SBA501404-THF010;SBA501423-THF010,\tLRO500768-THF010', D)).length, 3));
 });
