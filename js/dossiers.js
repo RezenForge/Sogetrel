@@ -14,7 +14,7 @@
  *   const regles = creerDossiers(store);                       // en temps normal
  *   const regles = creerDossiers(store, { horloge: () => d }); // tests : heure fixe
  */
-import { TYPES, STATUTS, STATUT_PAR_DEFAUT, FORMATS, RELANCE, EMAIL, FCI_ATTENDU_JOURS, FCI_RELANCE_JOURS, typeParCode, statutParCode } from './config.js';
+import { TYPES, STATUTS, STATUT_PAR_DEFAUT, FORMATS, RELANCE, EMAIL, FCI_ATTENDU_JOURS, FCI_RELANCE_JOURS, RELANCE_INTERVALLE_JOURS, typeParCode, statutParCode } from './config.js';
 import { aujourdhui, ajouterJours, ecartJours, estJour, formater, versJour } from './dates.js';
 
 /* ---------------- Lecture et nettoyage des saisies ---------------- */
@@ -72,6 +72,18 @@ export function fciEnRetard(d, jour) {
 }
 
 /** Le jour (« AAAA-MM-JJ ») de la dernière relance FCI préparée, d'après l'historique ; null sinon. */
+/**
+ * Protection contre les doublons : la dernière relance du même motif ('fci' ou 'dft') si elle date de
+ * moins de `jours` jours (le jour même compris), sinon null. → { date (ISO), jours: 0 aujourd'hui, 1 hier… }
+ */
+export function relanceRecente(d, motif, jour, jours = RELANCE_INTERVALLE_JOURS) {
+  const motifTexte = motif === 'fci' ? 'FCI' : 'DFT';
+  const e = [...(d.historique || [])].reverse().find(h => h.action === 'mail' && new RegExp(`^Relance ${motifTexte}\\b`).test(h.detail));
+  if (!e) return null;
+  const ecart = ecartJours(jour, versJour(new Date(e.date)));
+  return ecart >= 0 && ecart < jours ? { date: e.date, jours: ecart } : null;
+}
+
 export function derniereRelanceFci(d) {
   const e = [...(d.historique || [])].reverse().find(h => h.action === 'mail' && /^Relance FCI/.test(h.detail));
   return e ? versJour(new Date(e.date)) : null;

@@ -96,3 +96,13 @@ groupe('R12 — Commandes affect et relance', () => {
     egal(e.ouverts.length, 1); vrai(e.ouverts[0].includes('DFT')); vrai(e.sortie.at(-1).includes('sans affect'));
   });
 });
+
+import { relanceRecente } from '../js/dossiers.js';
+groupe('Relances : protection contre les doublons', () => {
+  const h = (date, detail) => ({ date: new Date(date).toISOString(), action: 'mail', detail });
+  const d = { historique: [h('2026-11-03T10:00:00', 'Relance FCI préparée'), h('2026-10-20T10:00:00', 'Relance DFT préparée')] };
+  test('relance FCI d\'hier : protégée (1 jour)', () => egal(relanceRecente(d, 'fci', '2026-11-04')?.jours, 1));
+  test('relance FCI d\'avant-hier : plus protégée', () => egal(relanceRecente(d, 'fci', '2026-11-05'), null));
+  test('chaque motif à part : la DFT d\'il y a 15 jours ne bloque rien', () => egal(relanceRecente(d, 'dft', '2026-11-04'), null));
+  test('même jour : 0', () => egal(relanceRecente(d, 'fci', '2026-11-03')?.jours, 0));
+});

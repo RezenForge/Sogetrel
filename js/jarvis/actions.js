@@ -35,6 +35,7 @@ import { extraireDossiers, appliquerImport } from '../import-excel.js';
 import { lireAffectsClasseur, noterAffectsClasseur, ecartAffect } from '../affects-classeur.js';
 import { typeParCode, statutParCode } from '../config.js';
 import { pointDuJour } from './aujourdhui.js';
+import { relanceRecente } from '../dossiers.js';
 import { depuisJour } from '../dates.js';
 
 /** Échappe un texte avant de l'insérer dans du HTML. */
@@ -135,10 +136,16 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
     },
 
     /** R12 — Prépare un mail de relance : « fci » (numéro de commande, seulement s'il manque) ou « dft ». */
-    relance(v) {
+    async relance(v) {
       const d = store.parId(v.cible.id) || v.cible;
       if (!AFFECTS_MAIL.includes(d.type)) return erreur(`${esc(d.gcblo)} : ${d.type ? `pas de relance pour ${esc(typeParCode(d.type).libelle)}` : 'sans affect · affect ' + esc(d.gcblo) + ' num21|air'}`);
       if (v.motif === 'fci' && d.fci.length) return info(`${esc(d.gcblo)} a déjà un FCI (${esc(d.fci.join(', '))}) : pas de relance`);
+      // Protection contre les doublons : même relance préparée aujourd'hui ou hier → on demande
+      const recente = relanceRecente(d, v.motif, regles.aujourdhui());
+      if (recente) {
+        const quand = `${recente.jours === 0 ? "aujourd'hui" : 'hier'} à ${new Date(recente.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+        if (!(await confirmer(`relance ${v.motif.toUpperCase()} de ${d.gcblo} déjà préparée ${quand} : relancer quand même ?`))) return info(`pas de relance · ${esc(d.gcblo)} relancé ${esc(quand)}`);
+      }
       preparerMail(mailRelance(d.gcblo, d.type, v.motif), d, `Relance ${v.motif.toUpperCase()} préparée`);
     },
 

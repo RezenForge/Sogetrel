@@ -90,6 +90,7 @@ Un dossier **clos** n'a plus d'alerte de relance.
     - `relance ‹dossier› fci` : mail de relance pour le numéro de commande, **seulement si le dossier n'a pas de FCI**. `relance ‹dossier› dft` : mail de relance DFT (docs GCB1 et GCB2 sur le LINE).
     - **Destinataires** : NUM21 → oelmahdaoui, azaamoun, lsettar (@numerus21.fr) ; AIR → jeremie-sannier@air-reseaux.com ; **plus la boîte BL** selon les 3 premières lettres du GCBLO : SBA, LRO, POI, ANG, NIO → info_lpc_BL@sogetrel.fr (mention `@info_lpc_BL`) ; MED, BOR, EST, LIB, ARC → info_aquitaine_BL@sogetrel.fr (mention `@info_aquitaine_BL`) ; autre début : pas de boîte BL, c'est signalé. **Copie** : Romain.BOUTINEAU@sogetrel.fr.
     - **Objets** : `Affectation GCBLO ‹affect› | ‹GCBLO›`, `Relance GCBLO ‹affect› | ‹GCBLO›`, `Relance GCBLO DFT ‹affect› | ‹GCBLO›`. Les textes sont dans `js/mails.js` (vouvoiement pour NUM21, tutoiement « Jérémie » pour AIR).
+    - **Pas de doublon** : si la même relance (FCI ou DFT) a déjà été préparée aujourd'hui ou hier (`RELANCE_INTERVALLE_JOURS` = 2), le registre demande « déjà préparée … : relancer quand même ? [o/n] ». Non → rien n'est envoyé. Chaque motif est compté à part (une relance FCI ne bloque pas une DFT).
     - Le volet résume le mail (lien pour le rouvrir, destinataires, copie) ; l'historique du dossier note « Mail d'affectation préparé » ou « Relance FCI/DFT préparée ». L'envoi reste fait à la main dans la messagerie.
 
 13. **FCI attendu** : un dossier **affecté** (affect et date) qui n'a **toujours pas de FCI 24 h après sa date** (le lendemain) et n'est pas clos voit sa case FCI passer en **rouge clair** (liste et fiche). `ls fci-retard` les liste ; c'est le moment d'un `relance ‹dossier› fci` : un **clic droit sur la case rouge** le lance. Après une relance FCI (clic droit ou commande), la case passe en **orange pendant 2 jours** (le jour de la relance et le lendemain), puis redevient rouge si le FCI n'est toujours pas arrivé (`FCI_RELANCE_JOURS`). La date de relance est lue dans l'historique du dossier. Délai réglable : `FCI_ATTENDU_JOURS` dans `config.js`.
@@ -387,6 +388,7 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | `ls`, `list` et `info` vident la console avant d'afficher |
 | 04/11/2026 | `ls`/`info` : la ligne de commande va dans le volet ; sans résultat, tout va dans le volet et la console ne change pas |
 | 04/11/2026 | Commande `sauvegarde` (`js/sauvegarde.js`) : dossier choisi, nom daté, 3 sauvegardes gardées ; dernière sauvegarde dans le tableau de bord |
+| 04/11/2026 | Relances FCI et DFT : confirmation si la même relance a déjà été préparée aujourd'hui ou hier |
 | 04/11/2026 | Sous une liste, seulement le nombre de dossiers (plus de « N attach masqués » ni de rappel Ctrl+clic) |
 | 04/11/2026 | Historique : ↑ ↓ restent dans l'historique tant qu'on n'a rien tapé ; la liste de propositions reste fermée pendant ce temps |
 | 04/11/2026 | Correction : un clic sur une ligne ou ⋯ lançait « ls … tri:- » (la liste entière était prise pour un titre de colonne) |

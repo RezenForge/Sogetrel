@@ -43,6 +43,12 @@ export const FCI_ATTENDU_JOURS = 1;
 /** Après une relance FCI, la case passe en orange pendant N jours (le jour de la relance compris), puis redevient rouge. */
 export const FCI_RELANCE_JOURS = 2;
 
+/**
+ * Protection contre les relances en double : une relance FCI ou DFT déjà préparée il y a moins de
+ * RELANCE_INTERVALLE_JOURS jours (aujourd'hui ou hier avec 2) demande confirmation avant d'en refaire une.
+ */
+export const RELANCE_INTERVALLE_JOURS = 2;
+
 export const RELANCE = Object.freeze({
   joursProches: 3,      // « relance proche » : aujourd'hui ou dans les 3 jours
   delaiSuivante: 7      // relance suivante proposée à J+7
