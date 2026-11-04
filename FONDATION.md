@@ -402,6 +402,7 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | R14 : `registre-gcblo.csv` écrit à chaque sauvegarde ; macro `MajDepuisRegistre` pour IMMO-COORDI-DISSIM.xlsm (J = FCI, E = VALIDÉ GDP pour Attach, journal des changements) |
 | 04/11/2026 | Macro : fenêtre de compte rendu à la fin (modifié en vert, laissé de côté en orange, lien vers la cellule) |
 | 04/11/2026 | Macro : J n'est pas touché si un FCI du registre s'y trouve déjà, à n'importe quel endroit |
+| 04/11/2026 | Explorateur de fichiers lancé au clavier : bouton « ▸ ouvrir l'explorateur » à cliquer à la souris (sinon Windows cache le pointeur) ; Échap abandonne. Lancé à la souris : ouverture directe |
 | 04/11/2026 | `sauvegarde` réutilise le dossier déjà choisi sans ouvrir l'explorateur ; `sauvegarde dossier` pour en changer |
 | 04/11/2026 | Les deux sens par un seul dossier : la macro écrit `classeur-gcblo.csv`, le registre le lit à chaque sauvegarde et crée les nouveaux GCBLO |
 | 04/11/2026 | Macro : E = `FACTU` (et non VALIDÉ GDP) pour les dossiers Attach ; onglet Journal registre retiré, le compte rendu suffit |

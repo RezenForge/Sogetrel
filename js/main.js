@@ -59,21 +59,33 @@ const invite = creerInvite({
 });
 
 /*
- * Avant d'ouvrir l'explorateur de fichiers : on quitte la ligne de saisie et on attend
- * que la touche Entrée soit relâchée. Sinon Windows (option « Masquer le pointeur
- * pendant la frappe ») peut garder la souris cachée dans l'explorateur.
+ * Avant d'ouvrir l'explorateur de fichiers. Sous Windows, si la commande a été lancée au
+ * clavier (Entrée), l'explorateur peut s'ouvrir avec le pointeur de souris caché (option
+ * « Masquer le pointeur pendant la frappe » + Chrome/Edge). Seule parade fiable : l'ouvrir
+ * depuis un clic de souris. Donc :
+ *   - commande lancée à la souris (tableau de bord, menu ⋯, lien) : l'explorateur s'ouvre tout de suite ;
+ *   - commande lancée au clavier : un bouton « ouvrir l'explorateur » s'affiche, on clique dessus
+ *     (Échap pour abandonner).
+ * Renvoie true pour ouvrir, false si abandon.
  */
-let toucheEnfoncee = false;
-addEventListener('keydown', () => { toucheEnfoncee = true; }, true);
-addEventListener('keyup', () => { toucheEnfoncee = false; }, true);
+let derniereEntree = 'souris';
+addEventListener('keydown', e => { if (!['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) derniereEntree = 'clavier'; }, true);
+addEventListener('pointerdown', () => { derniereEntree = 'souris'; }, true);
 function avantExplorateur() {
-  document.activeElement?.blur();
+  if (derniereEntree === 'souris') return Promise.resolve(true);
   return new Promise(ok => {
-    const fin = () => setTimeout(ok, 120);
-    if (!toucheEnfoncee) return fin();
-    const relache = () => { removeEventListener('keyup', relache, true); clearTimeout(garde); fin(); };
-    const garde = setTimeout(relache, 600);
-    addEventListener('keyup', relache, true);
+    const id = `explorateur-${Date.now()}`;
+    invite.ecran.ligne(`<button type="button" id="${id}" class="lien c-verbe">▸ ouvrir l'explorateur</button> <span class="dim">· clic de souris · Échap pour abandonner</span>`, 'info');
+    const bouton = document.getElementById(id);
+    const finir = choix => {
+      removeEventListener('keydown', echap, true);
+      bouton?.closest('.l')?.remove();
+      ok(choix);
+    };
+    const echap = e => { if (e.key === 'Escape') { e.preventDefault(); finir(false); } };
+    addEventListener('keydown', echap, true);
+    if (!bouton) return finir(true);
+    bouton.addEventListener('click', e => { e.stopPropagation(); finir(true); }, { once: true });
   });
 }
 
@@ -172,7 +184,7 @@ const actions = creerActions({
   demander: (question, choix) => invite.demander(question, choix),
   // Ouvre l'explorateur de fichiers ; renvoie le fichier choisi, ou null
   choisirFichier: async types => {
-    await avantExplorateur();
+    if (!await avantExplorateur()) return null;
     return new Promise(resoudre => {
       const input = document.createElement('input');
       input.type = 'file'; input.accept = types;
@@ -186,7 +198,7 @@ const actions = creerActions({
     const xlsm = /\.xlsm$/i.test(nom);
     const type = xlsm ? 'application/vnd.ms-excel.sheet.macroEnabled.12' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
     if (window.showSaveFilePicker && !telecharger) {
-      await avantExplorateur();
+      if (!await avantExplorateur()) return 'annule';
       try {
         const poignee = await window.showSaveFilePicker({ suggestedName: nom, types: [{ description: 'Classeur Excel', accept: { [type]: [xlsm ? '.xlsm' : '.xlsx'] } }] });
         const flux = await poignee.createWritable();
@@ -209,7 +221,7 @@ const actions = creerActions({
   // Plusieurs fichiers d'un coup (attachements en série) : on choisit un dossier de destination
   choisirDossier: async id => {
     if (!window.showDirectoryPicker) return 'telechargement';
-    await avantExplorateur();
+    if (!await avantExplorateur()) return null;
     try { const d = await window.showDirectoryPicker({ id, mode: 'readwrite' }); invite.focus(); return d; }
     catch (e) { invite.focus(); if (e.name === 'AbortError') return null; throw e; }
   },
@@ -223,7 +235,7 @@ const actions = creerActions({
     let dossier = null;
     try { dossier = await coffre.lire('dossier-sauvegarde'); } catch { /* pas de dossier retenu */ }
     if (window.showOpenFilePicker) {
-      await avantExplorateur();
+      if (!await avantExplorateur()) return null;
       try {
         const [poignee] = await window.showOpenFilePicker({ id: 'gcblo-restaurer', ...(dossier?.kind === 'directory' ? { startIn: dossier } : {}),
           types: [{ description: 'Sauvegarde GCBLO', accept: { 'application/json': ['.json'] } }] });
@@ -260,7 +272,7 @@ const actions = creerActions({
       const { supprimes, classeur } = await ecrireSauvegarde(dossier, nom, texte);
       return { etat: 'enregistre', dossier: dossier.name, supprimes, classeur };
     }
-    await avantExplorateur();
+    if (!await avantExplorateur()) return { etat: 'annule' };
     try {
       // « id » : le navigateur rouvre l'explorateur dans le dernier dossier choisi
       dossier = await window.showDirectoryPicker({ id: 'gcblo-sauvegardes', mode: 'readwrite' });
