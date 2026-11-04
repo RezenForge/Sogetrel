@@ -99,7 +99,7 @@ Un dossier **clos** n'a plus d'alerte de relance.
     - **J** : `Numéro de commande FCI : ‹fci›`. Registre sans FCI → rien. un des FCI du registre se trouve déjà n'importe où dans J → rien (un dossier sur plusieurs lignes garde un FCI par ligne). Sinon le texte après la mention est remplacé, ou la mention est ajoutée à la fin ; le reste de J est gardé.
     - **E** : `FACTU` pour les dossiers **Attach** (seulement si E vaut `GCBLO`).
     - Rien n'est effacé ; une cellule à formule ou protégée est laissée et signalée. À la fin, une **fenêtre de compte rendu** (classeur temporaire, jamais enregistré) liste ce qui a été fait : vert = modifié, orange = laissé de côté avec la raison, lien « voir » vers la cellule ; si rien n'a changé, un simple message « Tout est déjà à jour ». Le chemin du CSV est demandé la première fois et gardé sur le PC (pas dans le classeur). **Relancer la macro ne change rien de plus** : un FCI déjà présent et un `FACTU` déjà posé ne sont pas réécrits (« Tout est déjà à jour »).
-    Dans l'autre sens, les nouveaux GCBLO du classeur entrent avec `import` (R10). Les lignes passées en `FACTU` ne sont plus relues par `import` : ces dossiers sont déjà au registre.
+    **Dans l'autre sens**, la macro écrit aussi **`classeur-gcblo.csv`** dans le même dossier : les lignes dont E vaut `GCBLO` sur les 5 onglets, lues dans le classeur **ouvert** (même ce qui n'est pas encore enregistré) — en-têtes `ONGLET;LIGNE;DOSSIER;COLONNE E;AFFECT;COMMUNE;VALO;COLONNE J`. À chaque sauvegarde (manuelle ou automatique), **avant** d'écrire, le registre lit ce fichier s'il est là et le traite exactement comme `import` (R10) : nouveaux GCBLO créés, ce qui manque complété, rien de remplacé. Le volet l'indique (« classeur partagé : N nouveaux GCBLO »). Un dossier supprimé du registre mais encore en `GCBLO` dans le classeur revient à la sauvegarde suivante. La commande `import` reste possible. Les lignes passées en `FACTU` ne sont plus relues par `import` : ces dossiers sont déjà au registre.
 
 Toutes ces règles vivent dans **un seul fichier** (`js/dossiers.js`), et chacune a un test.
 
@@ -124,7 +124,7 @@ js/
   info.js                  retrouve les dossiers d'une liste collée (commande info)
   sauvegarde.js            nom, contenu et rotation des sauvegardes (3 gardées)
   mails.js                 R12 : mails d'affectation et de relance (destinataires, objet, texte, lien mailto)
-  export-excel.js          R14 : registre-gcblo.csv pour le classeur partagé
+  export-excel.js          R14 : registre-gcblo.csv (vers le classeur) et lecture de classeur-gcblo.csv (depuis le classeur)
   coffre.js                garde des fichiers dans le navigateur (IndexedDB) : la référence d'attachement
   ui/
     registre.js            la liste des dossiers
@@ -402,4 +402,5 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | R14 : `registre-gcblo.csv` écrit à chaque sauvegarde ; macro `MajDepuisRegistre` pour IMMO-COORDI-DISSIM.xlsm (J = FCI, E = VALIDÉ GDP pour Attach, journal des changements) |
 | 04/11/2026 | Macro : fenêtre de compte rendu à la fin (modifié en vert, laissé de côté en orange, lien vers la cellule) |
 | 04/11/2026 | Macro : J n'est pas touché si un FCI du registre s'y trouve déjà, à n'importe quel endroit |
+| 04/11/2026 | Les deux sens par un seul dossier : la macro écrit `classeur-gcblo.csv`, le registre le lit à chaque sauvegarde et crée les nouveaux GCBLO |
 | 04/11/2026 | Macro : E = `FACTU` (et non VALIDÉ GDP) pour les dossiers Attach ; onglet Journal registre retiré, le compte rendu suffit |

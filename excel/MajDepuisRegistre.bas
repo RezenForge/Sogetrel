@@ -20,6 +20,10 @@ Attribute VB_Name = "MajDepuisRegistre"
 ' (vert = modifie, orange = laisse de cote, lien "voir" vers la cellule).
 ' Classeur temporaire jamais enregistre : il se ferme sans question.
 '
+' Dans l'autre sens, la macro ecrit classeur-gcblo.csv dans le meme dossier : les lignes
+' "GCBLO" du classeur ouvert (meme non enregistre). A chaque sauvegarde, le registre le lit
+' et cree les nouveaux GCBLO (ou complete ce qui manque), comme la commande import.
+'
 ' Relancer la macro ne change rien de plus : un FCI deja present et un "FACTU"
 ' deja pose ne sont pas reecrits ("Tout est deja a jour").
 '
@@ -35,6 +39,7 @@ Private Const COL_FILTRE As String = "E"
 Private Const COL_FCI As String = "J"
 Private Const PREMIERE_LIGNE As Long = 2
 Private Const APPLI As String = "RegistreGCBLO"
+Private Const NOM_CSV_CLASSEUR As String = "classeur-gcblo.csv"
 Private Const TITRE As String = "Mise a jour depuis le registre"
 
 Private nbModifs As Long
@@ -56,7 +61,7 @@ Public Sub MajDepuisRegistre()
     Dim chemin As String, registre As Object, nomOnglet As Variant
     Dim ws As Worksheet, derniere As Long, i As Long
     Dim cle As String, filtre As String, info As Variant
-    Dim ancienJ As String, nouveauJ As String, vus As Long, absents As String
+    Dim ancienJ As String, nouveauJ As String, vus As Long, absents As String, exportees As String
 
     Set cible = ClasseurCible()
     If cible Is Nothing Then
@@ -119,6 +124,9 @@ Public Sub MajDepuisRegistre()
         End If
     Next nomOnglet
 
+    ' --- Dans l'autre sens : les lignes GCBLO du classeur ouvert, pour le registre
+    exportees = ExporterClasseur(Left$(chemin, InStrRev(chemin, "\")) & NOM_CSV_CLASSEUR)
+
 Fin:
     Dim erreur As String
     If Err.Number <> 0 Then erreur = vbCrLf & vbCrLf & "Arr" & ChrW(234) & "t sur erreur : " & Err.Description
@@ -128,7 +136,8 @@ Fin:
     Dim bilan As String
     bilan = registre.Count & " dossiers dans le registre  " & ChrW(183) & "  " & vus & " lignes concern" & ChrW(233) & "es  " & ChrW(183) & "  " & _
              nbModifs & " cellule(s) modifi" & ChrW(233) & "e(s)  " & ChrW(183) & "  " & nbIgnores & " laiss" & ChrW(233) & "e(s) de c" & ChrW(244) & "t" & ChrW(233) & _
-             IIf(absents <> "", "  " & ChrW(183) & "  onglets introuvables :" & absents, "")
+             IIf(absents <> "", "  " & ChrW(183) & "  onglets introuvables :" & absents, "") & _
+             IIf(exportees <> "", "  " & ChrW(183) & "  " & exportees, "")
 
     If nbModifs + nbIgnores = 0 And erreur = "" Then
         MsgBox "Tout est d" & ChrW(233) & "j" & ChrW(224) & " " & ChrW(224) & " jour." & vbCrLf & vbCrLf & Replace(bilan, "  " & ChrW(183) & "  ", vbCrLf), _
@@ -139,6 +148,57 @@ Fin:
         End If
     End If
 End Sub
+
+'------------------------------------------------------------------------------
+' Ecrit classeur-gcblo.csv a cote de registre-gcblo.csv : les lignes dont E vaut "GCBLO"
+' sur les onglets 33, 16, 17, 79, 86, lues dans le classeur OUVERT (meme non enregistre).
+' Le registre le lit a chaque sauvegarde et y prend les nouveaux GCBLO (comme "import").
+' Renvoie une phrase pour le bilan.
+Private Function ExporterClasseur(destination As String) As String
+    Dim ws As Worksheet, nomOnglet As Variant, derniere As Long, i As Long, n As Long
+    Dim lignes() As String, flux As Object
+
+    ReDim lignes(0 To 255)
+    lignes(0) = "ONGLET;LIGNE;DOSSIER;COLONNE E;AFFECT;COMMUNE;VALO;COLONNE J"
+    For Each nomOnglet In Split(ONGLETS, ",")
+        Set ws = Nothing
+        On Error Resume Next
+        Set ws = cible.Worksheets(Trim$(nomOnglet))
+        On Error GoTo 0
+        If Not ws Is Nothing Then
+            derniere = ws.Cells(ws.Rows.Count, COL_DOSSIER).End(xlUp).Row
+            For i = PREMIERE_LIGNE To derniere
+                If UCase$(Trim$(Cellule(ws, i, COL_FILTRE))) = "GCBLO" And Trim$(Cellule(ws, i, COL_DOSSIER)) <> "" Then
+                    n = n + 1
+                    If n > UBound(lignes) Then ReDim Preserve lignes(0 To 2 * n)
+                    lignes(n) = Trim$(nomOnglet) & ";" & i & ";" & Cellule(ws, i, COL_DOSSIER) & ";" & _
+                                Cellule(ws, i, COL_FILTRE) & ";" & Cellule(ws, i, "I") & ";" & Cellule(ws, i, "G") & ";" & _
+                                Cellule(ws, i, "H") & ";" & Cellule(ws, i, COL_FCI)
+                End If
+            Next i
+        End If
+    Next nomOnglet
+
+    On Error GoTo Echec
+    Set flux = CreateObject("ADODB.Stream")
+    flux.Type = 2: flux.Charset = "utf-8": flux.Open
+    ReDim Preserve lignes(0 To n)
+    flux.WriteText Join(lignes, vbCrLf) & vbCrLf
+    flux.SaveToFile destination, 2                 ' 2 = remplace le fichier
+    flux.Close
+    ExporterClasseur = n & " ligne(s) GCBLO envoy" & ChrW(233) & "e(s) au registre (" & NOM_CSV_CLASSEUR & ")"
+    Exit Function
+Echec:
+    ExporterClasseur = NOM_CSV_CLASSEUR & " non " & ChrW(233) & "crit : " & Err.Description
+End Function
+
+' Valeur d'une cellule en texte, sans ";" ni retour a la ligne (une erreur #N/A donne "")
+Private Function Cellule(ws As Worksheet, ligne As Long, colonne As String) As String
+    Dim v As Variant
+    v = ws.Cells(ligne, colonne).Value
+    If IsError(v) Then Exit Function
+    Cellule = Trim$(Replace(Replace(Replace(CStr(v), ";", " "), vbCr, " "), vbLf, " "))
+End Function
 
 '------------------------------------------------------------------------------
 ' Le classeur a mettre a jour : celui qui contient la macro s'il a l'onglet 33,

@@ -32,7 +32,7 @@ import { cellulesAttachement } from '../attachement.js';
 import { chercherListe } from '../info.js';
 import { mailAffectation, mailRelance, lienMailto, AFFECTS_MAIL } from '../mails.js';
 import { contenuSauvegarde, nomSauvegarde, lireSauvegarde, GARDER } from '../sauvegarde.js';
-import { extraireDossiers } from '../import-excel.js';
+import { extraireDossiers, appliquerImport } from '../import-excel.js';
 import { typeParCode, statutParCode } from '../config.js';
 
 /** Échappe un texte avant de l'insérer dans du HTML. */
@@ -41,6 +41,18 @@ const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`;
 const SEUIL_CONFIRMATION = 3;
 /** Le mot « cancel », cliquable : un clic lance la commande. */
 const LIEN_ANNULE = '<button type="button" class="lien c-verbe" data-commande="cancel">cancel</button>';
+
+/**
+ * R14 — bilan de la lecture de classeur-gcblo.csv (écrit par la macro du classeur partagé).
+ * c = { lus, crees: [gcblo], completes, refuses, le (date du fichier) } ; complet : dire aussi « rien de nouveau ».
+ */
+export function texteClasseur(c, complet = false) {
+  const quand = c.le ? ` (macro du ${new Date(c.le).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })})` : '';
+  if (!c.crees.length && !c.completes) return complet ? `<span class="dim">classeur partagé${esc(quand)} : rien de nouveau</span>` : '';
+  const morceaux = [c.crees.length && pluriel(c.crees.length, 'nouveau GCBLO', 'nouveaux GCBLO'), c.completes && pluriel(c.completes, 'dossier complété', 'dossiers complétés')].filter(Boolean);
+  const exemples = c.crees.slice(0, 5).join(', ') + (c.crees.length > 5 ? '…' : '');
+  return `classeur partagé${esc(quand)} : ${morceaux.join(' · ')}${exemples ? ` <span class="dim">· ${esc(exemples)}</span>` : ''}`;
+}
 
 export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre, sauvegarderDans, choisirSauvegarde, choisirDossier, ecrireDansDossier, ouvrirMail = () => {} }) {
   let annulation = null;       // { libelle, faire() } : de quoi défaire la dernière modification
@@ -181,13 +193,7 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
         const exemples = [...new Set(sansType.map(n => n.typeLu).filter(Boolean))].slice(0, 3);
         info(`<span class="dim">${pluriel(sansType.length, 'dossier créé', 'dossiers créés')} sans affect${exemples.length ? ` (non reconnu : ${esc(exemples.join(', '))})` : ''} · ls sans-affect</span>`);
       }
-      // Pas de date affect à l'import : elle viendra de la commande « affect » (ou d'une saisie)
-      const creation = r.nouveaux.length ? regles.creerPlusieurs(r.nouveaux.map(n => ({ gcblo: n.gcblo, type: n.type || null, dateAffectation: null, fci: n.fci, commune: n.commune, valorisation: n.valorisation })), { origine: 'import Excel' }) : { crees: [], refuses: [] };
-      const avant = [];
-      for (const c of r.completes) {
-        const m = regles.modifier(c.dossier.id, c.changements);
-        if (m.ok && m.avant) avant.push(m.avant);
-      }
+      const creation = appliquerImport(regles, r, 'import Excel'), avant = creation.avant;
       if (creation.crees.length || avant.length) {
         const ids = creation.crees.map(d => d.id);
         annulation = { libelle: 'import', faire: () => { if (ids.length) regles.supprimer(...ids); if (avant.length) regles.restaurer(avant); } };
@@ -262,13 +268,16 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
 
     /** Sauvegarde toute la base dans un dossier choisi ; seules les 3 plus récentes y sont gardées. */
     async sauvegarde() {
-      const maintenant = new Date(), dossiers = store.tous();
+      const maintenant = new Date();
       const nom = nomSauvegarde(maintenant);
+      // Le contenu est calculé au dernier moment : après la lecture de classeur-gcblo.csv (R14)
       let r;
-      try { r = await sauvegarderDans(nom, contenuSauvegarde(dossiers, maintenant)); } catch (e) { return erreur(`sauvegarde impossible : ${esc(e.message)}`); }
+      try { r = await sauvegarderDans(nom, () => contenuSauvegarde(store.tous(), maintenant)); } catch (e) { return erreur(`sauvegarde impossible : ${esc(e.message)}`); }
       if (r.etat === 'annule') return info('aucun dossier choisi');
-      if (r.etat === 'telecharge') return ok(`${esc(nom)} téléchargé <span class="dim">· ${pluriel(dossiers.length, 'dossier', 'dossiers')}</span>`);
-      ok(`${esc(nom)} <span class="dim">· ${pluriel(dossiers.length, 'dossier', 'dossiers')} · dans ${esc(r.dossier)} · registre-gcblo.csv à jour</span>`);
+      const n = store.tous().length;
+      if (r.etat === 'telecharge') return ok(`${esc(nom)} téléchargé <span class="dim">· ${pluriel(n, 'dossier', 'dossiers')}</span>`);
+      if (r.classeur) info(texteClasseur(r.classeur, true));
+      ok(`${esc(nom)} <span class="dim">· ${pluriel(n, 'dossier', 'dossiers')} · dans ${esc(r.dossier)} · registre-gcblo.csv à jour</span>`);
       if (r.supprimes?.length) info(`<span class="dim">${GARDER} sauvegardes gardées · supprimée${r.supprimes.length > 1 ? 's' : ''} : ${esc(r.supprimes.join(', '))}</span>`);
     },
 

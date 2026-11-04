@@ -12,12 +12,13 @@ import { creerDossiers } from './dossiers.js';
 import { creerReglages } from './reglages.js';
 import { creerCoffre } from './coffre.js';
 import { aSupprimer, nomSauvegarde, contenuSauvegarde } from './sauvegarde.js';
-import { csvRegistre, NOM_CSV } from './export-excel.js';
+import { csvRegistre, NOM_CSV, NOM_CSV_CLASSEUR, lireCsvClasseur } from './export-excel.js';
+import { extraireDossiers, appliquerImport } from './import-excel.js';
 import { SAUVEGARDE_AUTO_HEURES } from './config.js';
 import { aujourdhui } from './dates.js';
 import { convertirV1, lireV1Navigateur } from './reprise-v1.js';
 import { creerInvite } from './jarvis/invite.js';
-import { creerActions, esc } from './jarvis/actions.js';
+import { creerActions, esc, texteClasseur } from './jarvis/actions.js';
 import { dessinerTableauBord } from './jarvis/tableau-bord.js';
 
 /** Date de la dernière sauvegarde (affichée dans le tableau de bord). */
@@ -82,7 +83,25 @@ function noterSauvegarde() {
   try { localStorage.setItem(CLE_DERNIERE_SAUVEGARDE, new Date().toISOString()); } catch { /* facultatif */ }
   dessinerBord();
 }
-async function ecrireSauvegarde(dossier, nom, texte) {
+/*
+ * R14 — lit classeur-gcblo.csv (écrit par la macro du classeur partagé) s'il est dans le dossier,
+ * et intègre les nouveaux GCBLO comme « import » : création, ou complément de ce qui manque.
+ * Renvoie null s'il n'y a pas de fichier.
+ */
+async function lireClasseurPartage(dossier) {
+  let poignee;
+  try { poignee = await dossier.getFileHandle(NOM_CSV_CLASSEUR); } catch { return null; }
+  const fichier = await poignee.getFile();
+  const r = extraireDossiers(lireCsvClasseur(await fichier.text()), store.tous());
+  const fait = appliquerImport(regles, r, 'classeur partagé');
+  return { lus: r.lus, crees: fait.crees.map(d => d.gcblo), completes: fait.avant.length, refuses: r.refuses.length + fait.refuses.length, le: fichier.lastModified };
+}
+
+async function ecrireSauvegarde(dossier, nom, contenu) {
+  // D'abord les nouveautés du classeur partagé : la sauvegarde et le CSV les contiennent déjà
+  let classeur = null;
+  try { classeur = await lireClasseurPartage(dossier); } catch (e) { invite.ecran.journal(`gcblo: ${esc(NOM_CSV_CLASSEUR)} illisible : ${esc(e.message)}`, 'err'); }
+  const texte = typeof contenu === 'function' ? contenu() : contenu;
   const fichier = await dossier.getFileHandle(nom, { create: true });
   const flux = await fichier.createWritable();
   await flux.write(texte); await flux.close();
@@ -95,7 +114,7 @@ async function ecrireSauvegarde(dossier, nom, texte) {
   const supprimes = aSupprimer(noms);
   for (const n of supprimes) await dossier.removeEntry(n);
   noterSauvegarde();
-  return supprimes;
+  return { supprimes, classeur };
 }
 
 /*
@@ -119,8 +138,9 @@ async function sauvegardeAutomatique() {
       return;
     }
     const maintenant = new Date(), nom = nomSauvegarde(maintenant);
-    const supprimes = await ecrireSauvegarde(dossier, nom, contenuSauvegarde(store.tous(), maintenant));
+    const { supprimes, classeur } = await ecrireSauvegarde(dossier, nom, () => contenuSauvegarde(store.tous(), maintenant));
     autorisationSignalee = false;
+    if (classeur && texteClasseur(classeur)) invite.ecran.journal(texteClasseur(classeur), 'ok');
     invite.ecran.journal(`<span class="dim">sauvegarde automatique · ${esc(nom)}${supprimes.length ? ` · supprimée : ${esc(supprimes.join(', '))}` : ''}</span>`, 'info');
   } catch (e) {
     invite.ecran.journal(`gcblo: sauvegarde automatique impossible : ${esc(e.message)}`, 'err');
@@ -212,6 +232,7 @@ const actions = creerActions({
   // Sauvegarde : on choisit un dossier (Chrome, Edge) ; il est retenu pour les sauvegardes automatiques
   sauvegarderDans: async (nom, texte) => {
     if (!window.showDirectoryPicker) {
+      if (typeof texte === 'function') texte = texte();
       const url = URL.createObjectURL(new Blob([texte], { type: 'application/json' }));
       const a = document.createElement('a'); a.href = url; a.download = nom; a.click();
       setTimeout(() => URL.revokeObjectURL(url), 2000);
@@ -228,10 +249,10 @@ const actions = creerActions({
       if (e.name === 'AbortError') return { etat: 'annule' };
       throw e;
     }
-    const supprimes = await ecrireSauvegarde(dossier, nom, texte);
+    const { supprimes, classeur } = await ecrireSauvegarde(dossier, nom, texte);
     try { await coffre.ecrire('dossier-sauvegarde', dossier); } catch { /* le navigateur refuse de retenir le dossier : pas d'automatique */ }
     invite.focus();
-    return { etat: 'enregistre', dossier: dossier.name, supprimes };
+    return { etat: 'enregistre', dossier: dossier.name, supprimes, classeur };
   }
 });
 invite.brancher(analyse => actions.executer(analyse));

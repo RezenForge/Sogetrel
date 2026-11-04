@@ -81,7 +81,7 @@ js/import-excel.js       quels dossiers et FCI prendre dans le classeur (command
 js/attachement.js        quelles cellules remplir dans l'attachement d'un dossier
 js/info.js               retrouve les dossiers d'une liste collée (commande info)
 js/sauvegarde.js         nom, contenu et rotation des sauvegardes
-js/export-excel.js       registre-gcblo.csv pour le classeur partagé
+js/export-excel.js       registre-gcblo.csv (vers le classeur) · lecture de classeur-gcblo.csv
 excel/MajDepuisRegistre.bas  macro VBA du classeur IMMO-COORDI-DISSIM.xlsm
 js/mails.js              mails d'affectation et de relance (adresses : config.js)
 js/coffre.js             garde la référence d'attachement dans le navigateur (IndexedDB)
@@ -92,7 +92,7 @@ js/jarvis/actions.js     exécute une commande via les règles
 js/jarvis/menus.js       le menu ⋯ d'un dossier : des commandes écrites à l'avance
 js/jarvis/tableau-bord.js le tableau de bord ASCII, toujours visible à droite
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   217 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
+tests/                   220 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
 ```
 
 ## Classeur partagé IMMO-COORDI-DISSIM.xlsm
@@ -107,4 +107,4 @@ La relancer ne change rien de plus : un FCI déjà présent et un `FACTU` déjà
 
 **Installer la macro (une fois)** : dans le classeur, Alt+F11, *Fichier › Importer un fichier…*, choisir `excel/MajDepuisRegistre.bas`, enregistrer. **Lancer** : Alt+F8 › `MajDepuisRegistre`. La première fois, elle demande où est `registre-gcblo.csv` (le dossier des sauvegardes). `ChoisirCsvRegistre` permet d'en changer.
 
-Dans l'autre sens, les nouveaux GCBLO du classeur entrent dans le registre avec `import`.
+**Dans l'autre sens**, la macro écrit aussi `classeur-gcblo.csv` dans le même dossier : les lignes « GCBLO » du classeur ouvert, même non enregistrées. À chaque sauvegarde (manuelle ou toutes les 3 h), le registre lit ce fichier et crée les nouveaux GCBLO, ou complète ce qui manque, comme `import`. Rien n'est remplacé. La commande `import` reste possible.

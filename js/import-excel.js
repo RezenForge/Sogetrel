@@ -94,3 +94,21 @@ export function extraireDossiers(classeur, existants = [], reglages = IMPORT_EXC
   }
   return { lus, nouveaux, completes, deja, refuses, ongletsAbsents: onglets.filter(o => !classeur.feuilles[o]) };
 }
+
+/**
+ * Applique le résultat d'extraireDossiers : crée les nouveaux dossiers, complète les autres.
+ * Utilisé par la commande « import » et par la lecture de classeur-gcblo.csv (R14).
+ * Renvoie { crees: [dossiers], avant: [dossiers avant complément], refuses: [{ saisie, erreur }] }.
+ */
+export function appliquerImport(regles, r, origine = 'import Excel') {
+  // Pas de date affect à l'import : elle viendra de la commande « affect » (ou d'une saisie)
+  const creation = r.nouveaux.length
+    ? regles.creerPlusieurs(r.nouveaux.map(n => ({ gcblo: n.gcblo, type: n.type || null, dateAffectation: null, fci: n.fci, commune: n.commune, valorisation: n.valorisation })), { origine })
+    : { crees: [], refuses: [] };
+  const avant = [];
+  for (const c of r.completes) {
+    const m = regles.modifier(c.dossier.id, c.changements);
+    if (m.ok && m.avant) avant.push(m.avant);
+  }
+  return { crees: creation.crees, avant, refuses: creation.refuses };
+}
