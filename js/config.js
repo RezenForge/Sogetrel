@@ -101,6 +101,9 @@ export const ATTACHEMENT = Object.freeze({
   ])
 });
 
+/** Sauvegarde automatique : toutes les N heures, tant que l'appli est ouverte (dans le dernier dossier choisi). */
+export const SAUVEGARDE_AUTO_HEURES = 3;
+
 /** Où et sous quelle version les données sont enregistrées dans le navigateur. */
 export const STOCKAGE = Object.freeze({
   cle: 'gcblo.v2.dossiers',

@@ -169,7 +169,16 @@ export function creerInvite({ racine, contexte }) {
         if (d) { vue.innerHTML = ficheHtml(d); vue.classList.remove('perime'); } else vue.classList.add('perime');
       });
     },
-    vider() { ecranEl.innerHTML = ''; if (voletEl) voletEl.innerHTML = ''; }
+    vider() { ecranEl.innerHTML = ''; if (voletEl) voletEl.innerHTML = ''; },
+    /** Écrit une ligne dans le volet de droite (messages qui ne viennent pas d'une commande : sauvegarde automatique…). */
+    journal(html, classe = '') {
+      const cible = voletEl || ecranEl;
+      const div = document.createElement('div');
+      div.className = `l ${classe}`;
+      div.innerHTML = html;
+      cible.appendChild(div);
+      cible.scrollTop = cible.scrollHeight;
+    }
   };
 
   /* ---------------- Ligne de saisie ---------------- */

@@ -11,7 +11,8 @@ import { creerStore, supportNavigateur, supportMemoire } from './store.js';
 import { creerDossiers } from './dossiers.js';
 import { creerReglages } from './reglages.js';
 import { creerCoffre } from './coffre.js';
-import { aSupprimer } from './sauvegarde.js';
+import { aSupprimer, nomSauvegarde, contenuSauvegarde } from './sauvegarde.js';
+import { SAUVEGARDE_AUTO_HEURES } from './config.js';
 import { aujourdhui } from './dates.js';
 import { convertirV1, lireV1Navigateur } from './reprise-v1.js';
 import { creerInvite } from './jarvis/invite.js';
@@ -72,6 +73,53 @@ function avantExplorateur() {
   });
 }
 
+/* Sauvegardes : écriture dans un dossier, avec rotation (3 gardées), et sauvegarde automatique. */
+const coffre = creerCoffre();
+function noterSauvegarde() {
+  try { localStorage.setItem(CLE_DERNIERE_SAUVEGARDE, new Date().toISOString()); } catch { /* facultatif */ }
+  dessinerBord();
+}
+async function ecrireSauvegarde(dossier, nom, texte) {
+  const fichier = await dossier.getFileHandle(nom, { create: true });
+  const flux = await fichier.createWritable();
+  await flux.write(texte); await flux.close();
+  const noms = [];
+  for await (const [n, h] of dossier.entries()) if (h.kind === 'file') noms.push(n);
+  const supprimes = aSupprimer(noms);
+  for (const n of supprimes) await dossier.removeEntry(n);
+  noterSauvegarde();
+  return supprimes;
+}
+
+/*
+ * Sauvegarde automatique toutes les SAUVEGARDE_AUTO_HEURES heures, tant que l'appli est ouverte,
+ * dans le dernier dossier choisi avec « sauvegarde ». Le navigateur peut redemander l'autorisation
+ * d'écrire dans ce dossier (après une fermeture, par exemple) : il faut alors un clic, on le signale.
+ */
+let autorisationSignalee = false, sauvegardeEnCours = false;
+async function sauvegardeAutomatique() {
+  if (sauvegardeEnCours || !store.tous().length) return;
+  const derniere = derniereSauvegarde();
+  if (derniere && Date.now() - new Date(derniere).getTime() < SAUVEGARDE_AUTO_HEURES * 3600 * 1000) return;
+  let dossier;
+  try { dossier = await coffre.lire('dossier-sauvegarde'); } catch { return; }
+  if (!dossier?.queryPermission) return;                  // jamais de dossier choisi : rien à faire
+  sauvegardeEnCours = true;
+  try {
+    if (await dossier.queryPermission({ mode: 'readwrite' }) !== 'granted') {
+      if (!autorisationSignalee) invite.ecran.journal(`<span class="dim">sauvegarde automatique en attente : le navigateur redemande l'accès au dossier ·</span> <button type="button" class="lien c-verbe" data-commande="sauvegarde">sauvegarde</button>`, 'info');
+      autorisationSignalee = true;
+      return;
+    }
+    const maintenant = new Date(), nom = nomSauvegarde(maintenant);
+    const supprimes = await ecrireSauvegarde(dossier, nom, contenuSauvegarde(store.tous(), maintenant));
+    autorisationSignalee = false;
+    invite.ecran.journal(`<span class="dim">sauvegarde automatique · ${esc(nom)}${supprimes.length ? ` · supprimée : ${esc(supprimes.join(', '))}` : ''}</span>`, 'info');
+  } catch (e) {
+    invite.ecran.journal(`gcblo: sauvegarde automatique impossible : ${esc(e.message)}`, 'err');
+  } finally { sauvegardeEnCours = false; }
+}
+
 /* 4. Les actions (les commandes sont refaites une par une, voir actions.js). */
 const actions = creerActions({
   regles,
@@ -113,16 +161,16 @@ const actions = creerActions({
     setTimeout(() => URL.revokeObjectURL(url), 2000);
     return 'telecharge';
   },
-  coffre: creerCoffre(),
+  coffre,
   // Sauvegarde : on choisit un dossier (Chrome, Edge), le fichier y est écrit, et seules
   // les 3 sauvegardes les plus récentes y restent. Ailleurs : téléchargement simple.
+  // Sauvegarde : on choisit un dossier (Chrome, Edge) ; il est retenu pour les sauvegardes automatiques
   sauvegarderDans: async (nom, texte) => {
-    const noter = () => { try { localStorage.setItem(CLE_DERNIERE_SAUVEGARDE, new Date().toISOString()); } catch { /* facultatif */ } dessinerBord(); };
     if (!window.showDirectoryPicker) {
       const url = URL.createObjectURL(new Blob([texte], { type: 'application/json' }));
       const a = document.createElement('a'); a.href = url; a.download = nom; a.click();
       setTimeout(() => URL.revokeObjectURL(url), 2000);
-      noter();
+      noterSauvegarde();
       return { etat: 'telecharge' };
     }
     await avantExplorateur();
@@ -135,14 +183,8 @@ const actions = creerActions({
       if (e.name === 'AbortError') return { etat: 'annule' };
       throw e;
     }
-    const fichier = await dossier.getFileHandle(nom, { create: true });
-    const flux = await fichier.createWritable();
-    await flux.write(texte); await flux.close();
-    const noms = [];
-    for await (const [n, h] of dossier.entries()) if (h.kind === 'file') noms.push(n);
-    const supprimes = aSupprimer(noms);
-    for (const n of supprimes) await dossier.removeEntry(n);
-    noter();
+    const supprimes = await ecrireSauvegarde(dossier, nom, texte);
+    try { await coffre.ecrire('dossier-sauvegarde', dossier); } catch { /* le navigateur refuse de retenir le dossier : pas d'automatique */ }
     invite.focus();
     return { etat: 'enregistre', dossier: dossier.name, supprimes };
   }
@@ -154,8 +196,9 @@ const tableauBord = document.getElementById('tableauBord');
 const derniereSauvegarde = () => { try { return localStorage.getItem(CLE_DERNIERE_SAUVEGARDE); } catch { return null; } };
 function dessinerBord() { tableauBord.innerHTML = `<div class="dessin">${dessinerTableauBord(regles.statistiques(), regles.aujourdhui(), { derniereSauvegarde: derniereSauvegarde(), maintenant: new Date() }).html}</div>`; }
 store.ecouter(dessinerBord);
-setInterval(dessinerBord, 60 * 1000);
+setInterval(() => { dessinerBord(); sauvegardeAutomatique(); }, 60 * 1000);
 dessinerBord();
+setTimeout(sauvegardeAutomatique, 3000);   // à l'ouverture, si la dernière date de plus de 3 h
 
 /* 6. Prévenir si l'enregistrement échoue. */
 store.ecouter(() => invite.ecran.rafraichirVues());
