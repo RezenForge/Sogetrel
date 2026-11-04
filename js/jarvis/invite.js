@@ -11,7 +11,8 @@
  * Clavier : Tab / → acceptent · ↑ ↓ parcourent (propositions, sinon historique)
  *           Entrée exécute (ou choisit la proposition sélectionnée) · Échap ferme puis vide.
  */
-import { analyser } from './analyse.js';
+import { analyser, criteresListe } from './analyse.js';
+import { chercherListe } from '../info.js';
 import { proposer, apercu } from './completion.js';
 import { esc } from './actions.js';
 import { STATUTS, typeParCode, statutParCode } from '../config.js';
@@ -273,14 +274,32 @@ export function creerInvite({ racine, contexte }) {
     if (attente) return;
     fermerMenu();
     const analyse = analyser(texte, texte.length, contexte());
-    if (voletEl && DANS_LE_VOLET.has(analyse.commande?.id)) sortie = voletEl;
-    // ls (list) et info repartent d'une console vide : seule la nouvelle liste reste affichée
-    if (VIDE_LA_CONSOLE.has(analyse.commande?.id)) ecranEl.innerHTML = '';
-    try { await lancerDans(texte, analyse); } finally { sortie = ecranEl; }
+    const id = analyse.commande?.id;
+    let echoDansLeVolet = false;
+    if (voletEl && DANS_LE_VOLET.has(id)) sortie = voletEl;
+    if (voletEl && VIDE_LA_CONSOLE.has(id) && analyse.complet) {
+      // ls (list) et info : la commande s'écrit dans le volet, comme les autres ;
+      // la console est vidée et ne montre que la liste. Sans résultat, tout va dans le volet
+      // et la liste déjà affichée reste en place.
+      echoDansLeVolet = true;
+      if (aucunResultat(analyse)) sortie = voletEl; else ecranEl.innerHTML = '';
+    }
+    try { await lancerDans(texte, analyse, echoDansLeVolet); } finally { sortie = ecranEl; }
   }
 
-  async function lancerDans(texte, analyse) {
+  /** ls ou info ne trouveraient aucun dossier ? */
+  function aucunResultat(analyse) {
+    const ctx = contexte();
+    if (analyse.commande.id === 'ls') return !ctx.regles.filtrer(criteresListe(analyse.valeurs)).length;
+    if (analyse.commande.id === 'info') return !chercherListe(analyse.valeurs.liste, ctx.dossiers).trouves.length;
+    return false;
+  }
+
+  async function lancerDans(texte, analyse, echoDansLeVolet = false) {
+    const ici = sortie;
+    if (echoDansLeVolet) sortie = voletEl;
     ecran.ligne(`<span class="invite-echo">${INVITE}</span> ${colorer(texte, analyse)}`, 'echo');
+    sortie = ici;
     historique = [texte, ...historique.filter(h => h !== texte)].slice(0, 100);
     try { localStorage.setItem(CLE_HISTORIQUE, JSON.stringify(historique)); } catch { /* facultatif */ }
     posHistorique = -1;

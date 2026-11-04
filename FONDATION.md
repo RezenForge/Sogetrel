@@ -191,7 +191,7 @@ Ce qui est cliquable :
 
 **Vues à jour** (04/11/2026, remplace le grisé) : quand un dossier change, les listes et fiches déjà affichées se mettent à jour sur place (mêmes dossiers, même ordre). Un dossier supprimé disparaît des listes ; sa fiche passe en grisé.
 
-**Console vidée** (04/11/2026) : `ls` (`list`) et `info` vident la console avant d'afficher leur liste.
+**Console vidée** (04/11/2026) : `ls` (`list`) et `info` vident la console, qui ne montre que la liste et son bilan ; la commande elle-même s'écrit dans le volet de droite, comme les autres (même lancée d'un clic sur le tableau de bord). Sans aucun résultat, tout s'affiche dans le volet et la liste déjà affichée reste en place.
 
 **Volet de droite** (04/11/2026) : `open`, `set`, `edit` (donc le double-clic), `cancel` et `help` s'affichent sous le tableau de bord, dans un volet qui défile seul ; la console ne bouge pas.
 
@@ -354,3 +354,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | Tableau de bord cliquable : chaque libellé lance `ls` filtré ; nouveaux filtres `proches` et `sans-valo` |
 | 04/11/2026 | `help` s'affiche aussi dans le volet de droite |
 | 04/11/2026 | `ls`, `list` et `info` vident la console avant d'afficher |
+| 04/11/2026 | `ls`/`info` : la ligne de commande va dans le volet ; sans résultat, tout va dans le volet et la console ne change pas |
