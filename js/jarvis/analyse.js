@@ -150,6 +150,9 @@ export function accepter(sorte, mot, ctx, { multiple = false } = {}) {
         return estJour(jour) ? { ok: true, valeur: { date: { jour } } } : { ok: false, erreur: `date non comprise : « ${mot} »` };
       }
     }
+      // Tri : « tri:valo » (croissant), « tri:valo- » (décroissant) ; aussi lancé d'un clic sur l'en-tête de la liste
+      { const t = String(mot).toLowerCase().match(/^tri:(date|affect|gcblo|commune|valo|fci|statut)(-?)$/);
+        if (t) return { ok: true, valeur: { tri: { colonne: t[1], cle: COLONNES_TRI[t[1]], sens: t[2] ? 'desc' : 'asc' } } }; }
       if (MOTS_TYPE[p]) return { ok: true, valeur: { type: MOTS_TYPE[p] } };
       if (MOTS_STATUT[p]) return { ok: true, valeur: { statut: MOTS_STATUT[p] } };
       if (MOTS_FILTRE[p]) return { ok: true, valeur: { [MOTS_FILTRE[p]]: true } };
@@ -349,18 +352,21 @@ export function criteresListe(valeurs) {
  * Sinon : le filtre habituel, trié par date, Attach masqués sauf « ls attach ».
  *   → { liste, collee: résultat de chercherListe | null, masques }
  */
+/** Colonnes de liste triables (« tri:… ») → champ du dossier. */
+export const COLONNES_TRI = Object.freeze({ date: 'dateAffectation', affect: 'type', gcblo: 'gcblo', commune: 'commune', valo: 'valorisation', fci: 'fci', statut: 'statutDft' });
 const MOTIF_DEBUT_GCBLO = /[A-Za-z]{3}\s*[-‐‑‒–—]?\s*\d{6}(?!\d)/g;
 export function resultatLs(criteres, regles, dossiers) {
   if ((criteres.texte.match(MOTIF_DEBUT_GCBLO) || []).length >= 2) {
     const collee = chercherListe(criteres.texte, dossiers);
-    return { liste: regles.filtrer({ ...criteres, texte: '', masquer: [] }, collee.trouves), collee, masques: 0 };
+    const liste = regles.filtrer({ ...criteres, texte: '', masquer: [] }, collee.trouves);
+    return { liste: criteres.tri ? regles.trier(liste, criteres.tri) : liste, collee, masques: 0 };
   }
   // « ls ecart-affect » : les dossiers dont l'affect diffère de la colonne I du classeur partagé
   if (criteres.ecartAffect) {
     const affects = lireAffectsClasseur();
     criteres = { ...criteres, parmi: new Set(dossiers.filter(d => ecartAffect(d, affects)).map(d => d.id)) };
   }
-  const liste = regles.trier(regles.filtrer(criteres), { cle: 'dateAffectation', sens: 'desc' });
+  const liste = regles.trier(regles.filtrer(criteres), criteres.tri || { cle: 'dateAffectation', sens: 'desc' });
   // Combien de dossiers Attach sont masqués par ce filtre (visibles avec « ls attach »)
   const masques = criteres.masquer.length ? regles.filtrer({ ...criteres, masquer: [], statut: criteres.masquer }).length : 0;
   return { liste, collee: null, masques };

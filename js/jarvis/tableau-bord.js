@@ -50,9 +50,11 @@ function cadre(titre, droite = '') {
   const fil = ['─'.repeat(LARGEUR - [...debut].length - [...fin].length), 'cadre fil'];
   return [['┌─ ', 'cadre'], [titre, 'cadre-titre'], [' ', ''], fil, ...(droite ? [[' ', ''], [droite, 'dim'], [' ─┐', 'cadre']] : [['┐', 'cadre']])];
 }
-function separation(titre) {
-  const debut = `├─ ${titre} `;
-  return [['├─ ', 'cadre'], [titre, 'cadre-titre'], [' ', ''], ['─'.repeat(LARGEUR - [...debut].length - 1), 'cadre fil'], ['┤', 'cadre']];
+function separation(titre, repli = null) {
+  // Section repliable : ▾ ouverte, ▸ repliée ; un clic sur le titre la replie ou la rouvre
+  const marque = repli ? (repli.replie ? '▸ ' : '▾ ') : '';
+  const debut = `├─ ${marque}${titre} `;
+  return [['├─ ', 'cadre'], [marque + titre, 'cadre-titre', repli ? { repli: titre } : undefined], [' ', ''], ['─'.repeat(LARGEUR - [...debut].length - 1), 'cadre fil'], ['┤', 'cadre']];
 }
 const bas = () => [['└', 'cadre'], ['─'.repeat(LARGEUR - 2), 'cadre fil'], ['┘', 'cadre']];
 /** Une ligne de contenu, complétée par des espaces jusqu'au bord droit. */
@@ -67,6 +69,20 @@ function rangeeBarre(libelle, n, total, classe, commande) {
 /** Libellé à gauche, montant aligné à droite. */
 const rangeeMontant = (libelle, montant, classe = 'fort', commande) => rangee([libelle.padEnd(INTERIEUR - 16), 'dim', commande], [euros(montant).padStart(16), classe]);
 
+/**
+ * Âge court d'un événement : « à l'instant », « il y a 25 min », « il y a 3 h », « hier 14:00 », « il y a 4 j ».
+ * Couleur : vert, puis orange au-delà de `orange` heures, rouge au-delà de `rouge` heures ; jamais → `jamais`.
+ */
+export function ageCourt(iso, maintenant, { orange, rouge, jamais = 'retard' }) {
+  if (!iso) return ['jamais', jamais];
+  const d = new Date(iso), m = new Date(maintenant);
+  const minutes = Math.max(0, Math.floor((m - d) / 60000)), heures = minutes / 60;
+  const jours = Math.floor((new Date(m).setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0)) / 86400000);
+  const heure = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const texte = minutes < 2 ? "à l'instant" : minutes < 60 ? `il y a ${minutes} min` : jours === 0 ? `il y a ${Math.floor(heures)} h` : jours === 1 ? `hier ${heure}` : `il y a ${jours} j`;
+  return [texte, heures > rouge ? 'retard' : heures > orange ? 'proche' : 'st-ATTACH'];
+}
+
 /** « aujourd'hui 09:30 », « hier », « il y a 4 j », « jamais » ; en rouge au-delà de 7 jours. */
 export function ageSauvegarde(iso, maintenant) {
   if (!iso) return ['jamais', 'retard'];
@@ -76,43 +92,56 @@ export function ageSauvegarde(iso, maintenant) {
   return [texte, jours > 7 ? 'retard' : jours > 2 ? 'proche' : 'st-ATTACH'];
 }
 
-export function dessinerTableauBord(s, jour, { derniereSauvegarde = undefined, maintenant = new Date(), ecartsAffect = 0 } = {}) {
+export function dessinerTableauBord(s, jour, { derniereSauvegarde = undefined, maintenant = new Date(), ecartsAffect = 0, classeur = undefined, replies = [] } = {}) {
+  // Sections repliées (titres) : seule la ligne de titre reste
+  const ouverte = titre => !replies.includes(titre);
+  const sep = titre => separation(titre, { replie: !ouverte(titre) });
   const date = depuisJour(jour).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' }).replace('.', '');
   const total = s.total;
   const lignes = [cadre('tableau de bord', date)];
   lignes.push(rangee([String(total), 'fort', 'ls'], [total > 1 ? ' dossiers' : ' dossier', 'dim', 'ls']));
 
-  lignes.push(separation('affect'));
-  TYPES.forEach(t => lignes.push(rangeeBarre(t.libelle, s.parType[t.code], total, `ty-${t.code}`, `ls ${motPourCode(MOTS_TYPE, t.code)}`)));
+  lignes.push(sep('affect'));
+  if (ouverte('affect')) TYPES.forEach(t => lignes.push(rangeeBarre(t.libelle, s.parType[t.code], total, `ty-${t.code}`, `ls ${motPourCode(MOTS_TYPE, t.code)}`)));
   // « - » : les dossiers sans affect (toujours affiché, cliquable comme les autres)
-  lignes.push(rangeeBarre('-', s.parType.SANS || 0, total, 'proche', 'ls sans-affect'));
+  if (ouverte('affect')) lignes.push(rangeeBarre('-', s.parType.SANS || 0, total, 'proche', 'ls sans-affect'));
   // Écarts avec la colonne I du classeur partagé (affiché seulement s'il y en a)
-  if (ecartsAffect) lignes.push(rangee(['≠ colonne I', 'dim', 'ls ecart-affect'], [String(ecartsAffect).padStart(INTERIEUR - 11), 'retard', 'ls ecart-affect']));
+  if (ecartsAffect && ouverte('affect')) lignes.push(rangee(['≠ colonne I', 'dim', 'ls ecart-affect'], [String(ecartsAffect).padStart(INTERIEUR - 11), 'retard', 'ls ecart-affect']));
 
-  lignes.push(separation('statut DFT'));
-  STATUTS.forEach(st => lignes.push(rangeeBarre(COURT[st.code] || st.libelle, s.parStatut[st.code], total, `st-${st.code}`, `ls ${motPourCode(MOTS_STATUT, st.code)}`)));
+  lignes.push(sep('statut DFT'));
+  if (ouverte('statut DFT')) STATUTS.forEach(st => lignes.push(rangeeBarre(COURT[st.code] || st.libelle, s.parStatut[st.code], total, `st-${st.code}`, `ls ${motPourCode(MOTS_STATUT, st.code)}`)));
 
   // Avancement : la part des dossiers clos (mis à disposition, annulés, attachés)
   const clos = STATUTS.filter(st => st.clos).reduce((n, st) => n + s.parStatut[st.code], 0);
   const [p, v] = barre(clos, total, 22, '▓', '░');
-  lignes.push(separation('avancement'));
-  lignes.push(rangee(['[', 'dim'], [p, 'st-MAD'], [v, 'vide'], [']', 'dim'], [pourcent(clos, total).padStart(6), 'fort'], [' clos', 'dim']));
+  lignes.push(sep('avancement'));
+  if (ouverte('avancement')) lignes.push(rangee(['[', 'dim'], [p, 'st-MAD'], [v, 'vide'], [']', 'dim'], [pourcent(clos, total).padStart(6), 'fort'], [' clos', 'dim']));
 
   // Valorisation : total, déjà attaché, reste à attacher (hors annulés)
   if (s.valo) {
     const attache = s.valo.parStatut.ATTACH || 0, annule = s.valo.parStatut.ANNULE || 0;
-    lignes.push(separation('valorisation'));
+    lignes.push(sep('valorisation'));
+    if (ouverte('valorisation')) {
     lignes.push(rangeeMontant('total', s.valo.total));
     lignes.push(rangeeMontant('attaché', attache, attache ? 'st-ATTACH' : 'dim', 'ls attach'));
     lignes.push(rangeeMontant('à attacher', Math.round((s.valo.total - attache - annule) * 100) / 100));
     if (s.valo.sans) lignes.push(rangee(['sans valo'.padEnd(INTERIEUR - 16), 'dim', 'ls sans-valo'], [String(s.valo.sans).padStart(16), 'proche']));
+    }
   }
 
-  // Dernière sauvegarde (cliquable : lance « sauvegarde »)
-  if (derniereSauvegarde !== undefined) {
-    const [texte, classe] = ageSauvegarde(derniereSauvegarde, maintenant);
-    lignes.push(separation('sauvegarde'));
-    lignes.push(rangee(['dernière    ', 'dim', 'sauvegarde'], [texte, classe, 'sauvegarde']));
+  // Synchro : la dernière sauvegarde (qui écrit aussi registre-gcblo.csv) et la dernière macro Excel lue
+  if (derniereSauvegarde !== undefined || classeur !== undefined) {
+    lignes.push(sep('synchro'));
+    if (ouverte('synchro')) {
+      if (derniereSauvegarde !== undefined) {
+        const [texte, classe] = ageCourt(derniereSauvegarde, maintenant, { orange: 2, rouge: 24 });
+        lignes.push(rangee(['sauvegarde  ', 'dim', 'sauvegarde'], [texte, classe, 'sauvegarde']));
+      }
+      if (classeur !== undefined) {
+        const [texte, classe] = ageCourt(classeur, maintenant, { orange: 24, rouge: 72, jamais: 'dim' });
+        lignes.push(rangee(['macro Excel ', 'dim'], [texte, classe]));
+      }
+    }
   }
   lignes.push(bas());
 
@@ -120,8 +149,9 @@ export function dessinerTableauBord(s, jour, { derniereSauvegarde = undefined, m
     texte: lignes.map(l => l.map(([t]) => t).join('')),
     // Une ligne = une rangée de cases de largeur fixe ; les traits (fil) prennent la place restante
     // Un morceau peut porter une commande (3e élément) : un clic la lance (un clic = une commande)
+    // Un titre de section porte { repli } : un clic la replie ou la rouvre (affichage seulement, pas une commande)
     html: lignes.map(l => `<div class="bl">${l.map(([t, c, cmd]) => /\bfil\b/.test(c)
       ? `<span class="${c}">${esc('─'.repeat(LARGEUR))}</span>`
-      : `<span class="m ${c}${cmd ? ' cliquable' : ''}" style="width:calc(${[...t].length} * var(--ch))"${cmd ? ` data-commande="${esc(cmd)}" title="${esc(cmd)}"` : ''}>${esc(t)}</span>`).join('')}</div>`).join('')
+      : `<span class="m ${c}${cmd ? ' cliquable' : ''}" style="width:calc(${[...t].length} * var(--ch))"${typeof cmd === 'string' ? ` data-commande="${esc(cmd)}" title="${esc(cmd)}"` : cmd?.repli ? ` data-repli="${esc(cmd.repli)}" title="replier / déplier"` : ''}>${esc(t)}</span>`).join('')}</div>`).join('')
   };
 }

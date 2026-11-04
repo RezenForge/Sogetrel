@@ -68,3 +68,31 @@ groupe('Tableau de bord cliquable', () => {
     egal([r.filtrer({ proche: true }).length, r.filtrer({ sansValo: true })[0].gcblo], [1, 'SBA501002-THF010']);
   });
 });
+
+import { ageCourt } from '../js/jarvis/tableau-bord.js';
+groupe('Tableau de bord — synchro et sections repliables', () => {
+  const m = new Date(2026, 10, 4, 15, 0);
+  const iso = (...a) => new Date(2026, ...a).toISOString();
+  test('âge court et couleur', () => egal(
+    [null, iso(10, 4, 14, 59), iso(10, 4, 14, 35), iso(10, 4, 11, 0), iso(10, 3, 14, 0), iso(9, 30, 9, 0)].map(i => ageCourt(i, m, { orange: 2, rouge: 24 })),
+    [['jamais', 'retard'], ["à l'instant", 'st-ATTACH'], ['il y a 25 min', 'st-ATTACH'], ['il y a 4 h', 'proche'], ['hier 14:00', 'retard'], ['il y a 5 j', 'retard']]));
+  test('section synchro : sauvegarde et macro Excel', () => {
+    const t = dessinerTableauBord(S, '2026-11-04', { derniereSauvegarde: iso(10, 4, 14, 30), classeur: null, maintenant: m }).texte;
+    vrai(t.some(l => l.includes('synchro')) && t.some(l => l.includes('il y a 30 min')) && t.some(l => l.includes('macro Excel') && l.includes('jamais')));
+    egal(t.filter(l => [...l].length !== LARGEUR), []);
+  });
+  test('section repliée : seul son titre reste, avec ▸', () => {
+    const b = dessinerTableauBord(S, '2026-11-04', { replies: ['statut DFT'] });
+    vrai(b.texte.some(l => l.includes('▸ statut DFT')) && !b.texte.some(l => l.includes('En valid.')) && b.texte.some(l => l.includes('▾ affect')));
+    vrai(b.html.includes('data-repli="statut DFT"'));
+    egal(b.texte.filter(l => [...l].length !== LARGEUR), []);
+  });
+});
+
+import { pointDuJour } from '../js/jarvis/aujourdhui.js';
+groupe('Aujourd\'hui — ce qui demande une action', () => {
+  test('seulement les lignes à traiter, dans l\'ordre d\'urgence', () => egal(
+    pointDuJour({ fciRetard: 2, retard: 0, proche: 1, parType: { SANS: 3 }, parStatut: { LITIGE: 1, REFUSE: 0 } }, { ecartsAffect: 4 }).map(l => [l.n, l.commande]),
+    [[2, 'ls fci-retard'], [1, 'ls litige'], [4, 'ls ecart-affect'], [3, 'ls sans-affect'], [1, 'ls proches']]));
+  test('rien à faire : liste vide', () => egal(pointDuJour({ parType: {}, parStatut: {} }), []));
+});

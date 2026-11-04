@@ -183,3 +183,53 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .propositions li.retard { color: inherit; font-weight: inherit; }
 .propositions li.retard .p-detail { color: var(--retard); }
 
+
+/* ---------------- Refonte 04/11/2026 : écran « Aujourd'hui » (commande today) ---------------- */
+.jour { display: flex; flex-direction: column; gap: 2px; max-width: 110ch; white-space: normal; }
+.jour-titre { font-weight: 700; margin-bottom: 6px; }
+.jour-ok { color: var(--accent); }
+.jour-ligne {
+  display: grid; grid-template-columns: 4ch 36ch minmax(0, 1fr) auto; align-items: baseline; gap: 0 12px;
+  font: inherit; color: var(--texte); text-align: left; background: none; border: 0; border-radius: 3px;
+  padding: 3px 8px; margin: 0 -8px; cursor: pointer;
+}
+.jour-ligne:hover { background: var(--repere-ligne); }
+.jour-n { font-weight: 700; text-align: right; }
+.jour-conseil { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jour-cmd { opacity: 0; }
+.jour-ligne:hover .jour-cmd, .jour-ligne:focus-visible .jour-cmd { opacity: 1; }
+
+/* Tri : chaque titre de colonne est un bouton (même largeur que le texte, aucun décalage) */
+.entete .tri { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; white-space: pre; }
+.entete .tri:hover { color: var(--texte); }
+.entete .tri.trie { color: var(--accent); }
+
+/* Sélection multiple (Ctrl+clic, Maj+clic) : barre verticale et fond léger sur les lignes choisies */
+.tableau .rangee.choisie { background-image: linear-gradient(var(--choisie), var(--choisie)); box-shadow: -6px 0 0 -3px var(--accent); }
+.selection {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px;
+  margin: 4px 0 6px; padding: 5px 10px; border: 1px solid var(--trait); border-radius: 4px; background: var(--fond-menu);
+}
+.selection .sel-n { color: var(--accent); font-weight: 700; margin-right: 6px; }
+.selection button, .selection select {
+  font: inherit; font-size: 14px; color: var(--texte); background: var(--fond); border: 1px solid var(--trait);
+  border-radius: 3px; padding: 2px 10px; cursor: pointer;
+}
+.selection button:hover, .selection select:hover { border-color: var(--pale); }
+.selection .sel-danger { color: var(--erreur); }
+.selection .sel-fermer { margin-left: auto; border: 0; background: none; color: var(--pale); }
+
+/* Notifications (événements automatiques) : en bas à droite de la console, au-dessus de la saisie */
+.notifs { position: fixed; z-index: 25; right: calc(40ch + 32px + 18px); bottom: 64px; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; max-width: min(70ch, 50vw); pointer-events: none; }
+.notif {
+  pointer-events: auto; display: flex; align-items: baseline; gap: 10px;
+  padding: 6px 8px 6px 12px; font-size: 14px; color: var(--texte);
+  background: var(--fond-menu); border: 1px solid var(--trait); border-left: 3px solid var(--pale); border-radius: 4px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .35); animation: notif-entre .2s ease-out; transition: opacity .4s;
+}
+.notif.ok { border-left-color: var(--accent); }
+.notif.err { border-left-color: var(--erreur); }
+.notif.part { opacity: 0; }
+.notif-fermer { font: inherit; color: var(--pale); background: none; border: 0; cursor: pointer; padding: 0 2px; }
+.notif-fermer:hover { color: var(--texte); }
+@keyframes notif-entre { from { opacity: 0; transform: translateY(6px); } }

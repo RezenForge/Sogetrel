@@ -24,6 +24,9 @@ import { dessinerTableauBord } from './jarvis/tableau-bord.js';
 
 /** Date de la dernière sauvegarde (affichée dans le tableau de bord). */
 const CLE_DERNIERE_SAUVEGARDE = 'gcblo.v2.derniereSauvegarde';
+/** Date du dernier classeur-gcblo.csv lu (écrit par la macro Excel) et sections repliées du tableau de bord. */
+const CLE_CLASSEUR_LE = 'gcblo.v2.classeurLe', CLE_REPLIES = 'gcblo.v2.bordReplies';
+const lireLocal = (cle, defaut) => { try { return JSON.parse(localStorage.getItem(cle)) ?? defaut; } catch { try { return localStorage.getItem(cle) ?? defaut; } catch { return defaut; } } };
 
 /* 1. Les données. Si le navigateur refuse le stockage, on travaille en mémoire (et on prévient). */
 let stockageOk = true;
@@ -105,6 +108,8 @@ async function lireClasseurPartage(dossier) {
   let poignee;
   try { poignee = await dossier.getFileHandle(NOM_CSV_CLASSEUR); } catch { return null; }
   const fichier = await poignee.getFile();
+  // Pour le tableau de bord (synchro) : quand la macro a écrit ce fichier pour la dernière fois
+  try { localStorage.setItem(CLE_CLASSEUR_LE, new Date(fichier.lastModified).toISOString()); } catch { /* facultatif */ }
   const r = extraireDossiers(lireCsvClasseur(await fichier.text()), store.tous());
   noterAffectsClasseur(r.affects);
   const fait = appliquerImport(regles, r, 'classeur partagé');
@@ -303,8 +308,17 @@ const tableauBord = document.getElementById('tableauBord');
 const derniereSauvegarde = () => { try { return localStorage.getItem(CLE_DERNIERE_SAUVEGARDE); } catch { return null; } };
 /** Nombre de dossiers dont l'affect diffère de la colonne I (tableau de bord). */
 function nbEcartsAffect() { const a = lireAffectsClasseur(); return store.tous().filter(d => ecartAffect(d, a)).length; }
-function dessinerBord() { tableauBord.innerHTML = `<div class="dessin">${dessinerTableauBord(regles.statistiques(), regles.aujourdhui(), { derniereSauvegarde: derniereSauvegarde(), maintenant: new Date(), ecartsAffect: nbEcartsAffect() }).html}</div>`; }
+function dessinerBord() { tableauBord.innerHTML = `<div class="dessin">${dessinerTableauBord(regles.statistiques(), regles.aujourdhui(), { derniereSauvegarde: derniereSauvegarde(), maintenant: new Date(), ecartsAffect: nbEcartsAffect(), classeur: lireLocal(CLE_CLASSEUR_LE, null), replies: lireLocal(CLE_REPLIES, []) }).html}</div>`; }
 store.ecouter(dessinerBord);
+// Un clic sur le titre d'une section la replie ou la rouvre (retenu dans ce navigateur)
+tableauBord.addEventListener('click', e => {
+  const t = e.target.closest('[data-repli]');
+  if (!t) return;
+  const replies = lireLocal(CLE_REPLIES, []), titre = t.dataset.repli;
+  const suite = replies.includes(titre) ? replies.filter(x => x !== titre) : [...replies, titre];
+  try { localStorage.setItem(CLE_REPLIES, JSON.stringify(suite)); } catch { /* facultatif */ }
+  dessinerBord();
+});
 setInterval(() => { dessinerBord(); sauvegardeAutomatique(); }, 60 * 1000);
 dessinerBord();
 setTimeout(sauvegardeAutomatique, 3000);   // à l'ouverture, si la dernière date de plus d'une heure
@@ -318,7 +332,9 @@ const e = invite.ecran;
 if (reprise?.dossiers.length) e.ligne(`${reprise.dossiers.length} dossiers repris de la version 1${reprise.ignores ? ` (${reprise.ignores} ignorés)` : ''}`, 'ok');
 if (!stockageOk) e.ligne('gcblo: ce navigateur bloque l\'enregistrement : les données seront perdues à la fermeture', 'err');
 invite.rafraichir();
+// L'écran « Aujourd'hui » : ce qui demande une action (sans entrer dans l'historique des commandes)
+if (store.tous().length) invite.lancer('today', { historique: false });
 invite.focus();
 
 // Accès depuis la console du navigateur, pour dépanner : window.gcblo.store.tous()
-window.gcblo = { store, regles, esc, coffre };
+window.gcblo = { store, regles, esc, coffre, invite };

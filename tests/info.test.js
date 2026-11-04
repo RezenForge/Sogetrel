@@ -62,3 +62,14 @@ groupe('ls — colonne de GCBLO collée (ex-« info »)', () => {
   test('un seul GCBLO : ls habituel', () => { const r = ls('ls SBA501404'); egal([r.collee, r.liste.length], [null, 1]); });
   test('la commande info n\'existe plus', () => egal(analyser('info SBA501404', 15, { dossiers: [], aujourdhui: '2026-11-04', regles }).commande, null));
 });
+
+groupe('ls — tri (tri:colonne, clic sur l\'en-tête)', () => {
+  const regles = creerDossiers(creerStore(supportMemoire()));
+  regles.creer({ type: 'AIR', gcblo: 'SBA501404-THF010', valorisation: 60, commune: 'Bègles' });
+  regles.creer({ type: 'NUM21', gcblo: 'LRO500767-THF010', valorisation: 30, commune: 'Royan' });
+  regles.creer({ type: 'AIR', gcblo: 'POI500001-THF010', commune: 'Niort' });
+  const ls = texte => { const dossiers = regles.filtrer({}); return resultatLs(criteresListe(analyser(texte, texte.length, { dossiers, aujourdhui: '2026-11-04', regles }).valeurs), regles, dossiers).liste.map(d => d.gcblo.slice(0, 3)); };
+  test('croissant, sans valeur à la fin', () => egal(ls('ls tri:valo'), ['LRO', 'SBA', 'POI']));
+  test('décroissant avec « - »', () => egal(ls('ls tri:valo-'), ['SBA', 'LRO', 'POI']));
+  test('avec un filtre, par commune', () => egal(ls('ls air tri:commune'), ['SBA', 'POI']));
+});

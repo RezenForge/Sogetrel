@@ -387,6 +387,7 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | `ls`, `list` et `info` vident la console avant d'afficher |
 | 04/11/2026 | `ls`/`info` : la ligne de commande va dans le volet ; sans résultat, tout va dans le volet et la console ne change pas |
 | 04/11/2026 | Commande `sauvegarde` (`js/sauvegarde.js`) : dossier choisi, nom daté, 3 sauvegardes gardées ; dernière sauvegarde dans le tableau de bord |
+| 04/11/2026 | **Refonte à l'essai** (version d'avant : branche `avant-refonte`) : écran « Aujourd'hui » (`today`, à l'ouverture) ; tri `tri:colonne` et clic sur les titres de colonnes ; sélection multiple (Ctrl+clic, Maj+clic) avec barre d'actions (set, attachement, copier, delete) ; tableau de bord à sections repliables et bloc « synchro » (sauvegarde, macro Excel) ; notifications discrètes pour les événements automatiques |
 | 04/11/2026 | Commande `refresh` : recharge la page en redemandant les fichiers au serveur (comme Ctrl+F5) |
 | 04/11/2026 | Écarts d'affect avec la colonne I : `ls ecart-affect`, ligne « ≠ colonne I » au tableau de bord ; rien n'est corrigé automatiquement |
 | 04/11/2026 | Commande `info` retirée : `ls` reconnaît une colonne de GCBLO collée (au moins deux GCBLO), dans l'ordre collé, introuvables listés, combinable avec les filtres |

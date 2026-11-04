@@ -45,7 +45,10 @@ export function creerInvite({ racine, contexte }) {
   let attente = null;            // question en cours : { resoudre, choix: null (oui/non) | ['…', …] }
   let executer = async () => {};
   let surCollage = null;         // reçoit le texte d'une liste collée
-  let listeDemandee = false;     // Tab sur une ligne vide : afficher toutes les commandes
+  let listeDemandee = false;
+  let commandeEnCours = '';
+  const choisis = new Set();     // sélection multiple dans les listes (Ctrl+clic, Maj+clic) : ids des dossiers
+  let dernierChoisi = null;      // la commande en train de s'exécuter (une liste retient son « ls »)
 
   /* ---------------- Zone de sortie ---------------- */
 
@@ -54,7 +57,7 @@ export function creerInvite({ racine, contexte }) {
    * les commandes qui ne doivent pas faire défiler la console (open, set, edit, cancel, help).
    */
   const DANS_LE_VOLET = new Set(['open', 'set', 'edit', 'cancel', 'help', 'sauvegarde', 'restore', 'attachement', 'delete', 'affect', 'relance']);
-  const VIDE_LA_CONSOLE = new Set(['ls']);
+  const VIDE_LA_CONSOLE = new Set(['ls', 'today']);
   let sortie = ecranEl;
   const defiler = () => { sortie.scrollTop = sortie.scrollHeight; };
 
@@ -107,7 +110,7 @@ export function creerInvite({ racine, contexte }) {
     }
   }
 
-  function tableauHtml(dossiers) {
+  function tableauHtml(dossiers, tri = '') {
     const col = (t, n) => esc(String(t).padEnd(n).slice(0, n));
     const coupe = (t, n) => (t.length > n ? t.slice(0, n - 1) + '…' : t);
     const lignes = dossiers.map(d => {
@@ -122,7 +125,7 @@ export function creerInvite({ racine, contexte }) {
       // Ordre des colonnes : AFFECT GCBLO COMMUNE VALO FCI STATUT DFT
       const milieu = `${ed('commune', col(coupe(commune, 22) || '—', 22))} ${ed('valo', `<span class="valo">${esc((valo || '—').padStart(11))}</span>`)}  ${ed('fci', copieFci(d, `<span class="dim">${col(fci || '—', 15)}</span>`), fciRouge)} `;
       // Une ligne = un bloc : le statut peut colorer toute la ligne (Attach : vert clair)
-      return `<span class="rangee rangee-${d.statutDft}">`
+      return `<span class="rangee rangee-${d.statutDft}${choisis.has(d.id) ? ' choisie' : ''}" data-id="${esc(d.id)}">`
         // Date (d'affectation) : jour/mois seulement (l'année se voit en ouvrant le champ au double-clic)
         + `${ed('date', `<span class="dim">${col(d.dateAffectation ? formater(d.dateAffectation).slice(0, 5) : '—', 5)}</span>`)}  `
         + `${ed('affect', `<span class="ty-${d.type || 'SANS'}">${col(TYPE_COURT[d.type] || '—', 6)}</span>`)} `
@@ -132,8 +135,15 @@ export function creerInvite({ racine, contexte }) {
         + boutonMenu(d) + '</span>';
     });
     // L'en-tête reste visible en haut de l'écran tant que la liste défile (CSS : sticky)
-    const entete = `<span class="entete dim">${'DATE'.padEnd(7)}${'AFFECT'.padEnd(7)}${'GCBLO'.padEnd(17)}`
-      + `${'COMMUNE'.padEnd(23)}${'VALO'.padStart(11)}  ${'FCI'.padEnd(16)}STATUT DFT</span>`;
+    // Chaque titre de colonne est cliquable : il relance la même liste triée sur cette colonne (▲ croissant, ▼ décroissant)
+    const [triCol, triDesc] = [tri.replace(/-$/, ''), tri.endsWith('-')];
+    const titre = (col, libelle, largeur, droite = false) => {
+      const marque = triCol === col ? (triDesc ? '▼' : '▲') : '';
+      const texte = droite ? `${marque}${marque ? ' ' : ''}${libelle}`.padStart(largeur) : `${libelle}${marque ? ' ' + marque : ''}`.padEnd(largeur);
+      return `<button type="button" class="tri${marque ? ' trie' : ''}" data-tri="${col}" title="trier par ${libelle.toLowerCase()}">${esc(texte)}</button>`;
+    };
+    const entete = `<span class="entete dim">${titre('date', 'DATE', 7)}${titre('affect', 'AFFECT', 7)}${titre('gcblo', 'GCBLO', 17)}`
+      + `${titre('commune', 'COMMUNE', 23)}${titre('valo', 'VALO', 11, true)}  ${titre('fci', 'FCI', 16)}${titre('statut', 'STATUT DFT', 10)}</span>`;
     return `<pre class="tableau">${entete}${lignes.join('')}</pre>`;
   }
 
@@ -150,8 +160,10 @@ export function creerInvite({ racine, contexte }) {
      * Le GCBLO est cliquable (→ « open ») ; ⋯ ouvre le menu d'actions du dossier.
      */
     tableau(dossiers) {
-      ecran.ligne(tableauHtml(dossiers), 'vue');
-      sortie.lastElementChild.dataset.liste = dossiers.map(d => d.id).join(',');
+      // La vue retient la commande qui l'a produite (pour le tri par en-tête) et son tri éventuel
+      const tri = (commandeEnCours.match(/(?:^|\s)tri:(\S+)/i) || [])[1] || '';
+      ecran.ligne(tableauHtml(dossiers, tri.toLowerCase()), 'vue');
+      Object.assign(sortie.lastElementChild.dataset, { liste: dossiers.map(d => d.id).join(','), ls: commandeEnCours, tri: tri.toLowerCase() });
     },
     fiche(d) {
       ecran.ligne(ficheHtml(d), 'vue');
@@ -167,23 +179,34 @@ export function creerInvite({ racine, contexte }) {
       const dossiers = contexte().dossiers, parId = new Map(dossiers.map(d => [d.id, d]));
       racine.querySelectorAll('.vue[data-liste]').forEach(vue => {
         if (vue.querySelector('.edition')) return;          // saisie en cours : on n'y touche pas
-        vue.innerHTML = tableauHtml(vue.dataset.liste.split(',').map(i => parId.get(i)).filter(Boolean));
+        vue.innerHTML = tableauHtml(vue.dataset.liste.split(',').map(i => parId.get(i)).filter(Boolean), vue.dataset.tri || '');
       });
+      // Sélection : un dossier supprimé en sort
+      if ([...choisis].some(i => !parId.has(i))) { [...choisis].forEach(i => { if (!parId.has(i)) choisis.delete(i); }); majSelection(); }
       racine.querySelectorAll('.vue[data-fiche]').forEach(vue => {
         if (vue.querySelector('.edition')) return;
         const d = parId.get(vue.dataset.fiche);
         if (d) { vue.innerHTML = ficheHtml(d); vue.classList.remove('perime'); } else vue.classList.add('perime');
       });
     },
-    vider() { ecranEl.innerHTML = ''; if (voletEl) voletEl.innerHTML = ''; },
+    vider() { ecranEl.innerHTML = ''; if (voletEl) voletEl.innerHTML = ''; viderSelection(); },
     /** Écrit une ligne dans le volet de droite (messages qui ne viennent pas d'une commande : sauvegarde automatique…). */
+    /**
+     * Les événements automatiques (sauvegarde, classeur partagé…) : une notification discrète en bas
+     * de la console, qui disparaît seule après quelques secondes. Une erreur, ou un message qui attend
+     * un clic (bouton), reste jusqu'à ce qu'on la ferme. Le volet ne garde que ce qu'on a demandé.
+     */
     journal(html, classe = '') {
-      const cible = voletEl || ecranEl;
-      const div = document.createElement('div');
-      div.className = `l ${classe}`;
-      div.innerHTML = html;
-      cible.appendChild(div);
-      cible.scrollTop = cible.scrollHeight;
+      let pile = racine.querySelector('.notifs');
+      if (!pile) { pile = document.createElement('div'); pile.className = 'notifs'; pile.setAttribute('aria-live', 'polite'); racine.body.appendChild(pile); }
+      const n = document.createElement('div');
+      n.className = `notif ${classe}`;
+      n.innerHTML = `<span class="notif-texte">${html}</span><button type="button" class="notif-fermer" aria-label="Fermer">✕</button>`;
+      n.querySelector('.notif-fermer').addEventListener('click', () => n.remove());
+      n.addEventListener('click', e => { if (e.target.closest('[data-commande]')) setTimeout(() => n.remove(), 0); });
+      pile.appendChild(n);
+      while (pile.children.length > 4) pile.firstElementChild.remove();
+      if (classe !== 'err' && !n.querySelector('[data-commande]')) setTimeout(() => { n.classList.add('part'); setTimeout(() => n.remove(), 400); }, 6000);
     }
   };
 
@@ -285,7 +308,7 @@ export function creerInvite({ racine, contexte }) {
    * Recopie une commande à l'écran puis l'exécute. Sert à la saisie (Entrée)
    * ET aux clics : un clic = une commande, avec écho, historique et « cancel ».
    */
-  async function lancer(texte) {
+  async function lancer(texte, { historique: noter = true } = {}) {
     if (attente) return;
     fermerMenu();
     const analyse = analyser(texte, texte.length, contexte());
@@ -298,9 +321,9 @@ export function creerInvite({ racine, contexte }) {
       // la console est vidée et ne montre que la liste. Sans résultat, tout va dans le volet
       // et la liste déjà affichée reste en place.
       echoDansLeVolet = true;
-      if (aucunResultat(analyse)) sortie = voletEl; else ecranEl.innerHTML = '';
+      if (aucunResultat(analyse)) sortie = voletEl; else { ecranEl.innerHTML = ''; viderSelection(); }
     }
-    try { await lancerDans(texte, analyse, echoDansLeVolet); } finally { sortie = ecranEl; }
+    try { await lancerDans(texte, analyse, echoDansLeVolet, noter); } finally { sortie = ecranEl; }
   }
 
   /** ls ou info ne trouveraient aucun dossier ? */
@@ -310,13 +333,15 @@ export function creerInvite({ racine, contexte }) {
     return false;
   }
 
-  async function lancerDans(texte, analyse, echoDansLeVolet = false) {
+  async function lancerDans(texte, analyse, echoDansLeVolet = false, noter = true) {
     const ici = sortie;
     if (echoDansLeVolet) sortie = voletEl;
     ecran.ligne(`<span class="invite-echo">${INVITE}</span> ${colorer(texte, analyse)}`, 'echo');
     sortie = ici;
-    historique = [texte, ...historique.filter(h => h !== texte)].slice(0, 100);
-    try { localStorage.setItem(CLE_HISTORIQUE, JSON.stringify(historique)); } catch { /* facultatif */ }
+    if (noter) {
+      historique = [texte, ...historique.filter(h => h !== texte)].slice(0, 100);
+      try { localStorage.setItem(CLE_HISTORIQUE, JSON.stringify(historique)); } catch { /* facultatif */ }
+    }
     posHistorique = -1;
     rafraichir();
 
@@ -326,6 +351,7 @@ export function creerInvite({ racine, contexte }) {
       return ecran.ligne(`${esc(analyse.commande.verbes[0])}: ${esc(pb)}<br><span class="dim">usage : ${esc(analyse.commande.forme)}</span>`, 'err');
     }
     contexte().memoriser?.(analyse.commande.id);
+    commandeEnCours = texte;
     await executer(analyse);
     rafraichir();
   }
@@ -471,7 +497,69 @@ export function creerInvite({ racine, contexte }) {
     poserRepere(el && !el.matches(ZONES_REPERE) ? el : null);
   }, true);
 
+  /* ---------------- Sélection multiple : Ctrl+clic (un par un), Maj+clic (une plage) ---------------- */
+  // Une barre d'actions apparaît au-dessus de la ligne de saisie ; chaque bouton lance une commande
+  // ordinaire sur les dossiers choisis (set, attachement, delete) : un clic = une commande.
+  const barreEl = document.createElement('div');
+  barreEl.className = 'selection'; barreEl.hidden = true;
+  $('#formulaire')?.before(barreEl);
+  const gcbloChoisis = () => { const parId = new Map(contexte().dossiers.map(d => [d.id, d])); return [...choisis].map(i => parId.get(i)?.gcblo).filter(Boolean); };
+  function majSelection() {
+    racine.querySelectorAll('#ecran .rangee[data-id]').forEach(r => r.classList.toggle('choisie', choisis.has(r.dataset.id)));
+    const n = gcbloChoisis().length;
+    barreEl.hidden = !n;
+    if (!n) return;
+    const options = (titre, mots) => `<optgroup label="${titre}">${mots.map(([mot, lib]) => `<option value="${esc(mot)}">${esc(lib)}</option>`).join('')}</optgroup>`;
+    barreEl.innerHTML = `<span class="sel-n">${n} sélectionné${n > 1 ? 's' : ''}</span>`
+      + `<select data-sel="set" aria-label="Changer le statut ou l'affect"><option value="">statut / affect…</option>`
+      + options('statut DFT', STATUTS.map(s => [motPourCode(MOTS_STATUT, s.code), s.libelle]))
+      + options('affect', ['NUM21', 'AIR', 'SOGETREL'].map(c => [motPourCode(MOTS_TYPE, c), typeParCode(c).libelle])) + '</select>'
+      + '<button type="button" data-sel="attachement">attachement</button>'
+      + '<button type="button" data-sel="copier" title="copie les GCBLO, un par ligne (à coller dans Excel)">copier</button>'
+      + '<button type="button" data-sel="delete" class="sel-danger">supprimer</button>'
+      + '<button type="button" data-sel="vider" class="sel-fermer" title="désélectionner (Échap)">✕</button>';
+  }
+  function viderSelection() { if (!choisis.size) return; choisis.clear(); dernierChoisi = null; majSelection(); }
+  barreEl.addEventListener('change', e => {
+    const sel = e.target.closest('[data-sel="set"]');
+    if (sel?.value) { const v = sel.value; sel.value = ''; lancer(`set ${gcbloChoisis().join(' ')} to ${v}`); }
+  });
+  barreEl.addEventListener('click', async e => {
+    const b = e.target.closest('button[data-sel]');
+    if (!b) return;
+    const g = gcbloChoisis();
+    if (b.dataset.sel === 'vider') viderSelection();
+    else if (b.dataset.sel === 'copier') { if (await copier(g.join('\n'))) bulle(e.clientX, e.clientY, `${g.length} GCBLO copiés`); }
+    else await lancer(`${b.dataset.sel} ${g.join(' ')}`);
+    champ.focus();
+  });
+  // Maj+clic : pas de sélection de texte du navigateur sur la liste
+  racine.addEventListener('mousedown', e => { if (e.shiftKey && e.target.closest?.('#ecran .rangee[data-id]')) e.preventDefault(); });
+  function choisirRangee(rangee, plage) {
+    const id = rangee.dataset.id;
+    if (plage && dernierChoisi) {
+      const rangees = [...rangee.closest('.vue').querySelectorAll('.rangee[data-id]')].map(r => r.dataset.id);
+      const [a, b] = [rangees.indexOf(dernierChoisi), rangees.indexOf(id)].sort((x, y) => x - y);
+      if (a >= 0) rangees.slice(a, b + 1).forEach(i => choisis.add(i));
+      else choisis.add(id);
+    } else if (choisis.has(id)) choisis.delete(id);
+    else choisis.add(id);
+    dernierChoisi = id;
+    majSelection();
+  }
+
   racine.addEventListener('click', e => {
+    const rangee = (e.ctrlKey || e.metaKey || e.shiftKey) && e.target.closest('#ecran .rangee[data-id]');
+    if (rangee) { e.preventDefault(); choisirRangee(rangee, e.shiftKey); return; }
+    // En-tête de liste : relance la même commande triée sur cette colonne (2e clic : sens inverse)
+    const tri = e.target.closest('[data-tri]');
+    if (tri) {
+      e.preventDefault();
+      const vue = tri.closest('.vue'), col = tri.dataset.tri;
+      const base = (vue?.dataset.ls || 'ls').replace(/\s+tri:\S+/gi, '').trim();
+      lancer(`${base} tri:${col}${vue?.dataset.tri === col ? '-' : ''}`);
+      return;
+    }
     const cmd = e.target.closest('[data-commande]');
     const points = e.target.closest('[data-menu-dossier]');
     if (cmd) { e.preventDefault(); lancer(cmd.dataset.commande); return; }
@@ -573,6 +661,8 @@ export function creerInvite({ racine, contexte }) {
   voletEl?.addEventListener('dblclick', surDoubleClic);
 
   racine.addEventListener('keydown', e => {
+    // Échap, ligne de saisie vide : on désélectionne
+    if (e.key === 'Escape' && !menuEl && choisis.size && !champ.value && !attente) { e.preventDefault(); viderSelection(); return; }
     if (!menuEl) return;
     const choix = [...menuEl.querySelectorAll('.menu-choix')], i = choix.indexOf(racine.activeElement);
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); fermerMenu(); champ.focus(); }

@@ -339,7 +339,8 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
     trier(liste, { cle = 'dateAffectation', sens = 'desc' } = {}) {
       const ordre = {
         type: d => TYPES.findIndex(t => t.code === d.type),
-        statutDft: d => STATUTS.findIndex(s => s.code === d.statutDft)
+        statutDft: d => STATUTS.findIndex(s => s.code === d.statutDft),
+        fci: d => d.fci[0] ?? null
       };
       const valeur = ordre[cle] || (d => d[cle] ?? null);
       const signe = sens === 'asc' ? 1 : -1;

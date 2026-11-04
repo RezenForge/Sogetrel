@@ -25,6 +25,8 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `sauvegarde` · `sauvegarde dossier` | la première fois, choisit un dossier ; ensuite, sauvegarde directement dans ce dossier sans rien redemander (`sauvegarde dossier` pour en changer). Écrit une sauvegarde datée ; seules les 10 plus récentes y restent. Ensuite, sauvegarde automatique toutes les heures dans ce dossier, tant que l'appli est ouverte. Écrit aussi `registre-gcblo.csv` pour le classeur partagé (voir plus bas) |
 | `restore` | recharge une sauvegarde : remplace toute la base après confirmation (annulable) |
 | `refresh` | recharge la page avec la dernière version publiée (comme Ctrl+F5) ; les dossiers restent |
+| `today` | « Aujourd'hui » : ce qui demande une action (FCI en retard, relances, litiges, refusés, écarts d'affect, sans affect), chaque ligne cliquable. S'affiche à l'ouverture |
+| `ls … tri:colonne` | trie la liste (`tri:valo`, `tri:valo-` décroissant ; date, affect, gcblo, commune, fci, statut). Ou un clic sur le titre de la colonne (2e clic : sens inverse) |
 | `*` | dans `set`, `delete`, `attachement` : tous les dossiers de la liste affichée (ex. `ls litige` puis `set * to annule`, `attachement *`) |
 | `affect ‹GCBLO› ‹num21\|air\|sogetrel›` | donne l'affect (crée le dossier s'il n'existe pas) et ouvre le mail d'affectation |
 | `relance ‹dossier› ‹fci\|dft›` | ouvre le mail de relance (fci : seulement si le dossier n'a pas de FCI) |
@@ -81,6 +83,7 @@ js/xlsx.js               lit un classeur Excel (.xlsx, .xlsm) et en écrit une c
 js/import-excel.js       quels dossiers et FCI prendre dans le classeur (commande import)
 js/attachement.js        quelles cellules remplir dans l'attachement d'un dossier
 js/affects-classeur.js   affect de la colonne I retenu, écarts avec le registre (ls ecart-affect)
+js/jarvis/aujourdhui.js  écran « Aujourd'hui » (commande today)
 js/info.js               retrouve les dossiers d'une liste collée (ls avec une colonne de GCBLO)
 js/sauvegarde.js         nom, contenu et rotation des sauvegardes
 js/export-excel.js       registre-gcblo.csv (vers le classeur) · lecture de classeur-gcblo.csv
@@ -94,8 +97,18 @@ js/jarvis/actions.js     exécute une commande via les règles
 js/jarvis/menus.js       le menu ⋯ d'un dossier : des commandes écrites à l'avance
 js/jarvis/tableau-bord.js le tableau de bord ASCII, toujours visible à droite
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   233 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
+tests/                   241 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
 ```
+
+## Refonte (04/11/2026, à l'essai)
+
+- **Aujourd'hui** (`today`) à l'ouverture : la liste de ce qui demande une action.
+- **Tri** par clic sur les titres de colonnes.
+- **Sélection multiple** : Ctrl+clic (un par un) ou Maj+clic (une plage) sur les lignes ; une barre d'actions apparaît (statut / affect, attachement, copier les GCBLO, supprimer). Échap ou ✕ désélectionne.
+- **Tableau de bord** : sections repliables (clic sur le titre), bloc **synchro** (dernière sauvegarde, dernière macro Excel lue, en couleur selon l'ancienneté).
+- **Notifications** : les événements automatiques (sauvegarde, classeur) s'affichent en bas et disparaissent seuls ; les erreurs restent.
+
+Version d'avant la refonte : branche `avant-refonte`.
 
 ## Classeur partagé IMMO-COORDI-DISSIM.xlsm
 
