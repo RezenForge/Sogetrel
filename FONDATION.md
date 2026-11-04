@@ -121,7 +121,7 @@ js/
   xlsx.js                  lit un classeur Excel (.xlsx, .xlsm) et en écrit une copie modifiée, sans bibliothèque
   import-excel.js          R10 : quels dossiers et FCI prendre dans le classeur
   attachement.js           R11 : quelles cellules remplir pour un dossier
-  info.js                  retrouve les dossiers d'une liste collée (commande info)
+  info.js                  retrouve les dossiers d'une liste collée (ls avec une colonne de GCBLO)
   sauvegarde.js            nom, contenu et rotation des sauvegardes (3 gardées)
   mails.js                 R12 : mails d'affectation et de relance (destinataires, objet, texte, lien mailto)
   export-excel.js          R14 : registre-gcblo.csv (vers le classeur) et lecture de classeur-gcblo.csv (depuis le classeur)
@@ -183,7 +183,7 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 | Afficher | les dossiers **Attach** n'apparaissent que si on les demande (`ls attach`) ; `ls [affects…] [statuts…] [dates…] [retard\|proches] [sans-fci] [sans-valo] [sans-affect] [texte]` (aussi `list`) ; plusieurs affects, statuts ou dates = l'un ou l'autre ; date affect : `12/03` (jour, année en cours), `12/03/2026`, `03/2026` (mois) | `ls num21 sogetrel litige`, `ls 03/2026` |
 | Ouvrir | `open ‹dossier›` | `open 501404` |
 | Changer le statut ou le type | `set ‹dossiers› to ‹statut\|type›` | `set 501404 to refuse` |
-| Infos d'une liste | `info ‹GCBLO…›` : coller une colonne de GCBLO, complets ou seulement leur début (`SBA501023`) ; affiche les dossiers trouvés comme `ls` (éditables), puis les introuvables | `info` + Ctrl+V |
+| Liste collée | `ls ‹GCBLO…›` : dès qu'il y a **au moins deux GCBLO** (complets ou débuts, `SBA501023`), c'est une liste collée : dossiers trouvés dans l'ordre collé (éditables, Attach compris), puis les introuvables ; les autres filtres s'ajoutent (`ls air` + colonne). Un seul GCBLO : `ls` habituel. (Remplace l'ancienne commande `info`.) | `ls ` + Ctrl+V |
 | Modifier un champ | `edit ‹dossier› ‹champ› ‹valeur›` ; champs : affect, statut, commune, valo, fci, affectation, relance, commentaire, gcblo ; `-` vide un champ facultatif | `edit 501404 commune Le Haillan` |
 | Supprimer | `delete ‹dossiers›` (aussi `rm`), confirmation demandée | `delete 501404` |
 | Annuler | `cancel` (aussi `undo`) : défait la dernière modification | `cancel` |
@@ -221,7 +221,7 @@ Ce qui est cliquable :
 
 **`*` = la liste affichée** (04/11/2026) : partout où plusieurs dossiers sont permis (`set`, `delete`, `attachement`), `*` désigne tous les dossiers de la dernière liste affichée dans la console (`ls`, `info`), comme le `*` des terminaux. Exemple : `ls litige` puis `set * to annule` (confirmation au-delà de 3 dossiers).
 
-**Console vidée** (04/11/2026) : `ls` (`list`) et `info` vident la console, qui ne montre que la liste et son bilan ; la commande elle-même s'écrit dans le volet de droite, comme les autres (même lancée d'un clic sur le tableau de bord). Sans aucun résultat, tout s'affiche dans le volet et la liste déjà affichée reste en place.
+**Console vidée** (04/11/2026) : `ls` (`list`) vide la console, qui ne montre que la liste et son bilan ; la commande elle-même s'écrit dans le volet de droite, comme les autres (même lancée d'un clic sur le tableau de bord). Sans aucun résultat, tout s'affiche dans le volet et la liste déjà affichée reste en place.
 
 **Volet de droite** (04/11/2026) : `open`, `set`, `edit` (donc le double-clic), `cancel`, `help`, `sauvegarde`, `restore`, `attachement` et `delete` s'affichent, ainsi que toute commande inconnue ou incomplète (message d'erreur), sous le tableau de bord, dans un volet qui défile seul ; la console ne bouge pas.
 
@@ -386,6 +386,7 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | `ls`, `list` et `info` vident la console avant d'afficher |
 | 04/11/2026 | `ls`/`info` : la ligne de commande va dans le volet ; sans résultat, tout va dans le volet et la console ne change pas |
 | 04/11/2026 | Commande `sauvegarde` (`js/sauvegarde.js`) : dossier choisi, nom daté, 3 sauvegardes gardées ; dernière sauvegarde dans le tableau de bord |
+| 04/11/2026 | Commande `info` retirée : `ls` reconnaît une colonne de GCBLO collée (au moins deux GCBLO), dans l'ordre collé, introuvables listés, combinable avec les filtres |
 | 04/11/2026 | Repère visuel : la ligne qui contient l'élément cliqué est aussi voilée de gris très léger |
 | 04/11/2026 | Repère visuel : le dernier élément cliqué (gauche ou droit) — case, lien, morceau du tableau de bord, sinon la ligne — est surligné en bleu clair ; il reste en place quand la vue se redessine |
 | 04/11/2026 | Sauvegarde automatique toutes les heures dans le dernier dossier choisi ; autorisation à renouveler signalée dans le volet |

@@ -14,9 +14,8 @@ import { COMMANDES, MOTS_STATUT, MOTS_TYPE, GROUPES, PERIODES, JOURS, CHAMPS, pl
 import { STATUTS, TYPES, IMPORT_EXCEL, statutParCode, typeParCode } from '../config.js';
 import { formater } from '../dates.js';
 import { etatRelance } from '../dossiers.js';
-import { chercherListe } from '../info.js';
 const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`;
-import { chercherDossiers, lireDate, criteresListe } from './analyse.js';
+import { chercherDossiers, lireDate, criteresListe, resultatLs } from './analyse.js';
 
 const MAX = 8;
 
@@ -151,7 +150,7 @@ export function apercu(analyse, ctx) {
   const v = analyse.valeurs;
   const n = liste => `${liste.length} dossier${liste.length > 1 ? 's' : ''}`;
   switch (c.id) {
-    case 'ls': return `→ ${n(ctx.regles.filtrer(criteresListe(v)))}`;
+    case 'ls': { const r = resultatLs(criteresListe(v), ctx.regles, ctx.dossiers); return r.collee ? `→ ${pluriel(r.liste.length, 'trouvé', 'trouvés')}${r.collee.introuvables.length ? ` · ${r.collee.introuvables.length} introuvable${r.collee.introuvables.length > 1 ? 's' : ''}` : ''}` : `→ ${n(r.liste)}`; }
     case 'open': return `→ fiche de ${v.cible.gcblo}`;
     case 'affect': return `→ ${v.cible.gcblo}${v.cible.dossier ? '' : ' (nouveau)'} : affect → ${typeParCode(v.affect).libelle}${v.affect === 'SOGETREL' ? '' : ' · mail d’affectation'}`;
     case 'relance': return `→ mail de relance ${v.motif.toUpperCase()} · ${v.cible.gcblo}`;
@@ -160,7 +159,6 @@ export function apercu(analyse, ctx) {
       if (v.cibles.some(c => c.fichier)) return '→ choisir la référence';
       return v.cibles.length === 1 ? `→ ${v.cibles[0].gcblo}.xlsx` : `→ ${v.cibles.length} attachements dans un dossier à choisir (confirmation)`;
     }
-    case 'info': { const r = chercherListe(v.liste, ctx.dossiers); return `→ ${pluriel(r.trouves.length, 'trouvé', 'trouvés')}${r.introuvables.length ? ` · ${r.introuvables.length} introuvable${r.introuvables.length > 1 ? 's' : ''}` : ''}`; }
     case 'edit': return `→ ${v.cible.gcblo} : ${Object.keys(CHAMPS).find(k => CHAMPS[k] === v.champ)} → ${v.valeur}`;
     case 'delete': return `→ suppression de ${v.cibles.length === 1 ? v.cibles[0].gcblo : n(v.cibles)} (confirmation)`;
     case 'set': {

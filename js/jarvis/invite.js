@@ -11,8 +11,7 @@
  * Clavier : Tab / → acceptent · ↑ ↓ parcourent (propositions, sinon historique)
  *           Entrée exécute (ou choisit la proposition sélectionnée) · Échap ferme puis vide.
  */
-import { analyser, criteresListe } from './analyse.js';
-import { chercherListe } from '../info.js';
+import { analyser, criteresListe, resultatLs } from './analyse.js';
 import { proposer, apercu } from './completion.js';
 import { esc } from './actions.js';
 import { STATUTS, typeParCode, statutParCode } from '../config.js';
@@ -55,7 +54,7 @@ export function creerInvite({ racine, contexte }) {
    * les commandes qui ne doivent pas faire défiler la console (open, set, edit, cancel, help).
    */
   const DANS_LE_VOLET = new Set(['open', 'set', 'edit', 'cancel', 'help', 'sauvegarde', 'restore', 'attachement', 'delete', 'affect', 'relance']);
-  const VIDE_LA_CONSOLE = new Set(['ls', 'info']);
+  const VIDE_LA_CONSOLE = new Set(['ls']);
   let sortie = ecranEl;
   const defiler = () => { sortie.scrollTop = sortie.scrollHeight; };
 
@@ -307,8 +306,7 @@ export function creerInvite({ racine, contexte }) {
   /** ls ou info ne trouveraient aucun dossier ? */
   function aucunResultat(analyse) {
     const ctx = contexte();
-    if (analyse.commande.id === 'ls') return !ctx.regles.filtrer(criteresListe(analyse.valeurs)).length;
-    if (analyse.commande.id === 'info') return !chercherListe(analyse.valeurs.liste, ctx.dossiers).trouves.length;
+    if (analyse.commande.id === 'ls') return !resultatLs(criteresListe(analyse.valeurs), ctx.regles, ctx.dossiers).liste.length;
     return false;
   }
 

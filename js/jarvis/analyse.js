@@ -19,6 +19,7 @@
 import { COMMANDES, MOTS_STATUT, MOTS_TYPE, MOTS_FILTRE, GROUPES, PERIODES, JOURS, CHAMPS, plat, commandeParVerbe } from './grammaire.js';
 import { FORMATS, typeParCode } from '../config.js';
 import { normaliserGcblo, etatRelance } from '../dossiers.js';
+import { chercherListe } from '../info.js';
 import { estEmail } from '../reglages.js';
 import { ajouterJours, ecartJours, estJour, versJour } from '../dates.js';
 
@@ -338,6 +339,25 @@ export function criteresListe(valeurs) {
   // Les dossiers Attach (attachement fait) ne s'affichent que si on les demande : « ls attach »
   c.masquer = c.statut.length ? [] : ['ATTACH'];
   return c;
+}
+
+/**
+ * Le résultat de « ls ». Si le texte contient au moins deux GCBLO (ou débuts de GCBLO, ex. SBA501023),
+ * c'est une liste collée (colonne Excel, mail…) : chaque GCBLO est cherché (info.js), dans l'ordre collé,
+ * Attach compris ; les autres filtres (affect, statut, date…) s'appliquent en plus.
+ * Sinon : le filtre habituel, trié par date, Attach masqués sauf « ls attach ».
+ *   → { liste, collee: résultat de chercherListe | null, masques }
+ */
+const MOTIF_DEBUT_GCBLO = /[A-Za-z]{3}\s*[-‐‑‒–—]?\s*\d{6}(?!\d)/g;
+export function resultatLs(criteres, regles, dossiers) {
+  if ((criteres.texte.match(MOTIF_DEBUT_GCBLO) || []).length >= 2) {
+    const collee = chercherListe(criteres.texte, dossiers);
+    return { liste: regles.filtrer({ ...criteres, texte: '', masquer: [] }, collee.trouves), collee, masques: 0 };
+  }
+  const liste = regles.trier(regles.filtrer(criteres), { cle: 'dateAffectation', sens: 'desc' });
+  // Combien de dossiers Attach sont masqués par ce filtre (visibles avec « ls attach »)
+  const masques = criteres.masquer.length ? regles.filtrer({ ...criteres, masquer: [], statut: criteres.masquer }).length : 0;
+  return { liste, collee: null, masques };
 }
 
 export { COMMANDES };

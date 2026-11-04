@@ -16,7 +16,7 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `ls [affects…] [statuts…] [dates…] [retard\|proches] [sans-fci|fci-retard] [sans-valo] [sans-affect] [texte]` (ex. `ls num21 sogetrel`, `ls 12/03`, `ls 03/2026`) ; les dossiers Attach n'apparaissent qu'avec `ls attach` | affiche les dossiers : affect, GCBLO, commune, valo, FCI, statut DFT (Attach : ligne en vert clair) |
 | `open ‹dossier›` | la fiche complète |
 | `set ‹dossiers› to ‹statut\|affect›` | change le statut DFT ou l'affect (ex. `set 501404 to refuse`, `set 501404 to air`) |
-| `info ‹GCBLO…›` | tapez `info ` puis collez une colonne de GCBLO, complets ou seulement leur début (`SBA501023`) : affiche ceux qui sont dans la base (comme `ls`) et liste les introuvables |
+| `ls ‹GCBLO collés…›` | tapez `ls ` puis collez une colonne de GCBLO (Excel, mail…), complets ou seulement leur début (`SBA501023`) : affiche ceux qui sont dans la base, dans l'ordre collé (Attach compris), et liste les introuvables. Se combine avec un filtre : `ls air` + colonne |
 | `edit ‹dossier› ‹champ› ‹valeur›` | modifie un champ (affect, statut, commune, valo, fci, affectation, relance, commentaire, gcblo) ; dans une fiche ou une liste, double-cliquer une valeur fait la même chose |
 | `delete ‹dossiers›` | supprime, après confirmation |
 | `import` | lit un classeur Excel : onglets 33, 16, 17, 79, 86, lignes `GCBLO` en colonne E, dossier en D, commune en G, valorisation en H, affect en I, FCI en J |
@@ -79,7 +79,7 @@ js/collage.js            lit une liste collée (Excel, mail, classeur robot)
 js/xlsx.js               lit un classeur Excel (.xlsx, .xlsm) et en écrit une copie modifiée, sans bibliothèque
 js/import-excel.js       quels dossiers et FCI prendre dans le classeur (commande import)
 js/attachement.js        quelles cellules remplir dans l'attachement d'un dossier
-js/info.js               retrouve les dossiers d'une liste collée (commande info)
+js/info.js               retrouve les dossiers d'une liste collée (ls avec une colonne de GCBLO)
 js/sauvegarde.js         nom, contenu et rotation des sauvegardes
 js/export-excel.js       registre-gcblo.csv (vers le classeur) · lecture de classeur-gcblo.csv
 excel/MajDepuisRegistre.bas  macro VBA du classeur IMMO-COORDI-DISSIM.xlsm
@@ -92,7 +92,7 @@ js/jarvis/actions.js     exécute une commande via les règles
 js/jarvis/menus.js       le menu ⋯ d'un dossier : des commandes écrites à l'avance
 js/jarvis/tableau-bord.js le tableau de bord ASCII, toujours visible à droite
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   221 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
+tests/                   225 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
 ```
 
 ## Classeur partagé IMMO-COORDI-DISSIM.xlsm

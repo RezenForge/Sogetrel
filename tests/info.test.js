@@ -37,3 +37,28 @@ groupe('info — liste collée', () => {
   test('débuts recollés bout à bout', () => egal(noms(chercherListe('SBA501023SBA501404', D)).length, 2));
   test('séparateurs : virgules, points-virgules, tabulations', () => egal(noms(chercherListe('SBA501404-THF010;SBA501423-THF010,\tLRO500768-THF010', D)).length, 3));
 });
+
+import { resultatLs, criteresListe, analyser } from '../js/jarvis/analyse.js';
+import { creerStore, supportMemoire } from '../js/store.js';
+import { creerDossiers } from '../js/dossiers.js';
+
+groupe('ls — colonne de GCBLO collée (ex-« info »)', () => {
+  const regles = creerDossiers(creerStore(supportMemoire()));
+  regles.creer({ type: 'AIR', gcblo: 'SBA501404-THF010' });
+  regles.creer({ type: 'NUM21', gcblo: 'LRO500767-THF010' });
+  const att = regles.creer({ type: 'AIR', gcblo: 'SBA501023-ACF011' }).dossier;
+  regles.modifier(att.id, { statutDft: 'ATTACH' });
+  const ls = texte => {
+    const dossiers = regles.filtrer({});
+    const a = analyser(texte, texte.length, { dossiers, aujourdhui: '2026-11-04', regles });
+    return resultatLs(criteresListe(a.valeurs), regles, dossiers);
+  };
+  test('deux GCBLO ou plus : liste collée, ordre collé, Attach compris, introuvables', () => {
+    const r = ls('ls GCBLO LRO500767-THF010 SBA501023 ABC123456-DEF789');
+    egal([r.liste.map(d => d.gcblo), r.collee.introuvables], [['LRO500767-THF010', 'SBA501023-ACF011'], ['ABC123456-DEF789']]);
+    egal(ls('ls SBA501023 LRO500767-THF010').liste.map(d => d.gcblo), ['SBA501023-ACF011', 'LRO500767-THF010']);   // début et GCBLO complet mélangés : ordre collé
+  });
+  test('avec un filtre en plus (affect)', () => egal(ls('ls air LRO500767-THF010 SBA501404-THF010').liste.map(d => d.gcblo), ['SBA501404-THF010']));
+  test('un seul GCBLO : ls habituel', () => { const r = ls('ls SBA501404'); egal([r.collee, r.liste.length], [null, 1]); });
+  test('la commande info n\'existe plus', () => egal(analyser('info SBA501404', 15, { dossiers: [], aujourdhui: '2026-11-04', regles }).commande, null));
+});

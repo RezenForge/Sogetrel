@@ -16,43 +16,47 @@ const MOTIF_GCBLO = /([A-Za-z]{3})\s*[-‐‑‒–—]?\s*(\d{6})\s*[-‐‑‒
 
 export function chercherListe(texte, dossiers) {
   const parCle = new Map(dossiers.map(d => [cle(d.gcblo), d]));
-  const trouves = [], introuvables = [], ambigus = [], vus = new Set();
+  const places = [], introuvables = [], ambigus = [], vus = new Set();   // places : [position dans le texte, dossier]
   let ignores = 0;
-  const ajouter = d => { if (!trouves.includes(d)) trouves.push(d); };
+  // Ce qui est reconnu est remplacé par autant d'espaces : les positions restent celles du texte collé
+  const blanc = m => ' '.repeat(m.length);
 
   // 1. Les GCBLO complets, cherchés dans tout le texte (une colonne collée bout à bout reste lisible)
-  const reste = String(texte ?? '').replace(MOTIF_GCBLO, (_, a, b, c, n) => {
+  const reste = String(texte ?? '').replace(MOTIF_GCBLO, (m, a, b, c, n, pos) => {
     const g = `${a}${b}-${c}${n}`.toUpperCase();
     if (!vus.has(g)) {
       vus.add(g);
       const d = parCle.get(cle(g));
-      if (d) ajouter(d); else introuvables.push(g);
+      if (d) places.push([pos, d]); else introuvables.push(g);
     }
-    return ' ';
+    return blanc(m);
   });
 
   // 2. Un début de GCBLO seul (« SBA501023 ») : les dossiers qui commencent ainsi (…-THF010, -THF011, -ACF010, -ACF011)
-  const reste2 = reste.replace(/([A-Za-z]{3})\s*[-‐‑‒–—]?\s*(\d{6})(?!\d)/g, (_, a, b) => {
+  const reste2 = reste.replace(/([A-Za-z]{3})\s*[-‐‑‒–—]?\s*(\d{6})(?!\d)/g, (m, a, b, pos) => {
     const debut = `${a}${b}`.toUpperCase();
     if (!vus.has(debut)) {
       vus.add(debut);
       const possibles = dossiers.filter(d => cle(d.gcblo).startsWith(debut));
-      if (possibles.length) possibles.forEach(ajouter); else introuvables.push(debut);
+      if (possibles.length) possibles.forEach(d => places.push([pos, d])); else introuvables.push(debut);
     }
-    return ' ';
+    return blanc(m);
   });
 
   // 3. Le reste : un morceau d'au moins 4 chiffres désigne un dossier s'il est seul à le contenir
-  for (const mot of reste2.split(/[\s,;|]+/).filter(Boolean)) {
+  for (const { 0: mot, index: pos } of reste2.matchAll(/[^\s,;|]+/g)) {
     const chiffres = mot.replace(/\D/g, '');
     if (chiffres.length >= 4 && chiffres === mot.replace(/[\s-]/g, '')) {
       if (vus.has(chiffres)) continue;
       vus.add(chiffres);
       const possibles = dossiers.filter(d => cle(d.gcblo).includes(chiffres));
-      if (possibles.length === 1) ajouter(possibles[0]);
+      if (possibles.length === 1) places.push([pos, possibles[0]]);
       else if (possibles.length > 1) ambigus.push(mot);
       else introuvables.push(mot);
     } else ignores++;
   }
+  // Dans l'ordre collé, sans doublon
+  const trouves = [];
+  for (const [, d] of places.sort((x, y) => x[0] - y[0])) if (!trouves.includes(d)) trouves.push(d);
   return { trouves, introuvables, ambigus, ignores };
 }

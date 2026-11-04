@@ -23,13 +23,12 @@
  *   ecrireDansDossier(dossier, nom, octets) → Promise  (écrit ou remplace un fichier dans ce dossier)
  *   ouvrirMail(lien)         ouvre un lien mailto: dans la messagerie
  */
-import { criteresListe } from './analyse.js';
+import { criteresListe, resultatLs } from './analyse.js';
 import { COMMANDES, SORTES, MOTS_TYPE, MOTS_STATUT, CHAMPS, plat } from './grammaire.js';
 import { lireDate } from './analyse.js';
 import { IMPORT_EXCEL } from '../config.js';
 import { lireClasseur, modifierClasseur, contientMacros } from '../xlsx.js';
 import { cellulesAttachement } from '../attachement.js';
-import { chercherListe } from '../info.js';
 import { mailAffectation, mailRelance, lienMailto, AFFECTS_MAIL } from '../mails.js';
 import { contenuSauvegarde, nomSauvegarde, lireSauvegarde, GARDER } from '../sauvegarde.js';
 import { extraireDossiers, appliquerImport } from '../import-excel.js';
@@ -65,11 +64,18 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
 
   const commandes = {
     ls(v) {
-      const criteres = criteresListe(v);
-      const liste = regles.trier(regles.filtrer(criteres), { cle: 'dateAffectation', sens: 'desc' });
-      // Combien de dossiers Attach sont masqués par ce filtre (visibles avec « ls attach »)
-      const masques = criteres.masquer.length ? regles.filtrer({ ...criteres, masquer: [], statut: criteres.masquer }).length : 0;
+      const { liste, collee, masques } = resultatLs(criteresListe(v), regles, store.tous());
       const note = masques ? ` · ${masques} attach masqué${masques > 1 ? 's' : ''}` : '';
+      if (collee) {
+        // Liste collée (colonne de GCBLO) : trouvés dans l'ordre collé, puis introuvables et ambigus
+        if (liste.length) ecran.tableau(liste);
+        const bilan = [pluriel(liste.length, 'trouvé', 'trouvés'), collee.introuvables.length && `${collee.introuvables.length} introuvable${collee.introuvables.length > 1 ? 's' : ''}`,
+          collee.ambigus.length && `${collee.ambigus.length} ambigu${collee.ambigus.length > 1 ? 's' : ''}`].filter(Boolean);
+        info(`<span class="dim">${bilan.join(' · ')}</span>`);
+        if (collee.introuvables.length) erreur(`introuvables : ${esc(collee.introuvables.slice(0, 15).join(', '))}${collee.introuvables.length > 15 ? ` … (+${collee.introuvables.length - 15})` : ''}`);
+        if (collee.ambigus.length) info(`<span class="dim">plusieurs dossiers possibles : ${esc(collee.ambigus.slice(0, 10).join(', '))}</span>`);
+        return;
+      }
       if (!liste.length) return info(store.tous().length ? `aucun dossier ne correspond${note}` : 'aucun dossier enregistré');
       ecran.tableau(liste);
       info(`<span class="dim">${pluriel(liste.length, 'dossier', 'dossiers')}${note}</span>`);
@@ -127,16 +133,6 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
     },
 
     /** Retrouve les dossiers d'une liste collée et affiche leurs infos (même liste que ls, éditable). */
-    info(v) {
-      const r = chercherListe(v.liste, store.tous());
-      if (r.trouves.length) ecran.tableau(r.trouves);
-      const bilan = [pluriel(r.trouves.length, 'trouvé', 'trouvés'), r.introuvables.length && `${r.introuvables.length} introuvable${r.introuvables.length > 1 ? 's' : ''}`,
-        r.ambigus.length && `${r.ambigus.length} ambigu${r.ambigus.length > 1 ? 's' : ''}`, r.ignores && `${r.ignores} mot${r.ignores > 1 ? 's' : ''} ignoré${r.ignores > 1 ? 's' : ''}`].filter(Boolean);
-      info(`<span class="dim">${bilan.join(' · ')}</span>`);
-      if (r.introuvables.length) erreur(`introuvables : ${esc(r.introuvables.slice(0, 15).join(', '))}${r.introuvables.length > 15 ? ` … (+${r.introuvables.length - 15})` : ''}`);
-      if (r.ambigus.length) info(`<span class="dim">plusieurs dossiers possibles : ${esc(r.ambigus.slice(0, 10).join(', '))}</span>`);
-    },
-
     /** Modifie un champ d'un dossier (aussi lancé par le double-clic dans une fiche). */
     edit(v) {
       const brut = v.valeur.trim().replace(/^"(.*)"$/, '$1');
