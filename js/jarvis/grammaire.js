@@ -44,7 +44,7 @@ export const COMMANDES = Object.freeze([
   { id: 'attachement', verbes: ['attachement'], resume: 'crée les attachements de dossiers',
     forme: 'attachement ‹dossiers|*|statut|fichier›',
     emplacements: [{ nom: 'cibles', sorte: 'attachement', multiple: true }] },
-  { id: 'sauvegarde', verbes: ['sauvegarde'], resume: 'sauvegarde la base dans un dossier', forme: 'sauvegarde [dossier]',
+  { id: 'save', verbes: ['save'], resume: 'sauvegarde la base dans un dossier', forme: 'save [folder]',
     emplacements: [{ nom: 'option', sorte: 'option-sauvegarde', optionnel: true }] },
   { id: 'restore', verbes: ['restore'], resume: 'recharge une sauvegarde', forme: 'restore', emplacements: [] },
   { id: 'cancel', verbes: ['cancel', 'undo'], resume: 'annule la dernière action', forme: 'cancel', emplacements: [] },
@@ -105,7 +105,7 @@ export const SORTES = Object.freeze({
   commande: 'une commande',
   gcblo: 'GCBLO existant ou nouveau (créé), ou morceau d\'un existant',
   'motif-relance': 'fci (numéro de commande) ou dft',
-  'option-sauvegarde': '« dossier » pour choisir un autre dossier de sauvegarde',
+  'option-sauvegarde': '« folder » pour choisir un autre dossier de sauvegarde',
   champ: 'date, affect, statut, commune, valo, fci, relance, commentaire, gcblo',
   'dossier-ou-fichier': 'un dossier, ou « fichier » pour choisir la référence',
   attachement: 'des dossiers, * (la liste affichée), un statut (tous ses dossiers), ou « fichier » pour choisir la référence'

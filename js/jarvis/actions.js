@@ -281,12 +281,12 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
     },
 
     /** Sauvegarde toute la base dans un dossier choisi ; seules les 10 plus récentes y sont gardées. */
-    async sauvegarde(v = {}) {
+    async save(v = {}) {
       const maintenant = new Date();
       const nom = nomSauvegarde(maintenant);
       // Le contenu est calculé au dernier moment : après la lecture de classeur-gcblo.csv (R14)
       let r;
-      try { r = await sauvegarderDans(nom, () => contenuSauvegarde(store.tous(), maintenant), { changer: v.option === 'dossier' }); } catch (e) { return erreur(`sauvegarde impossible : ${esc(e.message)}`); }
+      try { r = await sauvegarderDans(nom, () => contenuSauvegarde(store.tous(), maintenant), { changer: v.option === 'folder' }); } catch (e) { return erreur(`sauvegarde impossible : ${esc(e.message)}`); }
       if (r.etat === 'annule') return info('aucun dossier choisi');
       const n = store.tous().length;
       if (r.etat === 'telecharge') return ok(`${esc(nom)} téléchargé <span class="dim">· ${pluriel(n, 'dossier', 'dossiers')}</span>`);

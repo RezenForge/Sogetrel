@@ -26,7 +26,7 @@ groupe('Sauvegarde — tableau de bord', () => {
   test('ligne cliquable, largeur tenue', () => {
     const vide = { total: 0, parType: { NUM21: 0, AIR: 0, SOGETREL: 0 }, parStatut: { A_FAIRE: 0, EN_VALIDATION: 0, MAD: 0, REFUSE: 0, LITIGE: 0, ANNULE: 0, ATTACH: 0 }, retard: 0, proche: 0, sansFci: 0, aVenir: [0, 0, 0, 0, 0, 0, 0] };
     const r = dessinerTableauBord(vide, '2026-11-04', { derniereSauvegarde: null, maintenant: m });
-    vrai(r.html.includes('data-commande="sauvegarde"'));
+    vrai(r.html.includes('data-commande="save"'));
     egal(r.texte.filter(l => [...l].length !== LARGEUR), []);
   });
 });

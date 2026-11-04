@@ -135,7 +135,7 @@ export function dessinerTableauBord(s, jour, { derniereSauvegarde = undefined, m
     if (ouverte('synchro')) {
       if (derniereSauvegarde !== undefined) {
         const [texte, classe] = ageCourt(derniereSauvegarde, maintenant, { orange: 2, rouge: 24 });
-        lignes.push(rangee(['sauvegarde  ', 'dim', 'sauvegarde'], [texte, classe, 'sauvegarde']));
+        lignes.push(rangee(['sauvegarde  ', 'dim', 'save'], [texte, classe, 'save']));
       }
       if (classeur !== undefined) {
         const [texte, classe] = ageCourt(classeur, maintenant, { orange: 24, rouge: 72, jamais: 'dim' });

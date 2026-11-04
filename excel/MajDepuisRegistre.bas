@@ -73,7 +73,7 @@ Public Sub MajDepuisRegistre()
     If chemin = "" Then
         MsgBox "Aucun fichier choisi : rien n'a " & ChrW(233) & "t" & ChrW(233) & " fait." & vbCrLf & vbCrLf & _
                "Le fichier registre-gcblo.csv est " & ChrW(233) & "crit par le registre " & ChrW(224) & " chaque sauvegarde, " & _
-               "dans le dossier des sauvegardes. S'il n'y est pas, tapez sauvegarde dans le registre " & _
+               "dans le dossier des sauvegardes. S'il n'y est pas, tapez save dans le registre " & _
                "(apr" & ChrW(232) & "s Ctrl+F5 pour avoir la derni" & ChrW(232) & "re version de la page).", vbExclamation, TITRE
         Exit Sub
     End If

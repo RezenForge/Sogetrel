@@ -153,7 +153,7 @@ async function dossierConnu() {
 
 /*
  * Sauvegarde automatique toutes les SAUVEGARDE_AUTO_HEURES heures, tant que l'appli est ouverte,
- * dans le dernier dossier choisi avec « sauvegarde ». Le navigateur peut redemander l'autorisation
+ * dans le dernier dossier choisi avec « save ». Le navigateur peut redemander l'autorisation
  * d'écrire dans ce dossier (après une fermeture, par exemple) : il faut alors un clic, on le signale.
  */
 let autorisationSignalee = false, sauvegardeEnCours = false;
@@ -167,7 +167,7 @@ async function sauvegardeAutomatique() {
   sauvegardeEnCours = true;
   try {
     if (await dossier.queryPermission({ mode: 'readwrite' }) !== 'granted') {
-      if (!autorisationSignalee) invite.ecran.journal(`<span class="dim">sauvegarde automatique en attente : le navigateur redemande l'accès au dossier ·</span> <button type="button" class="lien c-verbe" data-commande="sauvegarde">sauvegarde</button>`, 'info');
+      if (!autorisationSignalee) invite.ecran.journal(`<span class="dim">sauvegarde automatique en attente : le navigateur redemande l'accès au dossier ·</span> <button type="button" class="lien c-verbe" data-commande="save">save</button>`, 'info');
       autorisationSignalee = true;
       return;
     }
@@ -271,7 +271,7 @@ const actions = creerActions({
   // Sauvegarde : on choisit un dossier (Chrome, Edge), le fichier y est écrit, et seules
   // les 10 sauvegardes les plus récentes y restent. Ailleurs : téléchargement simple.
   // Sauvegarde : on choisit un dossier (Chrome, Edge) ; il est retenu pour les sauvegardes automatiques
-  // Le dossier déjà choisi est réutilisé sans rien demander ; « sauvegarde dossier » (changer) en choisit un autre
+  // Le dossier déjà choisi est réutilisé sans rien demander ; « save folder » (changer) en choisit un autre
   sauvegarderDans: async (nom, texte, { changer = false } = {}) => {
     if (!window.showDirectoryPicker) {
       if (typeof texte === 'function') texte = texte();

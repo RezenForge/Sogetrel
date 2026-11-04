@@ -1,5 +1,5 @@
 /**
- * sauvegarde.js — le contenu et le nom des sauvegardes (commande « sauvegarde »).
+ * sauvegarde.js — le contenu et le nom des sauvegardes (commande « save »).
  *
  * Fonctions pures : l'écriture du fichier dans le dossier choisi (explorateur de
  * fichiers) est faite par main.js, qui seul touche au navigateur.
