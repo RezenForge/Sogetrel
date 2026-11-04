@@ -96,7 +96,9 @@ export function proposer(analyse, ctx) {
     case 'type': liste = commencePar(types(), mot); break;
     case 'filtre': liste = commencePar([...types(), ...statuts(),
       { inserer: 'retard ', libelle: 'retard', detail: 'relance en retard', sorte: 'valeur' },
-      { inserer: 'sans-fci ', libelle: 'sans-fci', detail: 'sans FCI', sorte: 'valeur' }], mot); break;
+      { inserer: 'proches ', libelle: 'proches', detail: 'relance sous 3 jours', sorte: 'valeur' },
+      { inserer: 'sans-fci ', libelle: 'sans-fci', detail: 'sans FCI', sorte: 'valeur' },
+      { inserer: 'sans-valo ', libelle: 'sans-valo', detail: 'sans valorisation', sorte: 'valeur' }], mot); break;
     case 'date': liste = commencePar(dates(ctx), mot); break;
     case 'ville': {
       // Villes déjà consultées, et la période dès qu'un nom de ville est commencé

@@ -13,7 +13,7 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 
 | Commande | Effet |
 | --- | --- |
-| `ls [affect] [statut] [retard] [sans-fci] [texte]` | affiche les dossiers : affect, GCBLO, commune, valo, FCI, statut DFT (Attach : ligne en vert clair) |
+| `ls [affect] [statut] [retard\|proches] [sans-fci] [sans-valo] [texte]` | affiche les dossiers : affect, GCBLO, commune, valo, FCI, statut DFT (Attach : ligne en vert clair) |
 | `open ‹dossier›` | la fiche complète |
 | `set ‹dossiers› to ‹statut\|affect›` | change le statut DFT ou l'affect (ex. `set 501404 to refuse`, `set 501404 to air`) |
 | `info ‹GCBLO…›` | tapez `info ` puis collez une colonne de GCBLO, complets ou seulement leur début (`SBA501023`) : affiche ceux qui sont dans la base (comme `ls`) et liste les introuvables |
@@ -83,5 +83,5 @@ js/jarvis/actions.js     exécute une commande via les règles
 js/jarvis/menus.js       le menu ⋯ d'un dossier : des commandes écrites à l'avance
 js/jarvis/tableau-bord.js le tableau de bord ASCII, toujours visible à droite
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   165 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
+tests/                   169 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
 ```

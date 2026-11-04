@@ -159,7 +159,7 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 
 | Commande | Forme | Exemple |
 | --- | --- | --- |
-| Afficher | `ls [type] [statut] [retard] [sans-fci] [texte]` (aussi `list`) | `ls air retard` |
+| Afficher | `ls [affect] [statut] [retard\|proches] [sans-fci] [sans-valo] [texte]` (aussi `list`) | `ls air retard` |
 | Ouvrir | `open ‹dossier›` | `open 501404` |
 | Changer le statut ou le type | `set ‹dossiers› to ‹statut\|type›` | `set 501404 to refuse` |
 | Infos d'une liste | `info ‹GCBLO…›` : coller une colonne de GCBLO, complets ou seulement leur début (`SBA501023`) ; affiche les dossiers trouvés comme `ls` (éditables), puis les introuvables | `info` + Ctrl+V |
@@ -186,6 +186,7 @@ Ce qui est cliquable :
 - **`⋯`** à côté d'un dossier → un menu court, construit selon l'état du dossier au moment du clic (`js/jarvis/menus.js`) : Ouvrir, puis les statuts où il peut passer (`→ Refusé`), et Supprimer en dernier (en rouge, avec confirmation). ;
 - **une valeur de la fiche** (`open`) **ou d'une liste** (`ls` : affect, commune, valo, FCI, relance, statut), au **double-clic** : elle devient une zone de saisie (une liste pour l'affect et le statut). Entrée ou un clic ailleurs valide, Échap annule. La validation lance `edit ‹gcblo› ‹champ› ‹valeur›` ; la fiche ou la liste se met à jour sur place ;
 - **`cancel`** dans le message qui suit une modification ;
+- **les libellés du tableau de bord** (nombre de dossiers, affects, statuts, attaché, sans valo, en retard, sous 3 jours, sans FCI) → `ls` filtré sur ce qu'ils désignent ;
 - **chaque commande** dans la liste de `help` → `help ‹commande›`.
 
 **Vues à jour** (04/11/2026, remplace le grisé) : quand un dossier change, les listes et fiches déjà affichées se mettent à jour sur place (mêmes dossiers, même ordre). Un dossier supprimé disparaît des listes ; sa fiche passe en grisé.
@@ -348,3 +349,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | Affichage téléphone abandonné (ordinateur seulement) ; tableau de bord ASCII toujours visible à droite (`js/jarvis/tableau-bord.js`) : affect, statut DFT, avancement, valorisation (total, attaché, à attacher), relances ; redessiné à chaque changement |
 | 04/11/2026 | Tableau de bord : chaque morceau posé dans une case de largeur fixe, les traits remplissent le reste ; le cadre reste droit quelle que soit la police |
 | 04/11/2026 | Volet sous le tableau de bord pour `open`, `set`, `edit`, `cancel` (la console ne défile plus) ; listes et fiches mises à jour sur place au lieu d'être grisées |
+| 04/11/2026 | Tableau de bord cliquable : chaque libellé lance `ls` filtré ; nouveaux filtres `proches` et `sans-valo` |

@@ -48,3 +48,21 @@ groupe('Statistiques — valorisation', () => {
     egal([v.total, v.parStatut.ATTACH, v.parStatut.A_FAIRE, v.sans], [89.9, 58.4, 31.5, 1]);
   });
 });
+
+groupe('Tableau de bord cliquable', () => {
+  const html = dessinerTableauBord(S, '2026-11-04').html;
+  const commandes = [...html.matchAll(/data-commande="([^"]+)"/g)].map(m => m[1]);
+  test('chaque affect et chaque statut lance ls', () => vrai(['ls num21', 'ls air', 'ls sogetrel', 'ls a-faire', 'ls en-validation', 'ls mis-a-dispo', 'ls refuse', 'ls litige', 'ls annule', 'ls attach'].every(c => commandes.includes(c))));
+  test('relances et valorisation aussi', () => vrai(['ls retard', 'ls proches', 'ls sans-fci', 'ls sans-valo', 'ls'].every(c => commandes.includes(c))));
+  test('toutes ces commandes sont comprises', async () => {
+    const { analyser } = await import('../js/jarvis/analyse.js');
+    const store = creerStore(supportMemoire()), regles = creerDossiers(store);
+    egal([...new Set(commandes)].filter(c => !analyser(c, c.length, { dossiers: [], aujourdhui: '2026-11-04', regles }).complet), []);
+  });
+  test('filtres proches et sans-valo', () => {
+    const r = creerDossiers(creerStore(supportMemoire()), { horloge: () => new Date(2026, 10, 4, 9) });
+    r.creer({ type: 'AIR', gcblo: 'SBA501001-THF010', dateRelance: '2026-11-05', valorisation: 30 });
+    r.creer({ type: 'AIR', gcblo: 'SBA501002-THF010', dateRelance: '2026-11-30' });
+    egal([r.filtrer({ proche: true }).length, r.filtrer({ sansValo: true })[0].gcblo], [1, 'SBA501002-THF010']);
+  });
+});

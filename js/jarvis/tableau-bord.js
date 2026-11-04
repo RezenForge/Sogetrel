@@ -17,6 +17,7 @@
 import { TYPES, STATUTS } from '../config.js';
 import { depuisJour, ajouterJours } from '../dates.js';
 import { formaterMontant } from '../dossiers.js';
+import { MOTS_TYPE, MOTS_STATUT, motPourCode } from './grammaire.js';
 
 export const LARGEUR = 40;
 const INTERIEUR = LARGEUR - 4;        // « │ » + contenu + « │ »
@@ -59,24 +60,24 @@ function rangee(...morceaux) {
   const reste = INTERIEUR - longueur(morceaux);
   return [['│ ', 'cadre'], ...morceaux, [' '.repeat(Math.max(0, reste)), ''], [' │', 'cadre']];
 }
-function rangeeBarre(libelle, n, total, classe) {
+function rangeeBarre(libelle, n, total, classe, commande) {
   const [p, v] = barre(n, total);
-  return rangee([libelle.slice(0, 10).padEnd(11), 'dim'], [p, classe], [v, 'vide'], [' ' + String(n).padStart(4), n ? classe : 'dim'], [pourcent(n, total).padStart(6), 'dim']);
+  return rangee([libelle.slice(0, 10).padEnd(11), 'dim', commande], [p, classe], [v, 'vide'], [' ' + String(n).padStart(4), n ? classe : 'dim'], [pourcent(n, total).padStart(6), 'dim']);
 }
 /** Libellé à gauche, montant aligné à droite. */
-const rangeeMontant = (libelle, montant, classe = 'fort') => rangee([libelle.padEnd(INTERIEUR - 16), 'dim'], [euros(montant).padStart(16), classe]);
+const rangeeMontant = (libelle, montant, classe = 'fort', commande) => rangee([libelle.padEnd(INTERIEUR - 16), 'dim', commande], [euros(montant).padStart(16), classe]);
 
 export function dessinerTableauBord(s, jour) {
   const date = depuisJour(jour).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' }).replace('.', '');
   const total = s.total;
   const lignes = [cadre('tableau de bord', date)];
-  lignes.push(rangee([String(total), 'fort'], [total > 1 ? ' dossiers' : ' dossier', 'dim']));
+  lignes.push(rangee([String(total), 'fort', 'ls'], [total > 1 ? ' dossiers' : ' dossier', 'dim', 'ls']));
 
   lignes.push(separation('affect'));
-  TYPES.forEach(t => lignes.push(rangeeBarre(t.libelle, s.parType[t.code], total, `ty-${t.code}`)));
+  TYPES.forEach(t => lignes.push(rangeeBarre(t.libelle, s.parType[t.code], total, `ty-${t.code}`, `ls ${motPourCode(MOTS_TYPE, t.code)}`)));
 
   lignes.push(separation('statut DFT'));
-  STATUTS.forEach(st => lignes.push(rangeeBarre(COURT[st.code] || st.libelle, s.parStatut[st.code], total, `st-${st.code}`)));
+  STATUTS.forEach(st => lignes.push(rangeeBarre(COURT[st.code] || st.libelle, s.parStatut[st.code], total, `st-${st.code}`, `ls ${motPourCode(MOTS_STATUT, st.code)}`)));
 
   // Avancement : la part des dossiers clos (mis à disposition, annulés, attachés)
   const clos = STATUTS.filter(st => st.clos).reduce((n, st) => n + s.parStatut[st.code], 0);
@@ -89,17 +90,17 @@ export function dessinerTableauBord(s, jour) {
     const attache = s.valo.parStatut.ATTACH || 0, annule = s.valo.parStatut.ANNULE || 0;
     lignes.push(separation('valorisation'));
     lignes.push(rangeeMontant('total', s.valo.total));
-    lignes.push(rangeeMontant('attaché', attache, attache ? 'st-ATTACH' : 'dim'));
+    lignes.push(rangeeMontant('attaché', attache, attache ? 'st-ATTACH' : 'dim', 'ls attach'));
     lignes.push(rangeeMontant('à attacher', Math.round((s.valo.total - attache - annule) * 100) / 100));
-    if (s.valo.sans) lignes.push(rangee(['sans valo'.padEnd(INTERIEUR - 16), 'dim'], [String(s.valo.sans).padStart(16), 'proche']));
+    if (s.valo.sans) lignes.push(rangee(['sans valo'.padEnd(INTERIEUR - 16), 'dim', 'ls sans-valo'], [String(s.valo.sans).padStart(16), 'proche']));
   }
 
   // Alertes et relances des 7 prochains jours
   lignes.push(separation('relances'));
   const points = (n, classe) => [['●'.repeat(Math.min(n, 10)) + (n > 10 ? '+' : ''), classe]];
-  lignes.push(rangee(['en retard   ', 'dim'], [String(s.retard).padStart(4) + ' ', s.retard ? 'retard' : 'dim'], ...points(s.retard, 'retard')));
-  lignes.push(rangee(['sous 3 jours', 'dim'], [String(s.proche).padStart(4) + ' ', s.proche ? 'proche' : 'dim'], ...points(s.proche, 'proche')));
-  lignes.push(rangee(['sans FCI    ', 'dim'], [String(s.sansFci).padStart(4), s.sansFci ? 'fort' : 'dim']));
+  lignes.push(rangee(['en retard   ', 'dim', 'ls retard'], [String(s.retard).padStart(4) + ' ', s.retard ? 'retard' : 'dim'], ...points(s.retard, 'retard')));
+  lignes.push(rangee(['sous 3 jours', 'dim', 'ls proches'], [String(s.proche).padStart(4) + ' ', s.proche ? 'proche' : 'dim'], ...points(s.proche, 'proche')));
+  lignes.push(rangee(['sans FCI    ', 'dim', 'ls sans-fci'], [String(s.sansFci).padStart(4), s.sansFci ? 'fort' : 'dim']));
   if (s.aVenir) {
     const initiales = s.aVenir.map((_, i) => depuisJour(ajouterJours(jour, i)).toLocaleDateString('fr-FR', { weekday: 'narrow' }).toUpperCase());
     const n = s.aVenir.reduce((a, b) => a + b, 0);
@@ -111,8 +112,9 @@ export function dessinerTableauBord(s, jour) {
   return {
     texte: lignes.map(l => l.map(([t]) => t).join('')),
     // Une ligne = une rangée de cases de largeur fixe ; les traits (fil) prennent la place restante
-    html: lignes.map(l => `<div class="bl">${l.map(([t, c]) => /\bfil\b/.test(c)
+    // Un morceau peut porter une commande (3e élément) : un clic la lance (un clic = une commande)
+    html: lignes.map(l => `<div class="bl">${l.map(([t, c, cmd]) => /\bfil\b/.test(c)
       ? `<span class="${c}">${esc('─'.repeat(LARGEUR))}</span>`
-      : `<span class="m ${c}" style="width:calc(${[...t].length} * var(--ch))">${esc(t)}</span>`).join('')}</div>`).join('')
+      : `<span class="m ${c}${cmd ? ' cliquable' : ''}" style="width:calc(${[...t].length} * var(--ch))"${cmd ? ` data-commande="${esc(cmd)}" title="${esc(cmd)}"` : ''}>${esc(t)}</span>`).join('')}</div>`).join('')
   };
 }

@@ -20,7 +20,7 @@
  */
 export const COMMANDES = Object.freeze([
   { id: 'ls', verbes: ['ls', 'list'], resume: 'liste les dossiers',
-    forme: 'ls [affect] [statut] [retard] [sans-fci] [texte]',
+    forme: 'ls [affect] [statut] [retard|proches] [sans-fci] [sans-valo] [texte]',
     emplacements: [{ nom: 'filtres', sorte: 'filtre', optionnel: true, multiple: true }] },
   { id: 'open', verbes: ['open'], resume: 'fiche d\'un dossier',
     forme: 'open ‹dossier›',
@@ -66,7 +66,7 @@ export const PERIODES = Object.freeze({ jour: 'jour', aujourdhui: 'jour', demain
 
 /** Groupes de dossiers utilisables à la place d'une référence (là où plusieurs dossiers sont acceptés). */
 export const GROUPES = Object.freeze({ retard: 'retard', proches: 'proche' });
-export const MOTS_FILTRE = Object.freeze({ retard: 'retard', 'en-retard': 'retard', 'sans-fci': 'sansFci', sansfci: 'sansFci' });
+export const MOTS_FILTRE = Object.freeze({ retard: 'retard', 'en-retard': 'retard', proches: 'proche', 'sans-fci': 'sansFci', sansfci: 'sansFci', 'sans-valo': 'sansValo', sansvalo: 'sansValo' });
 
 /**
  * Champs modifiables avec « edit » (et au double-clic dans une fiche) : mot affiché → champ du dossier.
@@ -89,7 +89,7 @@ export const SORTES = Object.freeze({
   'nouveau-gcblo': 'AAA000000-AAA000',
   type: 'num21, air ou sogetrel',
   'statut-ou-type': 'a-faire, en-validation, mis-a-dispo, refuse, ou un affect',
-  filtre: 'affect, statut, retard, sans-fci, texte',
+  filtre: 'affect, statut, retard, proches, sans-fci, sans-valo, texte',
   date: 'demain, lundi, +3, 12/11',
   fci: 'F + 11 chiffres',
   texte: 'texte libre',

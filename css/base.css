@@ -46,6 +46,9 @@ body {
 .tableau-bord .m { flex: none; display: inline-block; overflow: hidden; white-space: pre; }
 .tableau-bord .fil { flex: 1 1 0; min-width: 0; overflow: hidden; white-space: pre; }
 .tableau-bord .cadre { color: var(--pale); }
+/* Libellés cliquables : un clic lance « ls » sur ce qu'ils désignent */
+.tableau-bord .cliquable { cursor: pointer; }
+.tableau-bord .cliquable:hover { color: var(--texte); text-decoration: underline dotted 1px; text-underline-offset: 3px; }
 .tableau-bord .cadre-titre { color: var(--texte); font-weight: 700; }
 .tableau-bord .vide { color: var(--pale); opacity: .35; }
 .tableau-bord .fort { color: var(--texte); font-weight: 700; }
