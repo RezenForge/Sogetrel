@@ -5,7 +5,7 @@ Attribute VB_Name = "MajDepuisRegistre"
 ' Lit le fichier registre-gcblo.csv ecrit par le Registre a chaque sauvegarde
 ' (manuelle ou automatique toutes les 3 h), puis, sur les onglets 33, 16, 17, 79, 86,
 ' pour chaque ligne dont la colonne D est un GCBLO du registre
-' et dont la colonne E vaut "GCBLO" (ou deja "VALIDÉ GDP") :
+' et dont la colonne E vaut "GCBLO" (ou deja "FACTU") :
 '   - colonne J : "Numéro de commande FCI : <fci>" tenu a jour depuis le registre
 '       * registre sans FCI          -> la cellule n'est pas touchee
 '       * J contient deja un FCI du registre -> pas touchee (plusieurs lignes,
@@ -13,14 +13,15 @@ Attribute VB_Name = "MajDepuisRegistre"
 '       * sinon : le texte apres "Numéro de commande FCI :" est remplace,
 '         ou la mention est ajoutee a la fin si elle n'existe pas ;
 '         le reste du texte de J est garde
-'   - colonne E : "VALIDÉ GDP" pour les dossiers en Attach dans le registre
+'   - colonne E : "FACTU" pour les dossiers en Attach dans le registre
 '
-' Rien n'est efface. Chaque changement est note dans l'onglet "Journal registre"
-' (date, onglet, ligne, GCBLO, colonne, avant, apres, remarque). Les cas laisses de cote
-' (cellule protegee, formule...) y sont notes aussi.
-' A la fin, une fenetre "Compte rendu" montre ce qui a ete fait cette fois-ci
+' Rien n'est efface. Les cas laisses de cote (cellule protegee, formule...) sont signales.
+' A la fin, une fenetre "Compte rendu" montre ce qui a ete fait
 ' (vert = modifie, orange = laisse de cote, lien "voir" vers la cellule).
 ' Classeur temporaire jamais enregistre : il se ferme sans question.
+'
+' Relancer la macro ne change rien de plus : un FCI deja present et un "FACTU"
+' deja pose ne sont pas reecrits ("Tout est deja a jour").
 '
 ' Lancer : Alt+F8 > MajDepuisRegistre. La premiere fois, la macro demande ou se
 ' trouve registre-gcblo.csv ; le chemin est garde sur ce PC (pas dans le classeur).
@@ -33,19 +34,17 @@ Private Const COL_DOSSIER As String = "D"
 Private Const COL_FILTRE As String = "E"
 Private Const COL_FCI As String = "J"
 Private Const PREMIERE_LIGNE As Long = 2
-Private Const ONGLET_JOURNAL As String = "Journal registre"
 Private Const APPLI As String = "RegistreGCBLO"
 Private Const TITRE As String = "Mise a jour depuis le registre"
 
-Private journal As Worksheet
 Private nbModifs As Long
 Private nbIgnores As Long
 Private cible As Workbook           ' le classeur a mettre a jour (IMMO-COORDI-DISSIM)
 Private faits As Collection          ' ce que la macro a fait, pour la fenetre de compte rendu
 
 ' Textes avec accents, construits ici pour ne pas dependre de l'encodage du module
-Private Function ValideGdp() As String
-    ValideGdp = "VALID" & ChrW(201) & " GDP"
+Private Function Factu() As String
+    Factu = "FACTU"
 End Function
 
 Private Function MentionFci() As String
@@ -81,7 +80,6 @@ Public Sub MajDepuisRegistre()
     Application.EnableEvents = False
     On Error GoTo Fin
 
-    Set journal = FeuilleJournal()
     nbModifs = 0: nbIgnores = 0
     Set faits = New Collection
 
@@ -99,7 +97,7 @@ Public Sub MajDepuisRegistre()
                 If cle <> "" Then
                     If registre.Exists(cle) Then
                         filtre = UCase$(Trim$(CStr(ws.Cells(i, COL_FILTRE).Value)))
-                        If filtre = "GCBLO" Or filtre = UCase$(ValideGdp()) Then
+                        If filtre = "GCBLO" Or filtre = Factu() Then
                             vus = vus + 1
                             info = registre(cle)          ' (0) = FCI, (1) = code statut
 
@@ -110,9 +108,9 @@ Public Sub MajDepuisRegistre()
                                 If nouveauJ <> ancienJ Then Ecrire ws, i, COL_FCI, cle, ancienJ, nouveauJ
                             End If
 
-                            ' --- Colonne E : VALIDÉ GDP pour les dossiers Attach
+                            ' --- Colonne E : FACTU pour les dossiers Attach
                             If info(1) = "ATTACH" And filtre = "GCBLO" Then
-                                Ecrire ws, i, COL_FILTRE, cle, CStr(ws.Cells(i, COL_FILTRE).Value), ValideGdp()
+                                Ecrire ws, i, COL_FILTRE, cle, CStr(ws.Cells(i, COL_FILTRE).Value), Factu()
                             End If
                         End If
                     End If
@@ -137,8 +135,7 @@ Fin:
                vbInformation, TITRE
     Else
         If Not CompteRendu(bilan, erreur) Then
-            MsgBox Replace(bilan, "  " & ChrW(183) & "  ", vbCrLf) & erreur & vbCrLf & vbCrLf & _
-                   "D" & ChrW(233) & "tail : onglet " & ONGLET_JOURNAL, vbInformation, TITRE
+            MsgBox Replace(bilan, "  " & ChrW(183) & "  ", vbCrLf) & erreur, vbInformation, TITRE
         End If
     End If
 End Sub
@@ -214,18 +211,7 @@ End Sub
 
 Private Sub Noter(ws As Worksheet, ligne As Long, gcblo As String, colonne As String, _
                   avant As String, apres As String, remarque As String)
-    Dim r As Long
     faits.Add Array(ws.Name, ligne, gcblo, colonne, avant, apres, remarque)
-    r = journal.Cells(journal.Rows.Count, 1).End(xlUp).Row + 1
-    journal.Cells(r, 1).Value = Now
-    journal.Cells(r, 2).Value = "'" & ws.Name
-    journal.Cells(r, 3).Value = ligne
-    journal.Cells(r, 4).Value = gcblo
-    journal.Cells(r, 5).Value = colonne
-    journal.Cells(r, 6).Value = "'" & avant
-    journal.Cells(r, 7).Value = "'" & apres
-    journal.Cells(r, 8).Value = remarque
-    If journal.Cells(1, 8).Value = "" Then journal.Cells(1, 8).Value = "Remarque": journal.Cells(1, 8).Font.Bold = True
 End Sub
 
 '------------------------------------------------------------------------------
@@ -266,7 +252,7 @@ Private Function CompteRendu(bilan As String, erreur As String) As Boolean
 
     For Each f In faits
         r = r + 1: n = n + 1
-        If f(3) = COL_FCI Then quoi = "J " & ChrW(183) & " FCI" Else quoi = "E " & ChrW(183) & " " & ValideGdp()
+        If f(3) = COL_FCI Then quoi = "J " & ChrW(183) & " FCI" Else quoi = "E " & ChrW(183) & " " & Factu()
         ws.Cells(r, 1).Value = "'" & f(0)
         ws.Cells(r, 2).Value = f(1)
         ws.Cells(r, 3).Value = f(2)
@@ -302,21 +288,6 @@ Private Function CompteRendu(bilan As String, erreur As String) As Boolean
     CompteRendu = True
 End Function
 
-Private Function FeuilleJournal() As Worksheet
-    Dim ws As Worksheet
-    On Error Resume Next
-    Set ws = cible.Worksheets(ONGLET_JOURNAL)
-    On Error GoTo 0
-    If ws Is Nothing Then
-        Set ws = cible.Worksheets.Add(After:=cible.Worksheets(cible.Worksheets.Count))
-        ws.Name = ONGLET_JOURNAL
-        ws.Range("A1:G1").Value = Array("Date", "Onglet", "Ligne", "GCBLO", "Colonne", "Avant", "Apr" & ChrW(232) & "s")
-        ws.Range("H1").Value = "Remarque"
-        ws.Range("A1:H1").Font.Bold = True
-        ws.Columns("A").NumberFormat = "dd/mm/yyyy hh:mm"
-    End If
-    Set FeuilleJournal = ws
-End Function
 
 '------------------------------------------------------------------------------
 ' Lit registre-gcblo.csv (UTF-8, separateur ;). Colonnes reperees par leur en-tete.

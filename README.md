@@ -100,9 +100,10 @@ tests/                   217 tests (classeur d'essai fictif : tests/donnees) : r
 Le registre écrit `registre-gcblo.csv` à chaque sauvegarde (manuelle ou toutes les 3 h). La macro `MajDepuisRegistre` met le classeur à jour depuis ce fichier, sans rien effacer :
 
 - colonne **J** : `Numéro de commande FCI : ‹fci›` ;
-- colonne **E** : `VALIDÉ GDP` pour les dossiers en Attach ;
-- chaque changement est noté dans l'onglet *Journal registre* ;
+- colonne **E** : `FACTU` pour les dossiers en Attach ;
 - à la fin, une fenêtre « Compte rendu » montre ce qui a été fait (vert = modifié, orange = laissé de côté, lien « voir » vers la cellule). Elle se ferme sans demander d'enregistrer.
+
+La relancer ne change rien de plus : un FCI déjà présent et un `FACTU` déjà posé ne sont pas réécrits.
 
 **Installer la macro (une fois)** : dans le classeur, Alt+F11, *Fichier › Importer un fichier…*, choisir `excel/MajDepuisRegistre.bas`, enregistrer. **Lancer** : Alt+F8 › `MajDepuisRegistre`. La première fois, elle demande où est `registre-gcblo.csv` (le dossier des sauvegardes). `ChoisirCsvRegistre` permet d'en changer.
 

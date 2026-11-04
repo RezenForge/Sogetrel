@@ -3,7 +3,7 @@
  *
  * Écrit à chaque sauvegarde (manuelle ou automatique), dans le même dossier, toujours
  * sous le même nom. La macro « MajDepuisRegistre » du classeur IMMO-COORDI-DISSIM.xlsm
- * le lit et met à jour les colonnes J (FCI) et E (« VALIDÉ GDP » pour les dossiers Attach).
+ * le lit et met à jour les colonnes J (FCI) et E (« FACTU » pour les dossiers Attach).
  *
  * Format pensé pour Excel en français : séparateur « ; », UTF-8 avec BOM, une ligne par dossier.
  * La macro repère les colonnes par leur nom d'en-tête : l'ordre peut évoluer sans la casser.
