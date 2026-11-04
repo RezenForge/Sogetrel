@@ -54,7 +54,10 @@ function dossiers(mot, ctx, enCours, analyse) {
     .map(([mot_, etat]) => ({ mot_, n: ctx.dossiers.filter(d => etatRelance(d, ctx.aujourdhui) === etat).length, etat }))
     .filter(g => g.n && g.mot_.startsWith(plat(mot)))
     .map(g => ({ inserer: g.mot_ + ' ', libelle: g.mot_, detail: `${g.n} ${g.etat === 'retard' ? 'en retard' : 'sous 3 j'}`, sorte: 'valeur', alerte: g.etat === 'retard' ? 'retard' : null }));
-  return [...groupes, ...base.filter(d => !deja.has(d.id))
+  // « * » : la liste affichée (ls, info), là où plusieurs dossiers sont permis
+  const affichee = enCours.slot?.multiple ? ctx.listeAffichee?.() || [] : [];
+  const etoile = affichee.length && '*'.startsWith(mot) ? [{ inserer: '* ', libelle: '*', detail: `les ${affichee.length} dossiers affichés`, sorte: 'valeur' }] : [];
+  return [...etoile, ...groupes, ...base.filter(d => !deja.has(d.id))
     .sort((a, b) => score(a) - score(b) || a.gcblo.localeCompare(b.gcblo))
     .slice(0, MAX)
     .map(d => {
@@ -91,6 +94,9 @@ export function proposer(analyse, ctx) {
     case 'verbe': liste = verbes(mot, ctx); break;
     case 'mot': liste = [{ inserer: ec.slot.mot + ' ', libelle: ec.slot.mot, detail: '', sorte: 'mot' }]; break;
     case 'dossier': liste = dossiers(mot, ctx, ec, analyse); break;
+    case 'attachement': liste = [...commencePar([{ inserer: 'fichier ', libelle: 'fichier', detail: 'choisir la référence', sorte: 'valeur' },
+      ...STATUTS.map(st => ({ inserer: motPourCode(MOTS_STATUT, st.code) + ' ', libelle: motPourCode(MOTS_STATUT, st.code), detail: `tous les dossiers ${st.libelle}`, sorte: 'valeur' }))], mot),
+      ...dossiers(mot, ctx, ec, analyse)]; break;
     case 'dossier-ou-fichier': liste = [...commencePar([{ inserer: 'fichier ', libelle: 'fichier', detail: 'référence', sorte: 'valeur' }], mot), ...dossiers(mot, ctx, ec, analyse)]; break;
     case 'statut-ou-type': liste = commencePar([...statuts(), ...types()], mot); break;
     case 'type': liste = commencePar(types(), mot); break;
@@ -143,7 +149,10 @@ export function apercu(analyse, ctx) {
     case 'ls': return `→ ${n(ctx.regles.filtrer(criteresListe(v)))}`;
     case 'open': return `→ fiche de ${v.cible.gcblo}`;
     case 'import': return `→ onglets ${IMPORT_EXCEL.onglets.join(', ')}`;
-    case 'attachement': return v.cible.fichier ? '→ choisir la référence' : `→ ${v.cible.dossier.gcblo}.xlsx`;
+    case 'attachement': {
+      if (v.cibles.some(c => c.fichier)) return '→ choisir la référence';
+      return v.cibles.length === 1 ? `→ ${v.cibles[0].gcblo}.xlsx` : `→ ${v.cibles.length} attachements dans un dossier à choisir (confirmation)`;
+    }
     case 'info': { const r = chercherListe(v.liste, ctx.dossiers); return `→ ${pluriel(r.trouves.length, 'trouvé', 'trouvés')}${r.introuvables.length ? ` · ${r.introuvables.length} introuvable${r.introuvables.length > 1 ? 's' : ''}` : ''}`; }
     case 'edit': return `→ ${v.cible.gcblo} : ${Object.keys(CHAMPS).find(k => CHAMPS[k] === v.champ)} → ${v.valeur}`;
     case 'delete': return `→ suppression de ${v.cibles.length === 1 ? v.cibles[0].gcblo : n(v.cibles)} (confirmation)`;

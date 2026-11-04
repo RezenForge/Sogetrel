@@ -38,9 +38,9 @@ export const COMMANDES = Object.freeze([
     forme: 'delete ‹dossiers›',
     emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }] },
   { id: 'import', verbes: ['import'], resume: 'importe un classeur Excel', forme: 'import', emplacements: [] },
-  { id: 'attachement', verbes: ['attachement'], resume: 'crée l\'attachement d\'un dossier',
-    forme: 'attachement ‹dossier|fichier›',
-    emplacements: [{ nom: 'cible', sorte: 'dossier-ou-fichier' }] },
+  { id: 'attachement', verbes: ['attachement'], resume: 'crée les attachements de dossiers',
+    forme: 'attachement ‹dossiers|*|statut|fichier›',
+    emplacements: [{ nom: 'cibles', sorte: 'attachement', multiple: true }] },
   { id: 'sauvegarde', verbes: ['sauvegarde'], resume: 'sauvegarde la base dans un dossier', forme: 'sauvegarde', emplacements: [] },
   { id: 'restore', verbes: ['restore'], resume: 'recharge une sauvegarde', forme: 'restore', emplacements: [] },
   { id: 'cancel', verbes: ['cancel', 'undo'], resume: 'annule la dernière action', forme: 'cancel', emplacements: [] },
@@ -84,7 +84,7 @@ export const JOURS = Object.freeze(['dimanche', 'lundi', 'mardi', 'mercredi', 'j
 
 /** Ce que veut dire chaque « sorte » d'emplacement (affiché dans l'aide). */
 export const SORTES = Object.freeze({
-  dossier: 'GCBLO ou morceau (501404), retard, proches',
+  dossier: 'GCBLO ou morceau (501404), retard, proches, * (la liste affichée)',
   adresse: 'email ou aucun',
   ville: 'nom de ville',
   periode: 'jour, demain, semaine',
@@ -97,7 +97,8 @@ export const SORTES = Object.freeze({
   texte: 'texte libre',
   commande: 'une commande',
   champ: 'affect, statut, commune, valo, fci, affectation, relance, commentaire, gcblo',
-  'dossier-ou-fichier': 'un dossier, ou « fichier » pour choisir la référence'
+  'dossier-ou-fichier': 'un dossier, ou « fichier » pour choisir la référence',
+  attachement: 'des dossiers, * (la liste affichée), un statut (tous ses dossiers), ou « fichier » pour choisir la référence'
 });
 
 /* ---------------- Aides de lecture ---------------- */

@@ -68,8 +68,9 @@ groupe('Menu ⋯ : un clic = une commande', () => {
   });
   test('attachement puis supprimer en dernier', () => egal(options.slice(-2).map(o => o.commande), ['attachement LRO500767-THF010', 'delete LRO500767-THF010']));
   test('attachement : fichier ou dossier', () => {
-    egal(A('attachement fichier').a.valeurs.cible, { fichier: true });
-    egal(A('attachement 501404').a.valeurs.cible.dossier.gcblo, 'SBA501404-THF010');
+    egal(A('attachement fichier').a.valeurs.cibles, [{ fichier: true }]);
+    egal(A('attachement 501404').a.valeurs.cibles[0].gcblo, 'SBA501404-THF010');
+    egal(A('attachement refuse').a.valeurs.cibles.map(d => d.statutDft), ['REFUSE']);
     egal(P('attachement f').propositions[0].libelle, 'fichier');
   });
   test('le choix vise bien le statut annoncé', () => {

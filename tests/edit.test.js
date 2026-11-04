@@ -76,9 +76,12 @@ groupe('attachement → statut Attach', () => {
     await coffre.ecrire('attachement-reference', { nom: 'ref.xlsx', octets });
     const lignes = [];
     const ecran = { ligne: h => lignes.push(h), tableau() {}, fiche() {}, vider() {} };
-    const actions = creerActions({ regles, store, ecran, coffre, enregistrerFichier: async () => enregistrement, confirmer: async () => true, demander: async () => null });
-    const lancer = t => actions.executer(analyser(t, t.length, { dossiers: store.tous(), aujourdhui: '2026-11-04', regles }));
-    return { store, d, lancer, lignes };
+    const ecrits = new Map(), destination = { name: 'Attachements' };
+    let affichee = [];
+    const actions = creerActions({ regles, store, ecran, coffre, enregistrerFichier: async () => enregistrement, confirmer: async () => true, demander: async () => null,
+      choisirDossier: async () => destination, ecrireDansDossier: async (dossier, nom, octets) => { ecrits.set(nom, octets); } });
+    const lancer = t => actions.executer(analyser(t, t.length, { dossiers: store.tous(), aujourdhui: '2026-11-04', regles, listeAffichee: () => affichee }));
+    return { store, regles, d, lancer, lignes, ecrits, afficher: l => { affichee = l; } };
   };
   test('fichier enregistré : statut Attach, annulable', async () => {
     const e = await preparer('enregistre');
@@ -91,5 +94,61 @@ groupe('attachement → statut Attach', () => {
     const e = await preparer('annule');
     await e.lancer('attachement 501404');
     egal(e.store.parId(e.d.id).statutDft, 'A_FAIRE');
+  });
+});
+
+groupe('« * » et attachements en série', () => {
+  const preparerSerie = async () => {
+    const { lireClasseur } = await import('../js/xlsx.js');
+    const { coffreMemoire } = await import('../js/coffre.js');
+    const store = creerStore(supportMemoire());
+    const regles = creerDossiers(store, { horloge: () => new Date(2026, 10, 4, 9) });
+    ['SBA501401-THF010', 'SBA501402-THF010', 'SBA501403-THF010', 'SBA501404-THF010'].forEach((gcblo, i) => {
+      const d = regles.creer({ type: 'AIR', gcblo, commune: 'Mérignac', valorisation: i === 3 ? null : 30 }).dossier;
+      regles.modifier(d.id, { statutDft: i < 3 ? 'LITIGE' : 'MAD' });
+    });
+    const coffre = coffreMemoire();
+    const octets = new Uint8Array(await (await fetch(new URL('./donnees/attachement-reference.xlsx', import.meta.url))).arrayBuffer());
+    await coffre.ecrire('attachement-reference', { nom: 'ref.xlsx', octets });
+    const ecrits = new Map(), lignes = [];
+    let affichee = [];
+    const ecran = { ligne: h => lignes.push(h), tableau() {}, fiche() {}, vider() {} };
+    const actions = creerActions({ regles, store, ecran, coffre, confirmer: async () => true, demander: async () => null, enregistrerFichier: async () => 'enregistre',
+      choisirDossier: async () => ({ name: 'Attachements' }), ecrireDansDossier: async (dossier, nom, o) => { ecrits.set(nom, o); } });
+    const ctx = () => ({ dossiers: store.tous(), aujourdhui: '2026-11-04', regles, listeAffichee: () => affichee });
+    const lancer = t => { const a = analyser(t, t.length, ctx()); return actions.executer(a); };
+    return { store, regles, ecrits, lignes, lancer, ctx, afficher: l => { affichee = l; } };
+  };
+  test('* : la liste affichée', async () => {
+    const e = await preparerSerie();
+    e.afficher(e.regles.filtrer({ statut: 'LITIGE' }));
+    const a = analyser('set * to annule', 15, e.ctx());
+    egal(a.valeurs.cibles.length, 3);
+    await e.lancer('set * to annule');
+    egal(e.store.tous().filter(d => d.statutDft === 'ANNULE').length, 3);
+  });
+  test('* sans liste affichée : refusé clairement', async () => {
+    const e = await preparerSerie();
+    vrai(analyser('set * to annule', 15, e.ctx()).erreurs[0].includes('aucune liste affichée'));
+  });
+  test('attachement * : un fichier par dossier, tous en Attach, un seul cancel', async () => {
+    const e = await preparerSerie();
+    e.afficher(e.regles.filtrer({ statut: 'LITIGE' }));
+    await e.lancer('attachement *');
+    egal([...e.ecrits.keys()].sort(), ['SBA501401-THF010.xlsx', 'SBA501402-THF010.xlsx', 'SBA501403-THF010.xlsx']);
+    egal(e.store.tous().filter(d => d.statutDft === 'ATTACH').length, 3);
+    await e.lancer('cancel');
+    egal(e.store.tous().filter(d => d.statutDft === 'LITIGE').length, 3);
+  });
+  test('attachement litige : tous les dossiers de ce statut, dans le dossier choisi', async () => {
+    const e = await preparerSerie();
+    await e.lancer('attachement litige');
+    egal(e.ecrits.size, 3);
+  });
+  test('un seul dossier dans le statut : « Enregistrer sous » ; valorisation manquante signalée', async () => {
+    const e = await preparerSerie();
+    await e.lancer('attachement mis-a-dispo');
+    egal([e.ecrits.size, e.store.parGcblo('SBA501404-THF010').statutDft], [0, 'ATTACH']);
+    vrai(e.lignes.some(l => l.includes('valorisation vide')));
   });
 });

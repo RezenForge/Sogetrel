@@ -79,6 +79,7 @@ Un dossier **clos** n'a plus d'alerte de relance.
     - `attachement fichier` : on choisit le classeur d'attachement **de référence** (.xlsx ou .xlsm). Il est gardé dans le navigateur (IndexedDB) et resservira à chaque attachement, jusqu'au prochain `attachement fichier`.
     - `attachement ‹dossier›` : une copie de la référence est remplie, sur sa **première feuille** : **X5** = commune du dossier, **AG5** = date du jour (format date si la cellule en a un), **U6** = GCBLO.
     - Selon la **valorisation**, le palier le plus proche est coché : proche de **30** → `ANNEX` en A30 et `1` en AB30 ; proche de **60** → en plus `BLOCS` en A31 et `1` en AB31. « Proche » = à 15 au plus du palier (réglable). Sans valorisation, ou trop loin des deux paliers, les lignes 30-31 restent vides et c'est signalé.
+    - **En série** : `attachement *` (la liste affichée), `attachement ‹statut›` (tous les dossiers de ce statut) ou plusieurs dossiers : après confirmation, on choisit **un dossier de destination** et tous les fichiers y sont écrits (un fichier du même nom est remplacé). Les dossiers à vérifier (commune ou valorisation manquante, aucun palier) sont listés ; tous passent en Attach en une seule modification (un seul `cancel`).
     - L'explorateur de fichiers s'ouvre pour choisir **où enregistrer** le fichier, nommé `‹GCBLO›.xlsx` (ou `.xlsm` si la référence contient des macros). Les navigateurs qui ne savent pas ouvrir cet explorateur (téléphones, Firefox) le téléchargent.
     - Le reste du classeur (mise en forme, formules, macros) n'est pas touché ; Excel recalcule les formules à l'ouverture. Une ligne « Attachement créé » s'ajoute à l'historique du dossier, et le dossier **passe au statut Attach** (annulable avec `cancel` ; rien ne change si l'enregistrement est abandonné).
     - Cellules et paliers sont réglés dans `config.js` (`ATTACHEMENT`).
@@ -168,7 +169,7 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 | Supprimer | `delete ‹dossiers›` (aussi `rm`), confirmation demandée | `delete 501404` |
 | Annuler | `cancel` (aussi `undo`) : défait la dernière modification | `cancel` |
 | Importer | `import` : ouvre l'explorateur de fichiers, lit un classeur Excel (R10) | `import` |
-| Attachement | `attachement fichier` (choisir la référence) · `attachement ‹dossier›` (créer, R11) | `attachement 501404` |
+| Attachement | `attachement fichier` (choisir la référence) · `attachement ‹dossiers›` (créer, R11) ; plusieurs dossiers (`*`, un statut, une liste) : un dossier de destination pour tous les fichiers, confirmation | `attachement 501404`, `attachement *`, `attachement mis-a-dispo` |
 | Sauvegarder | `sauvegarde` : choisir un dossier ; fichier `gcblo-sauvegarde_AAAA-MM-JJ_HHhMM-SS.json` ; seules les **3 plus récentes** y restent (les plus anciennes sont supprimées, les autres fichiers jamais touchés) | `sauvegarde` |
 | Restaurer | `restore` : choisir une sauvegarde (l'explorateur s'ouvre dans le dossier des sauvegardes) ; remplace toute la base après confirmation ; annulable (`cancel`) ; les dossiers illisibles ou en double sont ignorés | `restore` |
 | Vider l'écran | `clear` | `clear` |
@@ -197,9 +198,11 @@ Ce qui est cliquable :
 
 **Sauvegarde** (04/11/2026) : les dossiers n'existent que dans le navigateur ; `sauvegarde` en écrit une copie dans un dossier choisi (Chrome, Edge ; ailleurs, téléchargement). Le tableau de bord affiche la date de la dernière sauvegarde (rouge au-delà de 7 jours, cliquable). **Sauvegarde automatique toutes les 3 heures** (`SAUVEGARDE_AUTO_HEURES`), tant que l'appli est ouverte, dans le dernier dossier choisi avec `sauvegarde` (retenu dans le navigateur). Si le navigateur redemande l'autorisation d'écrire dans ce dossier (après une fermeture, par exemple), un message cliquable le signale une fois dans le volet : un clic sur `sauvegarde` suffit.
 
+**`*` = la liste affichée** (04/11/2026) : partout où plusieurs dossiers sont permis (`set`, `delete`, `attachement`), `*` désigne tous les dossiers de la dernière liste affichée dans la console (`ls`, `info`), comme le `*` des terminaux. Exemple : `ls litige` puis `set * to annule` (confirmation au-delà de 3 dossiers).
+
 **Console vidée** (04/11/2026) : `ls` (`list`) et `info` vident la console, qui ne montre que la liste et son bilan ; la commande elle-même s'écrit dans le volet de droite, comme les autres (même lancée d'un clic sur le tableau de bord). Sans aucun résultat, tout s'affiche dans le volet et la liste déjà affichée reste en place.
 
-**Volet de droite** (04/11/2026) : `open`, `set`, `edit` (donc le double-clic), `cancel` et `help` s'affichent sous le tableau de bord, dans un volet qui défile seul ; la console ne bouge pas.
+**Volet de droite** (04/11/2026) : `open`, `set`, `edit` (donc le double-clic), `cancel`, `help`, `sauvegarde`, `restore`, `attachement` et `delete` s'affichent sous le tableau de bord, dans un volet qui défile seul ; la console ne bouge pas.
 
 Pas de barre d'outils fixe : les clics restent à l'intérieur de ce que la console affiche.
 
@@ -366,3 +369,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | `backup` retiré (malentendu : c'était `restore`) ; commande `restore` |
 | 04/11/2026 | Clic droit sur un GCBLO ou un FCI : copie dans le presse-papiers |
 | 04/11/2026 | `ls` : plusieurs affects ou statuts s'ajoutent (`ls num21 sogetrel`, `ls litige attach`) ; catégories différentes combinées (`ls air litige`) |
+| 04/11/2026 | `*` = la liste affichée (`set * to annule`) ; attachements en série dans un dossier choisi (`attachement *`, `attachement mis-a-dispo`) ; `attachement` et `delete` dans le volet |

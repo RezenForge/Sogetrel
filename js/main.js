@@ -49,6 +49,8 @@ const invite = creerInvite({
     regles,
     reglages,
     recents,
+    // « * » : les dossiers de la dernière liste affichée dans la console (ls, info)
+    listeAffichee: () => invite.listeAffichee(),
     // Les commandes utilisées récemment remontent en tête des propositions
     memoriser: id => { const i = recents.indexOf(id); if (i >= 0) recents.splice(i, 1); recents.unshift(id); }
   })
@@ -140,10 +142,10 @@ const actions = creerActions({
     });
   },
   // « Enregistrer sous » : l'explorateur de fichiers si le navigateur le permet (Chrome, Edge sur ordinateur), sinon téléchargement
-  enregistrerFichier: async (nom, octets) => {
+  enregistrerFichier: async (nom, octets, { telecharger = false } = {}) => {
     const xlsm = /\.xlsm$/i.test(nom);
     const type = xlsm ? 'application/vnd.ms-excel.sheet.macroEnabled.12' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-    if (window.showSaveFilePicker) {
+    if (window.showSaveFilePicker && !telecharger) {
       await avantExplorateur();
       try {
         const poignee = await window.showSaveFilePicker({ suggestedName: nom, types: [{ description: 'Classeur Excel', accept: { [type]: [xlsm ? '.xlsm' : '.xlsx'] } }] });
@@ -162,6 +164,18 @@ const actions = creerActions({
     return 'telecharge';
   },
   coffre,
+  // Plusieurs fichiers d'un coup (attachements en série) : on choisit un dossier de destination
+  choisirDossier: async id => {
+    if (!window.showDirectoryPicker) return 'telechargement';
+    await avantExplorateur();
+    try { const d = await window.showDirectoryPicker({ id, mode: 'readwrite' }); invite.focus(); return d; }
+    catch (e) { invite.focus(); if (e.name === 'AbortError') return null; throw e; }
+  },
+  ecrireDansDossier: async (dossier, nom, octets) => {
+    const fichier = await dossier.getFileHandle(nom, { create: true });
+    const flux = await fichier.createWritable();
+    await flux.write(octets); await flux.close();
+  },
   // Restaurer : l'explorateur s'ouvre dans le dossier des sauvegardes quand le navigateur le permet
   choisirSauvegarde: async () => {
     let dossier = null;

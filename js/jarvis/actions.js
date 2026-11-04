@@ -19,6 +19,8 @@
  *   coffre                   fichiers gardés dans le navigateur (la référence d'attachement)
  *   sauvegarderDans(nom, texte) → Promise<{ etat: 'enregistre'|'telecharge'|'annule', dossier?, supprimes? }>
  *   choisirSauvegarde()      → Promise<File|null>  (explorateur, ouvert si possible dans le dossier des sauvegardes)
+ *   choisirDossier(id)       → Promise<dossier|'telechargement'|null>  (explorateur de dossiers ; null = abandon)
+ *   ecrireDansDossier(dossier, nom, octets) → Promise  (écrit ou remplace un fichier dans ce dossier)
  */
 import { criteresListe } from './analyse.js';
 import { COMMANDES, SORTES, MOTS_TYPE, MOTS_STATUT, CHAMPS, plat } from './grammaire.js';
@@ -38,7 +40,7 @@ const SEUIL_CONFIRMATION = 3;
 /** Le mot « cancel », cliquable : un clic lance la commande. */
 const LIEN_ANNULE = '<button type="button" class="lien c-verbe" data-commande="cancel">cancel</button>';
 
-export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre, sauvegarderDans, choisirSauvegarde }) {
+export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre, sauvegarderDans, choisirSauvegarde, choisirDossier, ecrireDansDossier }) {
   let annulation = null;       // { libelle, faire() } : de quoi défaire la dernière modification
 
   // Comme les outils Linux : un succès s'écrit simplement, une erreur est préfixée du nom du programme
@@ -154,8 +156,14 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
     },
 
     /** R11 — « attachement fichier » choisit la référence ; « attachement ‹dossier› » crée l'attachement. */
+    /**
+     * R11 — « attachement fichier » choisit la référence ; « attachement ‹dossiers› » crée les attachements.
+     * Un seul dossier : on choisit où enregistrer le fichier. Plusieurs (*, un statut, une liste) :
+     * on choisit un dossier de destination, tous les fichiers y sont écrits. Chaque dossier passe en Attach.
+     */
     async attachement(v) {
-      if (v.cible.fichier) {
+      if (v.cibles.some(c => c.fichier)) {
+        if (v.cibles.length > 1) return erreur('« fichier » s\'utilise seul : attachement fichier');
         const fichier = await choisirFichier('.xlsx,.xlsm');
         if (!fichier) return info('aucun fichier choisi');
         const octets = new Uint8Array(await fichier.arrayBuffer());
@@ -165,22 +173,50 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       }
       const ref = await coffre.lire('attachement-reference');
       if (!ref) return erreur('aucune référence · attachement fichier');
-      const d = store.parId(v.cible.dossier.id) || v.cible.dossier;
-      const { cellules, palier, avertissements } = cellulesAttachement(d, regles.aujourdhui());
-      avertissements.forEach(a => info(`<span class="dim">${esc(a)}</span>`));
-      let octets;
-      try { octets = await modifierClasseur(ref.octets, { cellules }); } catch (e) { return erreur(esc(e.message)); }
-      // Avec macros, le fichier doit s'appeler .xlsm, sinon Excel refuse de l'ouvrir
-      const nom = `${d.gcblo}.${contientMacros(ref.octets) ? 'xlsm' : 'xlsx'}`;
-      const r = await enregistrerFichier(nom, octets);
-      if (r === 'annule') return info('non enregistré');
-      regles.noterAttachement(d.id, palier?.nom);
-      // Attachement fait : le dossier passe au statut Attach (annulable)
-      const m = regles.modifier(d.id, { statutDft: 'ATTACH' });
-      const passe = m.ok && !m.inchange;
-      if (passe) annulation = { libelle: `statut Attach de ${d.gcblo}`, faire: () => regles.restaurer([m.avant]) };
-      ok(`${esc(nom)} ${r === 'telecharge' ? 'téléchargé' : 'enregistré'}${palier ? ` <span class="dim">· ${esc(palier.nom)}</span>` : ''}`
-        + (passe ? ` <span class="dim">·</span> statut → <span class="st-ATTACH">Attach</span> <span class="dim">·</span> ${LIEN_ANNULE}` : ''));
+      const extension = contientMacros(ref.octets) ? 'xlsm' : 'xlsx';      // avec macros : .xlsm, sinon Excel refuse
+      const dossiers = v.cibles.map(c => store.parId(c.id) || c);
+      const fabriquer = async d => {
+        const { cellules, palier, avertissements } = cellulesAttachement(d, regles.aujourdhui());
+        return { d, palier, avertissements, nom: `${d.gcblo}.${extension}`, octets: await modifierClasseur(ref.octets, { cellules }) };
+      };
+      // Statut Attach pour les dossiers faits, en une seule modification (un seul cancel)
+      const passerEnAttach = faits => {
+        faits.forEach(f => regles.noterAttachement(f.d.id, f.palier?.nom));
+        const m = regles.modifierPlusieurs(faits.map(f => f.d.id), { statutDft: 'ATTACH' });
+        if (m.ok && m.modifies) annulation = { libelle: `statut Attach de ${pluriel(m.modifies, 'dossier', 'dossiers')}`, faire: () => regles.restaurer(m.avant) };
+        return m.ok ? m.modifies : 0;
+      };
+      const finStatut = n => (n ? ` <span class="dim">·</span> statut → <span class="st-ATTACH">Attach</span> <span class="dim">·</span> ${LIEN_ANNULE}` : '');
+
+      // Un seul dossier : « Enregistrer sous »
+      if (dossiers.length === 1) {
+        let f;
+        try { f = await fabriquer(dossiers[0]); } catch (e) { return erreur(esc(e.message)); }
+        f.avertissements.forEach(a => info(`<span class="dim">${esc(a)}</span>`));
+        const r = await enregistrerFichier(f.nom, f.octets);
+        if (r === 'annule') return info('non enregistré');
+        const n = passerEnAttach([f]);
+        return ok(`${esc(f.nom)} ${r === 'telecharge' ? 'téléchargé' : 'enregistré'}${f.palier ? ` <span class="dim">· ${esc(f.palier.nom)}</span>` : ''}${finStatut(n)}`);
+      }
+
+      // Plusieurs dossiers : un dossier de destination pour tous les fichiers
+      if (!(await confirmer(`créer ${dossiers.length} attachements (${dossiers.slice(0, 3).map(d => d.gcblo).join(', ')}${dossiers.length > 3 ? '…' : ''}) ?`))) return info('aucun attachement créé');
+      const destination = await choisirDossier('gcblo-attachements');
+      if (destination === null) return info('aucun dossier choisi');
+      const faits = [], echecs = [], sansPalier = [];
+      for (const d of dossiers) {
+        try {
+          const f = await fabriquer(d);
+          if (destination === 'telechargement') await enregistrerFichier(f.nom, f.octets, { telecharger: true });
+          else await ecrireDansDossier(destination, f.nom, f.octets);
+          if (!f.palier || f.avertissements.length) sansPalier.push(d.gcblo);
+          faits.push(f);
+        } catch (e) { echecs.push(`${d.gcblo} (${e.message})`); }
+      }
+      const n = passerEnAttach(faits);
+      ok(`${pluriel(faits.length, 'attachement créé', 'attachements créés')}${destination === 'telechargement' ? ' (téléchargés)' : ` <span class="dim">· dans ${esc(destination.name)}</span>`}${finStatut(n)}`);
+      if (sansPalier.length) info(`<span class="dim">à vérifier (commune ou valorisation manquante, ou aucun palier) : ${esc(sansPalier.join(', '))}</span>`);
+      if (echecs.length) erreur(`échec : ${esc(echecs.join(', '))}`);
     },
 
     /** Sauvegarde toute la base dans un dossier choisi ; seules les 3 plus récentes y sont gardées. */

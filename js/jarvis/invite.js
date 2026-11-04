@@ -54,7 +54,7 @@ export function creerInvite({ racine, contexte }) {
    * Où s'écrit la sortie : la console, ou le volet de droite (sous le tableau de bord) pour
    * les commandes qui ne doivent pas faire défiler la console (open, set, edit, cancel, help).
    */
-  const DANS_LE_VOLET = new Set(['open', 'set', 'edit', 'cancel', 'help', 'sauvegarde', 'restore']);
+  const DANS_LE_VOLET = new Set(['open', 'set', 'edit', 'cancel', 'help', 'sauvegarde', 'restore', 'attachement', 'delete']);
   const VIDE_LA_CONSOLE = new Set(['ls', 'info']);
   let sortie = ecranEl;
   const defiler = () => { sortie.scrollTop = sortie.scrollHeight; };
@@ -544,6 +544,14 @@ export function creerInvite({ racine, contexte }) {
       });
     },
     rafraichir,
+    /** Les dossiers de la dernière liste affichée dans la console (pour « * »), dans l'ordre affiché. */
+    listeAffichee() {
+      const vues = ecranEl.querySelectorAll('.vue[data-liste]');
+      const vue = vues[vues.length - 1];
+      if (!vue?.dataset.liste) return [];
+      const parId = new Map(contexte().dossiers.map(d => [d.id, d]));
+      return vue.dataset.liste.split(',').map(i => parId.get(i)).filter(Boolean);
+    },
     /** Lance une commande comme si elle avait été tapée (utilisé par les clics). */
     lancer,
     focus: () => champ.focus()
