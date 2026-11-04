@@ -40,6 +40,8 @@ export const FORMATS = Object.freeze({
 /** Délais de relance, en jours. */
 /** R13 — Un dossier affecté reste sans FCI plus de N jours après sa date : le FCI s'affiche en rouge clair. */
 export const FCI_ATTENDU_JOURS = 1;
+/** Après une relance FCI, la case passe en orange pendant N jours (le jour de la relance compris), puis redevient rouge. */
+export const FCI_RELANCE_JOURS = 2;
 
 export const RELANCE = Object.freeze({
   joursProches: 3,      // « relance proche » : aujourd'hui ou dans les 3 jours

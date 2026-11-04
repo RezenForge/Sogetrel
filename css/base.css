@@ -122,6 +122,9 @@ pre { margin: 0; font: inherit; white-space: pre; }
 /* R13 : FCI attendu depuis plus de 24 h (affecté, toujours sans FCI) */
 .fci-retard { background: var(--fond-fci-retard); }
 .fci-retard:hover { background: var(--fond-fci-retard); outline: 1px solid var(--retard); }
+/* Relancé il y a moins de 2 jours : orange */
+.fci-relance { background: var(--fond-fci-relance); }
+.fci-relance:hover { background: var(--fond-fci-relance); outline: 1px solid var(--proche); }
 .edition {
   font: inherit; color: var(--texte); background: var(--fond-menu); border: 1px solid var(--pale);
   padding: 0 4px; margin: -1px 0; border-radius: 2px; outline: none; max-width: calc(100vw - 14ch - 40px);

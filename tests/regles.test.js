@@ -384,3 +384,17 @@ groupe('ls : dossiers Attach masqués', () => {
     egal([n('ls'), n('ls air'), n('ls attach'), n('ls attach litige'), n('ls litige')], [2, 2, 2, 3, 1]);
   });
 });
+
+groupe('R13 — Case FCI orange après une relance', () => {
+  test('rouge, orange le jour de la relance et le lendemain, rouge ensuite', async () => {
+    const { etatFci } = await import('../js/dossiers.js');
+    const d = jourRelance => ({ type: 'NUM21', dateAffectation: '2026-11-01', fci: [], statutDft: 'A_FAIRE',
+      historique: jourRelance ? [{ date: new Date(`${jourRelance}T10:00:00`).toISOString(), action: 'mail', detail: 'Relance FCI préparée' }] : [] });
+    egal([etatFci(d(null), '2026-11-04'), etatFci(d('2026-11-04'), '2026-11-04'), etatFci(d('2026-11-03'), '2026-11-04'), etatFci(d('2026-11-02'), '2026-11-04')],
+      ['retard', 'relance', 'relance', 'retard']);
+  });
+  test('une relance DFT ne compte pas', async () => {
+    const { etatFci } = await import('../js/dossiers.js');
+    egal(etatFci({ type: 'AIR', dateAffectation: '2026-11-01', fci: [], statutDft: 'A_FAIRE', historique: [{ date: new Date().toISOString(), action: 'mail', detail: 'Relance DFT préparée' }] }, '2026-11-04'), 'retard');
+  });
+});

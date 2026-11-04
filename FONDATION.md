@@ -92,7 +92,7 @@ Un dossier **clos** n'a plus d'alerte de relance.
     - **Objets** : `Affectation GCBLO ‹affect› | ‹GCBLO›`, `Relance GCBLO ‹affect› | ‹GCBLO›`, `Relance GCBLO DFT ‹affect› | ‹GCBLO›`. Les textes sont dans `js/mails.js` (vouvoiement pour NUM21, tutoiement « Jérémie » pour AIR).
     - Le volet résume le mail (lien pour le rouvrir, destinataires, copie) ; l'historique du dossier note « Mail d'affectation préparé » ou « Relance FCI/DFT préparée ». L'envoi reste fait à la main dans la messagerie.
 
-13. **FCI attendu** : un dossier **affecté** (affect et date) qui n'a **toujours pas de FCI 24 h après sa date** (le lendemain) et n'est pas clos voit sa case FCI passer en **rouge clair** (liste et fiche). Le tableau de bord compte ces dossiers (« FCI > 24 h », cliquable) ; `ls fci-retard` les liste ; c'est le moment d'un `relance ‹dossier› fci` : un **clic droit sur la case rouge** le lance. Délai réglable : `FCI_ATTENDU_JOURS` dans `config.js`.
+13. **FCI attendu** : un dossier **affecté** (affect et date) qui n'a **toujours pas de FCI 24 h après sa date** (le lendemain) et n'est pas clos voit sa case FCI passer en **rouge clair** (liste et fiche). Le tableau de bord compte ces dossiers (« FCI > 24 h », cliquable) ; `ls fci-retard` les liste ; c'est le moment d'un `relance ‹dossier› fci` : un **clic droit sur la case rouge** le lance. Après une relance FCI (clic droit ou commande), la case passe en **orange pendant 2 jours** (le jour de la relance et le lendemain), puis redevient rouge si le FCI n'est toujours pas arrivé (`FCI_RELANCE_JOURS`). La date de relance est lue dans l'historique du dossier. Délai réglable : `FCI_ATTENDU_JOURS` dans `config.js`.
 
 Toutes ces règles vivent dans **un seul fichier** (`js/dossiers.js`), et chacune a un test.
 
@@ -390,3 +390,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | Commande introuvable ou incomplète : le message va dans le volet |
 | 04/11/2026 | Clic droit sur une case FCI rouge : `relance ‹gcblo› fci` |
 | 04/11/2026 | `ls` masque les dossiers Attach sauf `ls attach` (le bilan indique combien sont masqués) |
+| 04/11/2026 | Case FCI orange pendant 2 jours après une relance FCI, puis rouge à nouveau |

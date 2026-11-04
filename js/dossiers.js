@@ -14,8 +14,8 @@
  *   const regles = creerDossiers(store);                       // en temps normal
  *   const regles = creerDossiers(store, { horloge: () => d }); // tests : heure fixe
  */
-import { TYPES, STATUTS, STATUT_PAR_DEFAUT, FORMATS, RELANCE, EMAIL, FCI_ATTENDU_JOURS, typeParCode, statutParCode } from './config.js';
-import { aujourdhui, ajouterJours, ecartJours, estJour, formater } from './dates.js';
+import { TYPES, STATUTS, STATUT_PAR_DEFAUT, FORMATS, RELANCE, EMAIL, FCI_ATTENDU_JOURS, FCI_RELANCE_JOURS, typeParCode, statutParCode } from './config.js';
+import { aujourdhui, ajouterJours, ecartJours, estJour, formater, versJour } from './dates.js';
 
 /* ---------------- Lecture et nettoyage des saisies ---------------- */
 
@@ -69,6 +69,22 @@ const PAR_DEFAUT = Object.freeze({ commune: '', valorisation: null, type: null }
 export function fciEnRetard(d, jour) {
   return !!(d.type && d.dateAffectation && !d.fci.length && !statutParCode(d.statutDft)?.clos
     && ecartJours(d.dateAffectation, jour) <= -FCI_ATTENDU_JOURS);
+}
+
+/** Le jour (« AAAA-MM-JJ ») de la dernière relance FCI préparée, d'après l'historique ; null sinon. */
+export function derniereRelanceFci(d) {
+  const e = [...(d.historique || [])].reverse().find(h => h.action === 'mail' && /^Relance FCI/.test(h.detail));
+  return e ? versJour(new Date(e.date)) : null;
+}
+
+/**
+ * R13 — État de la case FCI : 'retard' (rouge), 'relance' (orange : relancé il y a moins de
+ * FCI_RELANCE_JOURS jours, le jour même compris), ou null (rien à signaler).
+ */
+export function etatFci(d, jour) {
+  if (!fciEnRetard(d, jour)) return null;
+  const r = derniereRelanceFci(d);
+  return r && ecartJours(r, jour) > -FCI_RELANCE_JOURS ? 'relance' : 'retard';
 }
 
 export function etatRelance(dossier, jour) {
