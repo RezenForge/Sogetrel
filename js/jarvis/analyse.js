@@ -283,11 +283,19 @@ export function analyser(texte, curseur = texte.length, ctx = { dossiers: [], au
 }
 
 /** Transforme les valeurs de « ls » en critères pour regles.filtrer(). */
+/**
+ * Les filtres de « ls » → critères pour regles.filtrer.
+ * Plusieurs affects ou plusieurs statuts s'ajoutent (« ls num21 sogetrel » : l'un OU l'autre) ;
+ * des catégories différentes se combinent (« ls air litige » : AIR ET Litige).
+ */
 export function criteresListe(valeurs) {
-  const c = { texte: '' };
+  const c = { texte: '', type: [], statut: [] };
   for (const v of valeurs.filtres || []) {
     if (!v) continue;
-    if (v.texte) c.texte = `${c.texte} ${v.texte}`.trim(); else Object.assign(c, v);
+    if (v.texte) c.texte = `${c.texte} ${v.texte}`.trim();
+    else if (v.type) { if (!c.type.includes(v.type)) c.type.push(v.type); }
+    else if (v.statut) { if (!c.statut.includes(v.statut)) c.statut.push(v.statut); }
+    else Object.assign(c, v);
   }
   return c;
 }

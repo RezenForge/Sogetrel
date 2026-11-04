@@ -284,9 +284,11 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
       const plat = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/-/g, '');
       const mots = plat(texte).split(/\s+/).filter(Boolean);
       const ref = jour();
+      // Un affect ou un statut, ou une liste (l'un OU l'autre)
+      const types = [].concat(type || []), statuts = [].concat(statut || []);
       return liste.filter(d =>
-        (!type || d.type === type) &&
-        (!statut || d.statutDft === statut) &&
+        (!types.length || types.includes(d.type)) &&
+        (!statuts.length || statuts.includes(d.statutDft)) &&
         (!retard || etatRelance(d, ref) === 'retard') &&
         (!proche || etatRelance(d, ref) === 'proche') &&
         (!sansFci || d.fci.length === 0) &&

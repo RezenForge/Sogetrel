@@ -160,7 +160,7 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 
 | Commande | Forme | Exemple |
 | --- | --- | --- |
-| Afficher | `ls [affect] [statut] [retard\|proches] [sans-fci] [sans-valo] [texte]` (aussi `list`) | `ls air retard` |
+| Afficher | `ls [affects…] [statuts…] [retard\|proches] [sans-fci] [sans-valo] [texte]` (aussi `list`) ; plusieurs affects ou statuts = l'un ou l'autre | `ls num21 sogetrel litige` |
 | Ouvrir | `open ‹dossier›` | `open 501404` |
 | Changer le statut ou le type | `set ‹dossiers› to ‹statut\|type›` | `set 501404 to refuse` |
 | Infos d'une liste | `info ‹GCBLO…›` : coller une colonne de GCBLO, complets ou seulement leur début (`SBA501023`) ; affiche les dossiers trouvés comme `ls` (éditables), puis les introuvables | `info` + Ctrl+V |
@@ -365,3 +365,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | Sauvegarde automatique toutes les 3 h dans le dernier dossier choisi ; autorisation à renouveler signalée dans le volet |
 | 04/11/2026 | `backup` retiré (malentendu : c'était `restore`) ; commande `restore` |
 | 04/11/2026 | Clic droit sur un GCBLO ou un FCI : copie dans le presse-papiers |
+| 04/11/2026 | `ls` : plusieurs affects ou statuts s'ajoutent (`ls num21 sogetrel`, `ls litige attach`) ; catégories différentes combinées (`ls air litige`) |

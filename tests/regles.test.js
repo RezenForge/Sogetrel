@@ -315,3 +315,17 @@ groupe('Statuts Litige, Annulé, Attach', () => {
     egal([etat('ANNULE'), etat('ATTACH'), etat('LITIGE')], [null, null, 'retard']);
   });
 });
+
+groupe('ls : plusieurs affects ou statuts', () => {
+  const env = () => {
+    const r = creerDossiers(creerStore(supportMemoire()));
+    [['NUM21', 'A_FAIRE'], ['SOGETREL', 'LITIGE'], ['AIR', 'LITIGE'], ['NUM21', 'ATTACH']].forEach(([type, st], i) => {
+      const d = r.creer({ type, gcblo: `SBA50100${i}-THF010` }).dossier; r.modifier(d.id, { statutDft: st });
+    });
+    return r;
+  };
+  test('liste d\'affects : l\'un ou l\'autre', () => egal(env().filtrer({ type: ['NUM21', 'SOGETREL'] }).length, 3));
+  test('liste de statuts : l\'un ou l\'autre', () => egal(env().filtrer({ statut: ['LITIGE', 'ATTACH'] }).length, 3));
+  test('affects et statuts se combinent', () => egal(env().filtrer({ type: ['NUM21', 'SOGETREL'], statut: ['LITIGE'] }).map(d => d.type), ['SOGETREL']));
+  test('un seul affect (ancienne écriture) toujours compris', () => egal(env().filtrer({ type: 'AIR' }).length, 1));
+});

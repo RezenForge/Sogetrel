@@ -13,7 +13,7 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 
 | Commande | Effet |
 | --- | --- |
-| `ls [affect] [statut] [retard\|proches] [sans-fci] [sans-valo] [texte]` | affiche les dossiers : affect, GCBLO, commune, valo, FCI, statut DFT (Attach : ligne en vert clair) |
+| `ls [affects…] [statuts…] [retard\|proches] [sans-fci] [sans-valo] [texte]` (ex. `ls num21 sogetrel`) | affiche les dossiers : affect, GCBLO, commune, valo, FCI, statut DFT (Attach : ligne en vert clair) |
 | `open ‹dossier›` | la fiche complète |
 | `set ‹dossiers› to ‹statut\|affect›` | change le statut DFT ou l'affect (ex. `set 501404 to refuse`, `set 501404 to air`) |
 | `info ‹GCBLO…›` | tapez `info ` puis collez une colonne de GCBLO, complets ou seulement leur début (`SBA501023`) : affiche ceux qui sont dans la base (comme `ls`) et liste les introuvables |
