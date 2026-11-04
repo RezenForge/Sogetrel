@@ -53,10 +53,14 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
 
   const commandes = {
     ls(v) {
-      const liste = regles.trier(regles.filtrer(criteresListe(v)), { cle: 'dateAffectation', sens: 'desc' });
-      if (!liste.length) return info(store.tous().length ? 'aucun dossier ne correspond' : 'aucun dossier enregistré');
+      const criteres = criteresListe(v);
+      const liste = regles.trier(regles.filtrer(criteres), { cle: 'dateAffectation', sens: 'desc' });
+      // Combien de dossiers Attach sont masqués par ce filtre (visibles avec « ls attach »)
+      const masques = criteres.masquer.length ? regles.filtrer({ ...criteres, masquer: [], statut: criteres.masquer }).length : 0;
+      const note = masques ? ` · ${masques} attach masqué${masques > 1 ? 's' : ''}` : '';
+      if (!liste.length) return info(store.tous().length ? `aucun dossier ne correspond${note}` : 'aucun dossier enregistré');
       ecran.tableau(liste);
-      info(`<span class="dim">${pluriel(liste.length, 'dossier', 'dossiers')}</span>`);
+      info(`<span class="dim">${pluriel(liste.length, 'dossier', 'dossiers')}${note}</span>`);
     },
 
     open(v) { ecran.fiche(store.parId(v.cible.id) || v.cible); },

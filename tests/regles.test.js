@@ -374,3 +374,13 @@ groupe('R13 — FCI attendu depuis plus de 24 h', () => {
     egal([r.filtrer({ fciRetard: true }).map(x => x.gcblo), r.statistiques().fciRetard], [['SBA501001-THF010'], 1]);
   });
 });
+
+groupe('ls : dossiers Attach masqués', () => {
+  test('visibles seulement avec ls attach', async () => {
+    const { analyser, criteresListe } = await import('../js/jarvis/analyse.js');
+    const r = creerDossiers(creerStore(supportMemoire()));
+    ['A_FAIRE', 'ATTACH', 'ATTACH', 'LITIGE'].forEach((st, i) => { const d = r.creer({ type: 'AIR', gcblo: `SBA50100${i}-THF010` }).dossier; r.modifier(d.id, { statutDft: st }); });
+    const n = t => r.filtrer(criteresListe(analyser(t, t.length, { dossiers: r.filtrer(), aujourdhui: '2026-11-04', regles: r }).valeurs)).length;
+    egal([n('ls'), n('ls air'), n('ls attach'), n('ls attach litige'), n('ls litige')], [2, 2, 2, 3, 1]);
+  });
+});

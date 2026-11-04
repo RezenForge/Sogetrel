@@ -172,7 +172,7 @@ Chaque commande commence par un verbe, suivi d'**emplacements** à remplir dans 
 
 | Commande | Forme | Exemple |
 | --- | --- | --- |
-| Afficher | `ls [affects…] [statuts…] [dates…] [retard\|proches] [sans-fci] [sans-valo] [sans-affect] [texte]` (aussi `list`) ; plusieurs affects, statuts ou dates = l'un ou l'autre ; date affect : `12/03` (jour, année en cours), `12/03/2026`, `03/2026` (mois) | `ls num21 sogetrel litige`, `ls 03/2026` |
+| Afficher | les dossiers **Attach** n'apparaissent que si on les demande (`ls attach`) ; `ls [affects…] [statuts…] [dates…] [retard\|proches] [sans-fci] [sans-valo] [sans-affect] [texte]` (aussi `list`) ; plusieurs affects, statuts ou dates = l'un ou l'autre ; date affect : `12/03` (jour, année en cours), `12/03/2026`, `03/2026` (mois) | `ls num21 sogetrel litige`, `ls 03/2026` |
 | Ouvrir | `open ‹dossier›` | `open 501404` |
 | Changer le statut ou le type | `set ‹dossiers› to ‹statut\|type›` | `set 501404 to refuse` |
 | Infos d'une liste | `info ‹GCBLO…›` : coller une colonne de GCBLO, complets ou seulement leur début (`SBA501023`) ; affiche les dossiers trouvés comme `ls` (éditables), puis les introuvables | `info` + Ctrl+V |
@@ -389,3 +389,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | R13 : case FCI en rouge clair 24 h après la date sans FCI ; `ls fci-retard` ; « FCI > 24 h » au tableau de bord |
 | 04/11/2026 | Commande introuvable ou incomplète : le message va dans le volet |
 | 04/11/2026 | Clic droit sur une case FCI rouge : `relance ‹gcblo› fci` |
+| 04/11/2026 | `ls` masque les dossiers Attach sauf `ls attach` (le bilan indique combien sont masqués) |

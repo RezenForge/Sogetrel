@@ -332,6 +332,8 @@ export function criteresListe(valeurs) {
     else if (v.date) c.dates.push(v.date);
     else Object.assign(c, v);
   }
+  // Les dossiers Attach (attachement fait) ne s'affichent que si on les demande : « ls attach »
+  c.masquer = c.statut.length ? [] : ['ATTACH'];
   return c;
 }
 

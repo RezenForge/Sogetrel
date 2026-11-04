@@ -294,7 +294,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
      * `texte` cherche dans le GCBLO, les FCI et le commentaire (sans tenir compte
      * des majuscules, des accents ni des tirets).
      */
-    filtrer({ texte = '', type = '', statut = '', retard = false, proche = false, sansFci = false, fciRetard = false, sansValo = false, sansAffect = false, dates = [] } = {}, liste = store.tous()) {
+    filtrer({ texte = '', type = '', statut = '', retard = false, proche = false, sansFci = false, fciRetard = false, sansValo = false, sansAffect = false, dates = [], masquer = [] } = {}, liste = store.tous()) {
       const plat = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/-/g, '');
       const mots = plat(texte).split(/\s+/).filter(Boolean);
       const ref = jour();
@@ -303,6 +303,7 @@ export function creerDossiers(store, { horloge = () => new Date() } = {}) {
       return liste.filter(d =>
         (!types.length || types.includes(d.type)) &&
         (!statuts.length || statuts.includes(d.statutDft)) &&
+        !masquer.includes(d.statutDft) &&
         (!retard || etatRelance(d, ref) === 'retard') &&
         (!proche || etatRelance(d, ref) === 'proche') &&
         (!sansFci || d.fci.length === 0) &&
