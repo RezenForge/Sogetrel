@@ -429,7 +429,15 @@ export function creerInvite({ racine, contexte }) {
   // du tableau de bord ; à défaut le mot (span) cliqué, puis la ligne entière. Un seul repère à la fois.
   const ZONES_REPERE = '#ecran, #volet, #tableauBord';
   const PRECIS = '.editable, .lien, .points, .m, .entete';
-  let repere = null, repereCle = null;
+  let repere = null, repereCle = null, repereLigne = null;
+  /** La ligne qui contient le repère, surlignée très légèrement en gris (ligne de liste, de message, du tableau de bord). */
+  function poserLigne(el) {
+    const ligne = el?.closest('.rangee, .bl, .l:not(.vue)') || null;
+    if (ligne === repereLigne) return;
+    repereLigne?.classList.remove('repere-ligne');
+    repereLigne = ligne;
+    ligne?.classList.add('repere-ligne');
+  }
   /** De quoi retrouver l'élément quand la vue est redessinée (liste mise à jour, tableau de bord…). */
   function cleRepere(el) {
     const zone = el.closest(ZONES_REPERE);
@@ -446,12 +454,14 @@ export function creerInvite({ racine, contexte }) {
     repere = el;
     repereCle = el ? cleRepere(el) : null;
     el?.classList.add('repere');
+    poserLigne(el);
   }
   // Vue redessinée : le repère revient sur le même élément s'il existe encore
   new MutationObserver(() => {
     if (!repere || repere.isConnected || !repereCle) return;
     const el = racine.querySelector(repereCle);
     repere = el; if (el) el.classList.add('repere'); else repereCle = null;
+    repereLigne = null; poserLigne(el);
   }).observe(racine.body, { childList: true, subtree: true });
   racine.addEventListener('pointerdown', e => {
     if (e.button !== 0 && e.button !== 2) return;
