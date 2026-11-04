@@ -26,7 +26,7 @@ const BARRE = 14;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 /** Libellés courts, pour garder l'alignement. */
-const COURT = { A_FAIRE: 'À faire', EN_VALIDATION: 'En valid.', MAD: 'Mis à disp', REFUSE: 'Refusé', LITIGE: 'Litige', ANNULE: 'Annulé', ATTACH: 'Attach' };
+const COURT = { A_FAIRE: 'À faire', EN_VALIDATION: 'En valid.', ATTENTE_TRAVAUX: 'Att. trav.', MAD: 'Mis à disp', REFUSE: 'Refusé', LITIGE: 'Litige', ANNULE: 'Annulé', ATTACH: 'Attach' };
 
 /** Une barre pleine/vide proportionnelle : au moins un bloc dès qu'il y a quelque chose. */
 export function barre(n, total, largeur = BARRE, plein = '█', vide = '░') {
@@ -109,10 +109,10 @@ export function dessinerTableauBord(s, jour, { derniereSauvegarde = undefined, m
   if (ecartsAffect && ouverte('affect')) lignes.push(rangee(['≠ colonne I', 'dim', 'ls ecart-affect'], [String(ecartsAffect).padStart(INTERIEUR - 11), 'retard', 'ls ecart-affect']));
 
   lignes.push(sep('statut DFT'));
-  if (ouverte('statut DFT')) STATUTS.forEach(st => lignes.push(rangeeBarre(COURT[st.code] || st.libelle, s.parStatut[st.code], total, `st-${st.code}`, `ls ${motPourCode(MOTS_STATUT, st.code)}`)));
+  if (ouverte('statut DFT')) STATUTS.forEach(st => lignes.push(rangeeBarre(COURT[st.code] || st.libelle, s.parStatut[st.code] || 0, total, `st-${st.code}`, `ls ${motPourCode(MOTS_STATUT, st.code)}`)));
 
   // Avancement : la part des dossiers clos (mis à disposition, annulés, attachés)
-  const clos = STATUTS.filter(st => st.clos).reduce((n, st) => n + s.parStatut[st.code], 0);
+  const clos = STATUTS.filter(st => st.clos).reduce((n, st) => n + (s.parStatut[st.code] || 0), 0);
   const [p, v] = barre(clos, total, 22, '▓', '░');
   lignes.push(sep('avancement'));
   if (ouverte('avancement')) lignes.push(rangee(['[', 'dim'], [p, 'st-MAD'], [v, 'vide'], [']', 'dim'], [pourcent(clos, total).padStart(6), 'fort'], [' clos', 'dim']));

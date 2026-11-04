@@ -44,6 +44,7 @@
   --statut-MAD: #8ae234;
   --statut-REFUSE: #ef2929;
   --statut-LITIGE: #fcaf3e;
+  --statut-ATTENTE_TRAVAUX: #b98fd6;          /* violet clair */
   --statut-ANNULE: #888a85;
   --statut-ATTACH: #8ae234;
   --fond-fci-retard: rgba(239, 41, 41, .2);   /* FCI attendu depuis plus de 24 h */

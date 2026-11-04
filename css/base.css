@@ -83,7 +83,7 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .ty-SANS { color: var(--pale); }
 .st-A_FAIRE { color: var(--statut-A_FAIRE); } .st-EN_VALIDATION { color: var(--statut-EN_VALIDATION); }
 .st-MAD { color: var(--statut-MAD); } .st-REFUSE { color: var(--statut-REFUSE); }
-.st-LITIGE { color: var(--statut-LITIGE); } .st-ANNULE { color: var(--statut-ANNULE); } .st-ATTACH { color: var(--statut-ATTACH); }
+.st-LITIGE { color: var(--statut-LITIGE); } .st-ATTENTE_TRAVAUX { color: var(--statut-ATTENTE_TRAVAUX); } .st-ANNULE { color: var(--statut-ANNULE); } .st-ATTACH { color: var(--statut-ATTACH); }
 .retard { color: var(--retard); font-weight: 700; } .proche { color: var(--proche); }
 
 /* Rôles des mots (ligne de saisie, écho des commandes, propositions) */

@@ -66,6 +66,7 @@ export const MOTS_STATUT = Object.freeze({
   'en-validation': 'EN_VALIDATION', validation: 'EN_VALIDATION', 'en-cours': 'EN_VALIDATION',
   'mis-a-dispo': 'MAD', 'mis-a-disposition': 'MAD', mad: 'MAD', dispo: 'MAD',
   refuse: 'REFUSE', refus: 'REFUSE',
+  'attente-travaux': 'ATTENTE_TRAVAUX', attente: 'ATTENTE_TRAVAUX', travaux: 'ATTENTE_TRAVAUX',
   litige: 'LITIGE', annule: 'ANNULE', attach: 'ATTACH', attache: 'ATTACH'
 });
 export const MOTS_TYPE = Object.freeze({ num21: 'NUM21', air: 'AIR', sogetrel: 'SOGETREL' });

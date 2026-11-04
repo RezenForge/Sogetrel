@@ -61,7 +61,7 @@ groupe('Menu ⋯ : un clic = une commande', () => {
   const d = contexte().dossiers.find(x => x.gcblo === 'LRO500767-THF010');      // refusé
   const options = optionsDossier(d);
   test('ouvrir en premier', () => egal(options[0].commande, 'open LRO500767-THF010'));
-  test('pas de « passer en Refusé » pour un dossier déjà refusé', () => egal(options.filter(o => o.libelle.startsWith('→')).map(o => o.libelle), ['→ À faire', '→ En cours de validation', '→ Mis à disposition', '→ Litige', '→ Annulé', '→ Attach']));
+  test('pas de « passer en Refusé » pour un dossier déjà refusé', () => egal(options.filter(o => o.libelle.startsWith('→')).map(o => o.libelle), ['→ À faire', '→ En cours de validation', '→ Attente travaux', '→ Mis à disposition', '→ Litige', '→ Annulé', '→ Attach']));
   test('chaque choix est une commande complète et comprise', () => {
     const ctx = contexte();
     egal(options.filter(o => !analyser(o.commande, o.commande.length, ctx).complet).map(o => o.commande), []);
@@ -76,5 +76,16 @@ groupe('Menu ⋯ : un clic = une commande', () => {
   test('le choix vise bien le statut annoncé', () => {
     const ctx = contexte(), o = options.find(x => x.libelle.includes('Mis à disposition'));
     egal(analyser(o.commande, o.commande.length, ctx).valeurs.valeur, { statut: 'MAD' });
+  });
+});
+
+groupe('Statut « Attente travaux »', () => {
+  test('mots compris : attente-travaux, attente, travaux', async () => {
+    const { MOTS_STATUT } = await import('../js/jarvis/grammaire.js');
+    egal(['attente-travaux', 'attente', 'travaux'].map(m => MOTS_STATUT[m]), ['ATTENTE_TRAVAUX', 'ATTENTE_TRAVAUX', 'ATTENTE_TRAVAUX']);
+  });
+  test('statut ouvert (pas clos)', async () => {
+    const { statutParCode } = await import('../js/config.js');
+    egal([statutParCode('ATTENTE_TRAVAUX').libelle, statutParCode('ATTENTE_TRAVAUX').clos], ['Attente travaux', false]);
   });
 });

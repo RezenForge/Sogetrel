@@ -22,6 +22,7 @@ export const TYPES = Object.freeze([
 export const STATUTS = Object.freeze([
   { code: 'A_FAIRE', libelle: 'À faire', clos: false },
   { code: 'EN_VALIDATION', libelle: 'En cours de validation', clos: false },
+  { code: 'ATTENTE_TRAVAUX', libelle: 'Attente travaux', clos: false },
   { code: 'MAD', libelle: 'Mis à disposition', clos: true },
   { code: 'REFUSE', libelle: 'Refusé', clos: false },
   { code: 'LITIGE', libelle: 'Litige', clos: false },

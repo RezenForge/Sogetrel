@@ -25,7 +25,7 @@ const CLE_HISTORIQUE = 'gcblo.v2.historique';
 /** L'invite, façon bash : utilisateur@machine:chemin$ */
 const INVITE = '<span class="pr-hote">dylan@gcblo</span>:<span class="pr-chemin">~</span>$';
 const TYPE_COURT = { NUM21: 'NUM21', AIR: 'AIR', SOGETREL: 'SOGE' };
-const STATUT_COURT = { A_FAIRE: 'À faire', EN_VALIDATION: 'En valid.', MAD: 'Mis à disp', REFUSE: 'Refusé', LITIGE: 'Litige', ANNULE: 'Annulé', ATTACH: 'Attach' };
+const STATUT_COURT = { A_FAIRE: 'À faire', EN_VALIDATION: 'En valid.', ATTENTE_TRAVAUX: 'Att. trav.', MAD: 'Mis à disp', REFUSE: 'Refusé', LITIGE: 'Litige', ANNULE: 'Annulé', ATTACH: 'Attach' };
 
 /** Le GCBLO cliquable : un clic lance « open ‹gcblo› ». */
 const lienDossier = d => `<button type="button" class="lien c-dossier" data-commande="open ${esc(d.gcblo)}" data-copie="${esc(d.gcblo)}" title="clic : open ${esc(d.gcblo)} · clic droit : copier">${esc(d.gcblo)}</button>`;

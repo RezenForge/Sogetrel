@@ -48,6 +48,7 @@ L'application s'ouvre par le lien GitHub Pages. Elle fonctionne sans serveur : l
 | --- | --- | --- | --- |
 | `A_FAIRE` | À faire | gris clair | non |
 | `EN_VALIDATION` | En cours de validation | cyan | non |
+| `ATTENTE_TRAVAUX` | Attente travaux (`attente-travaux`, `attente`, `travaux`) | violet clair | non |
 | `MAD` | Mis à disposition | vert | **oui** |
 | `REFUSE` | Refusé | rouge | non (à reprendre) |
 | `LITIGE` | Litige | orange | non (à suivre) |
@@ -388,6 +389,7 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | `ls`, `list` et `info` vident la console avant d'afficher |
 | 04/11/2026 | `ls`/`info` : la ligne de commande va dans le volet ; sans résultat, tout va dans le volet et la console ne change pas |
 | 04/11/2026 | Commande `sauvegarde` (`js/sauvegarde.js`) : dossier choisi, nom daté, 3 sauvegardes gardées ; dernière sauvegarde dans le tableau de bord |
+| 04/11/2026 | Statut DFT « Attente travaux » (`attente-travaux`) : ouvert, violet clair, « Att. trav. » au tableau de bord |
 | 04/11/2026 | Relances FCI et DFT : confirmation si la même relance a déjà été préparée aujourd'hui ou hier |
 | 04/11/2026 | Sous une liste, seulement le nombre de dossiers (plus de « N attach masqués » ni de rappel Ctrl+clic) |
 | 04/11/2026 | Historique : ↑ ↓ restent dans l'historique tant qu'on n'a rien tapé ; la liste de propositions reste fermée pendant ce temps |
