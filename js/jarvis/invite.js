@@ -118,7 +118,8 @@ export function creerInvite({ racine, contexte }) {
   function relanceHtml(d) {
     const jour = contexte().aujourdhui;
     const badge = motif => {
-      const r = relanceRecente(d, motif, jour);
+      // Le FCI est arrivé : la relance FCI n'a plus d'objet, le badge disparaît
+      const r = motif === 'fci' && d.fci.length ? null : relanceRecente(d, motif, jour);
       if (!r) return '   ';
       const quand = `${r.jours === 0 ? "aujourd'hui" : 'hier'} à ${new Date(r.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
       return `<span class="badge badge-${motif}" title="relance ${motif.toUpperCase()} préparée ${quand} · une nouvelle relance demandera confirmation">${motif.toUpperCase()}</span>`;
