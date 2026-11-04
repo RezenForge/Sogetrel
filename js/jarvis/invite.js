@@ -163,7 +163,7 @@ export function creerInvite({ racine, contexte }) {
       // La vue retient la commande qui l'a produite (pour le tri par en-tête) et son tri éventuel
       const tri = (commandeEnCours.match(/(?:^|\s)tri:(\S+)/i) || [])[1] || '';
       ecran.ligne(tableauHtml(dossiers, tri.toLowerCase()), 'vue');
-      Object.assign(sortie.lastElementChild.dataset, { liste: dossiers.map(d => d.id).join(','), ls: commandeEnCours, tri: tri.toLowerCase() });
+      Object.assign(sortie.lastElementChild.dataset, { liste: dossiers.map(d => d.id).join(','), ls: commandeEnCours, triActuel: tri.toLowerCase() });
     },
     fiche(d) {
       ecran.ligne(ficheHtml(d), 'vue');
@@ -179,7 +179,7 @@ export function creerInvite({ racine, contexte }) {
       const dossiers = contexte().dossiers, parId = new Map(dossiers.map(d => [d.id, d]));
       racine.querySelectorAll('.vue[data-liste]').forEach(vue => {
         if (vue.querySelector('.edition')) return;          // saisie en cours : on n'y touche pas
-        vue.innerHTML = tableauHtml(vue.dataset.liste.split(',').map(i => parId.get(i)).filter(Boolean), vue.dataset.tri || '');
+        vue.innerHTML = tableauHtml(vue.dataset.liste.split(',').map(i => parId.get(i)).filter(Boolean), vue.dataset.triActuel || '');
       });
       // Sélection : un dossier supprimé en sort
       if ([...choisis].some(i => !parId.has(i))) { [...choisis].forEach(i => { if (!parId.has(i)) choisis.delete(i); }); majSelection(); }
@@ -552,12 +552,12 @@ export function creerInvite({ racine, contexte }) {
     const rangee = (e.ctrlKey || e.metaKey || e.shiftKey) && e.target.closest('#ecran .rangee[data-id]');
     if (rangee) { e.preventDefault(); choisirRangee(rangee, e.shiftKey); return; }
     // En-tête de liste : relance la même commande triée sur cette colonne (2e clic : sens inverse)
-    const tri = e.target.closest('[data-tri]');
+    const tri = e.target.closest('.entete [data-tri]');
     if (tri) {
       e.preventDefault();
       const vue = tri.closest('.vue'), col = tri.dataset.tri;
       const base = (vue?.dataset.ls || 'ls').replace(/\s+tri:\S+/gi, '').trim();
-      lancer(`${base} tri:${col}${vue?.dataset.tri === col ? '-' : ''}`);
+      lancer(`${base} tri:${col}${vue?.dataset.triActuel === col ? '-' : ''}`);
       return;
     }
     const cmd = e.target.closest('[data-commande]');
