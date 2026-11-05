@@ -15,7 +15,7 @@ import { aSupprimer, nomSauvegarde, contenuSauvegarde } from './sauvegarde.js';
 import { csvRegistre, NOM_CSV, NOM_CSV_CLASSEUR, lireCsvClasseur } from './export-excel.js';
 import { extraireDossiers, appliquerImport } from './import-excel.js';
 import { lireAffectsClasseur, noterAffectsClasseur, ecartAffect } from './affects-classeur.js';
-import { extraireLies, noterLies } from './dossiers-lies.js';
+import { extraireLies, noterLies, lireLies, totalLies } from './dossiers-lies.js';
 import { SAUVEGARDE_AUTO_HEURES } from './config.js';
 import { aujourdhui } from './dates.js';
 import { convertirV1, lireV1Navigateur } from './reprise-v1.js';
@@ -310,9 +310,11 @@ invite.brancher(analyse => actions.executer(analyse));
 /* 5. Le tableau de bord à droite : redessiné à chaque changement, et chaque minute (date, retards). */
 const tableauBord = document.getElementById('tableauBord');
 const derniereSauvegarde = () => { try { return localStorage.getItem(CLE_DERNIERE_SAUVEGARDE); } catch { return null; } };
+/** Valo totale des dossiers liés de tous les GCBLO (tableau de bord). */
+function valoDesLies() { const l = lireLies(); return Math.round(store.tous().reduce((s, d) => s + (totalLies(d, l) || 0), 0) * 100) / 100; }
 /** Nombre de dossiers dont l'affect diffère de la colonne I (tableau de bord). */
 function nbEcartsAffect() { const a = lireAffectsClasseur(); return store.tous().filter(d => ecartAffect(d, a)).length; }
-function dessinerBord() { tableauBord.innerHTML = `<div class="dessin">${dessinerTableauBord(regles.statistiques(), regles.aujourdhui(), { derniereSauvegarde: derniereSauvegarde(), maintenant: new Date(), ecartsAffect: nbEcartsAffect(), classeur: lireLocal(CLE_CLASSEUR_LE, null), replies: lireLocal(CLE_REPLIES, []) }).html}</div>`; }
+function dessinerBord() { tableauBord.innerHTML = `<div class="dessin">${dessinerTableauBord(regles.statistiques(), regles.aujourdhui(), { derniereSauvegarde: derniereSauvegarde(), maintenant: new Date(), ecartsAffect: nbEcartsAffect(), valoLies: valoDesLies(), classeur: lireLocal(CLE_CLASSEUR_LE, null), replies: lireLocal(CLE_REPLIES, []) }).html}</div>`; }
 store.ecouter(dessinerBord);
 // Un clic sur le titre d'une section la replie ou la rouvre (retenu dans ce navigateur)
 tableauBord.addEventListener('click', e => {

@@ -339,3 +339,4 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .li-barre { height: 3px; margin: 3px 0 2px; background: var(--trait); border-radius: 2px; overflow: hidden; }
 .li-barre span { display: block; height: 100%; background: var(--lie); }
 .li-bas { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tableau-bord .lie-total { color: #c4a000; font-weight: 700; }

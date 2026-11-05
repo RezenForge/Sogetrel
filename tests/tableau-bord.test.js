@@ -114,3 +114,13 @@ groupe('Aujourd\'hui — cartes', () => {
     vrai(!carteHtml(fci, [D('SBA501404-THF010')], ctx, esc).includes('defile'));
   });
 });
+
+groupe('Tableau de bord — GCBLO et valo liés', () => {
+  test('le compteur parle de GCBLO', () => vrai(dessinerTableauBord(S, '2026-11-05').texte.some(l => /\d+ GCBLO/.test(l))));
+  test('« valo liés » dans valorisation, cliquable', () => {
+    const b = dessinerTableauBord(S, '2026-11-05', { valoLies: 21650.5 });
+    vrai(b.texte.some(l => l.includes('valo liés') && l.includes('21 650,50')) && b.html.includes('data-commande="ls lies tri:lies-"'));
+    egal(b.texte.filter(l => [...l].length !== LARGEUR), []);
+  });
+  test('pas de ligne sans dossiers liés', () => vrai(!dessinerTableauBord(S, '2026-11-05').texte.some(l => l.includes('valo liés'))));
+});

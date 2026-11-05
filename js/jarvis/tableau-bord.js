@@ -92,14 +92,14 @@ export function ageSauvegarde(iso, maintenant) {
   return [texte, jours > 7 ? 'retard' : jours > 2 ? 'proche' : 'st-ATTACH'];
 }
 
-export function dessinerTableauBord(s, jour, { derniereSauvegarde = undefined, maintenant = new Date(), ecartsAffect = 0, classeur = undefined, replies = [] } = {}) {
+export function dessinerTableauBord(s, jour, { derniereSauvegarde = undefined, maintenant = new Date(), ecartsAffect = 0, classeur = undefined, replies = [], valoLies = 0 } = {}) {
   // Sections repliées (titres) : seule la ligne de titre reste
   const ouverte = titre => !replies.includes(titre);
   const sep = titre => separation(titre, { replie: !ouverte(titre) });
   const date = depuisJour(jour).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' }).replace('.', '');
   const total = s.total;
   const lignes = [cadre('tableau de bord', date)];
-  lignes.push(rangee([String(total), 'fort', 'ls'], [total > 1 ? ' dossiers' : ' dossier', 'dim', 'ls']));
+  lignes.push(rangee([String(total), 'fort', 'ls'], [' GCBLO', 'dim', 'ls']));
 
   lignes.push(sep('affect'));
   if (ouverte('affect')) TYPES.forEach(t => lignes.push(rangeeBarre(t.libelle, s.parType[t.code], total, `ty-${t.code}`, `ls ${motPourCode(MOTS_TYPE, t.code)}`)));
@@ -125,6 +125,8 @@ export function dessinerTableauBord(s, jour, { derniereSauvegarde = undefined, m
     lignes.push(rangeeMontant('total', s.valo.total));
     lignes.push(rangeeMontant('attaché', attache, attache ? 'st-ATTACH' : 'dim', 'ls attach'));
     lignes.push(rangeeMontant('à attacher', Math.round((s.valo.total - attache - annule) * 100) / 100));
+    // Valo des dossiers liés (même affaire dans le classeur partagé), tous GCBLO confondus
+    if (valoLies) lignes.push(rangeeMontant('valo liés', valoLies, 'lie-total', 'ls lies tri:lies-'));
     if (s.valo.sans) lignes.push(rangee(['sans valo'.padEnd(INTERIEUR - 16), 'dim', 'ls sans-valo'], [String(s.valo.sans).padStart(16), 'proche']));
     }
   }
