@@ -106,7 +106,7 @@ export function creerInvite({ racine, contexte }) {
     const c = e.target?.dataset?.carte;
     if (c) e.target.open ? cartesOuvertes.add(c) : cartesOuvertes.delete(c);
   }, true);
-  const ETIQUETTES = { creation: 'création', modification: 'modif', mail: 'mail', attachement: 'attach' };
+  const ETIQUETTES = { creation: 'création', modification: 'modif', mail: 'mail', attachement: 'attach', line: 'LINE' };
   function historiqueHtml(d) {
     const entrees = [...d.historique].reverse();
     const lignes = entrees.map(h => {

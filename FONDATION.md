@@ -114,6 +114,14 @@ Un dossier **clos** n'a plus d'alerte de relance.
     - La macro **Outlook** `BrouillonsAttachement` (`outlook/BrouillonsAttachement.bas`, Outlook classique) lit ce fichier et crée un **brouillon** par ligne : destinataires, objet, texte, **signature par défaut**, attachement en pièce jointe. Rien n'est envoyé : 3 brouillons au plus s'ouvrent, au-delà le dossier Brouillons s'affiche ; Dylan relit et envoie. **Déjà envoyé ?** Avant chaque brouillon, la macro cherche dans la Boîte de réception et les Éléments envoyés (sous-dossiers compris) de toutes les boîtes ouvertes dans Outlook (boîtes partagées comprises) un mail adressé à `info_lpc_BL` ou `info_aquitaine_BL` (À ou Cc) avec une pièce jointe dont le nom contient le GCBLO (tirets, espaces et `_` ignorés), envoyé par Dylan ou par quelqu'un d'autre : trouvé → pas de brouillon, signalé avec la date et l'expéditeur, ligne retirée. `BrouillonsAttachementForcer` fait la même chose sans cette vérification. Les lignes traitées sont retirées du fichier (relancer ne crée pas de doublon) ; une pièce jointe introuvable laisse la ligne en attente, signalée. Le dossier des attachements est demandé à la première exécution et gardé sur le PC (`ChoisirDossierAttachements` pour en changer).
     - Le statut **Attach** reste posé à la création de l'attachement (règle 11), pas à l'envoi du mail.
 
+16. **Commentaire FCI sur LINE** (extension 1.4, `extension/line.js`) : sur la page « Informations » d'un dossier LINE (celle qui a le bloc « Commentaire(s) »), si **aucun commentaire ne contient de FCI** (`F` + 11 chiffres) et que le registre en connaît pour ce GCBLO (question `ask ‹GCBLO›` → `{ etat: 'connu', fci }`), l'extension :
+    - attend que la page soit calme (2 s sans changement, 20 s au plus), redemande, revérifie ;
+    - ouvre le champ (« Ajouter un commentaire ») s'il est fermé, écrit `Num GCBLO : ‹FCI…›` (le format déjà utilisé sur LINE), puis clique sur **Valider** ;
+    - vérifie que le commentaire apparaît, bulle verte, et le signale au registre (`line-commentaire ‹GCBLO› ‹FCI…›`) qui ajoute « FCI écrit en commentaire sur LINE » à l'historique (étiquette LINE).
+    - Jamais : si LINE a déjà un FCI (même différent : c'est alors LINE qui complète le registre, règle de l'extension), si un texte est déjà en cours de saisie, ou une deuxième fois pour le même GCBLO dans le même onglet (même après rechargement). Bouton ou champ introuvable : bulle orange, rien d'écrit.
+    - La tournée (`sync`) attend la fin du commentaire avant de passer aux documents.
+    - Repères tirés de la page réelle enregistrée : `app-add-comment` (bouton « Ajouter un commentaire », `textarea[name=newCommentaire]` limité à 255 caractères, bouton `submit` « Valider »), commentaires dans `app-comment [name=comment-text-container]`.
+
 Toutes ces règles vivent dans **un seul fichier** (`js/dossiers.js`), et chacune a un test.
 
 ---
@@ -446,3 +454,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 05/11/2026 | R15 : mail d'attachement au pôle facturation — le registre prépare `mails-attachement.csv`, la macro Outlook `BrouillonsAttachement` en fait des brouillons (signature, pièce jointe) ; dossier des attachements retenu, `attachement folder` pour en changer ; un seul attachement ne passe plus par « Enregistrer sous » |
 | 05/11/2026 | Macro Outlook : module renommé `RegistreGcbloOutlook` (même nom que la macro → « Sub ou Function non définie » à Alt+F8) |
 | 05/11/2026 | Macro Outlook : vérifie avant chaque brouillon que l'attachement n'a pas déjà été envoyé à une boîte BL (réception, envoyés, boîtes partagées) ; `BrouillonsAttachementForcer` pour passer outre |
+| 05/11/2026 | R16 : extension 1.4 — le FCI du registre est écrit en commentaire sur LINE (« Num GCBLO : F… », Valider) quand aucun commentaire n'en contient ; tracé dans l'historique |

@@ -4,7 +4,13 @@
  * La page étant une application qui se charge petit à petit, on regarde à chaque changement de la page.
  * Onglet « Documents » (…/document) : si une pièce jointe contient « GCB_1 » et une autre « GCB_2 » (GCB1, GCB-1… aussi reconnus),
  * on demande au registre de passer le GCBLO en « Mis à disposition » (seulement depuis un statut ouvert).
- * Chaque envoi n'est fait qu'une fois par onglet. On ne fait que lire la page.
+ * Chaque envoi n'est fait qu'une fois par onglet.
+ *
+ * Commentaire FCI (onglet « Informations », la page qui a le bloc « Commentaire(s) ») : si AUCUN commentaire ne
+ * contient de FCI et que le registre en connaît un pour ce GCBLO, on écrit « Num GCBLO : F… » et on clique sur
+ * « Valider » (bouton « Ajouter un commentaire » d'abord si le champ est fermé). Une seule fois par GCBLO et par
+ * onglet, seulement quand la page est calme (2 s sans changement) ; jamais par-dessus un texte déjà saisi.
+ * Le commentaire vu sur la page, le registre l'inscrit dans l'historique du dossier.
  */
 (() => {
   const envoyes = new Set();
@@ -14,8 +20,7 @@
     const t = !m && (document.querySelector('h2.dossier')?.innerText || '').match(/Dossier\s+([A-Za-z]{3})(\d{6})\s*\/\s*([A-Za-z]+\d*)-(\d)/);
     if (!m && !t) return null;
     const gcblo = (m ? `${m[2]}${m[1]}-${m[3]}${m[4]}` : `${t[1]}${t[2]}-${t[3]}${t[4]}`).toUpperCase();
-    const texte = [...document.querySelectorAll('[name="comment-text-container"]')].map(e => e.innerText).join('\n');
-    const fci = [...new Set((texte.toUpperCase().match(/F\d{11}(?!\d)/g) || []))];
+    const fci = fciDesCommentaires();
     // Documents : les noms de pièces jointes (liens et textes de la zone principale de la page)
     let gcb1 = false, gcb2 = false;
     if (/\/document/i.test(location.pathname)) {
@@ -28,6 +33,11 @@
     }
     return { gcblo, fci, mad: gcb1 && gcb2 };
   }
+
+  const fciDesCommentaires = () => {
+    const texte = [...document.querySelectorAll('[name="comment-text-container"]')].map(e => e.innerText).join('\n');
+    return [...new Set((texte.toUpperCase().match(/F\d{11}(?!\d)/g) || []))];
+  };
 
   function bulle(texte, couleur = '#8ae234') {
     const d = document.createElement('div');
@@ -52,9 +62,69 @@
     });
   }
 
+  /* ---------- Commentaire FCI sur LINE ---------- */
+  const demander = commande => new Promise(resoudre => chrome.runtime.sendMessage({ type: 'registre-gcblo-fci', commande }, rep => resoudre(rep || null)));
+  const attendre = (test, max) => new Promise(resoudre => {
+    const debut = Date.now();
+    const i = setInterval(() => { const v = test(); if (v || Date.now() - debut > max) { clearInterval(i); resoudre(v || null); } }, 200);
+  });
+  const boutonDuFormulaire = motif => [...document.querySelectorAll('app-add-comment button')].find(b => motif.test(b.textContent || ''));
+  const dejaTente = gcblo => { try { return sessionStorage.getItem(`registre-gcblo-commente-${gcblo}`) === '1'; } catch { return false; } };
+  const noterTente = gcblo => { try { sessionStorage.setItem(`registre-gcblo-commente-${gcblo}`, '1'); } catch { /* facultatif */ } };
+  let commentaire = null;          // la promesse en cours (la tournée l'attend avant de passer aux documents)
+
+  async function commenterFci(gcblo) {
+    if (!document.querySelector('app-add-comment') || fciDesCommentaires().length || dejaTente(gcblo)) return;
+    const rep = await demander(`ask ${gcblo}`);
+    if (rep?.etat !== 'connu' || !rep.fci?.length) return;
+    if (fciDesCommentaires().length || dejaTente(gcblo)) return;      // la page a pu changer pendant la question
+    noterTente(gcblo);
+    const texte = `Num GCBLO : ${rep.fci.join(' ')}`;
+    let zone = document.querySelector('app-add-comment textarea');
+    if (!zone) {
+      const ouvrir = boutonDuFormulaire(/ajouter un commentaire/i);
+      if (!ouvrir) return bulle('LINE : bouton « Ajouter un commentaire » introuvable · FCI non écrit', '#fcaf3e');
+      ouvrir.click();
+      zone = await attendre(() => document.querySelector('app-add-comment textarea'), 5000);
+    }
+    if (!zone) return bulle('LINE : champ de commentaire introuvable · FCI non écrit', '#fcaf3e');
+    if (zone.value.trim()) return bulle('LINE : un commentaire est déjà en cours de saisie · FCI non écrit', '#fcaf3e');
+    zone.focus();
+    zone.value = texte;
+    // L'application LINE (Angular) lit la saisie sur ces évènements
+    zone.dispatchEvent(new Event('input', { bubbles: true }));
+    zone.dispatchEvent(new Event('change', { bubbles: true }));
+    zone.dispatchEvent(new Event('blur'));
+    const valider = await attendre(() => { const b = boutonDuFormulaire(/valider/i); return b && !b.disabled ? b : null; }, 3000);
+    if (!valider) return bulle('LINE : bouton « Valider » introuvable ou inactif · FCI non écrit', '#fcaf3e');
+    valider.click();
+    const vu = await attendre(() => rep.fci.every(f => fciDesCommentaires().includes(f)), 10000);
+    if (!vu) return bulle(`LINE : « ${texte} » validé mais pas encore affiché · vérifie la page`, '#fcaf3e');
+    bulle(`✓ LINE : commentaire ajouté · ${texte}`);
+    demander(`line-commentaire ${gcblo} ${rep.fci.join(' ')}`);
+  }
+
+  // Après 2 s sans changement de la page (20 s au plus) : les commentaires sont affichés
+  function essayerCommentaire() {
+    if (commentaire || /\/document/i.test(location.pathname)) return commentaire;
+    commentaire = new Promise(resoudre => {
+      const debut = Date.now();
+      const i = setInterval(() => {
+        const calme = Date.now() - derniereMutation > 2000;
+        if (!calme && Date.now() - debut < 20000) return;
+        clearInterval(i);
+        const r = lire();
+        if (!r) return resoudre();
+        commenterFci(r.gcblo).catch(() => {}).finally(resoudre);
+      }, 300);
+    });
+    return commentaire;
+  }
+
   function verifier() {
     const r = lire();
     if (!r) return;
+    if (document.querySelector('app-add-comment')) essayerCommentaire();
     // GCB1 + GCB2 dans les documents → mis à disposition
     if (r.mad) envoyer(`set ${r.gcblo} to mis-a-dispo`, { maj: `✓ registre : ${r.gcblo} mis à disposition (GCB_1 et GCB_2 présents)`, inconnu: `registre : ${r.gcblo} n'est pas dans le registre` });
     if (!r.fci.length) return;
@@ -78,8 +148,8 @@
       if (!prete && Date.now() - debut < 20000) return;
       clearInterval(surveiller);
       verifier();
-      // Laisse le temps aux messages vers le registre de partir
-      setTimeout(() => chrome.runtime.sendMessage({ type: 'tournee-fini', ok: !!lire() }), 1500);
+      // Le commentaire FCI éventuel, puis le temps aux messages vers le registre de partir
+      Promise.resolve(commentaire).then(() => setTimeout(() => chrome.runtime.sendMessage({ type: 'tournee-fini', ok: !!lire() }), 1500));
     }, 500);
   });
 })();

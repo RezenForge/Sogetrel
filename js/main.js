@@ -391,6 +391,28 @@ function afficherTournee(p) {
 }
 const COMMANDE_FCI = /^fci ([A-Z]{3}\d{6}-[A-Z]+\d+)((?: F\d{11})+)$/;
 const COMMANDE_MAD = /^set ([A-Z]{3}\d{6}-[A-Z]+\d+) to mis-a-dispo$/;
+// R16 — l'extension demande les FCI connus d'un GCBLO (pour les écrire en commentaire sur LINE s'ils y manquent),
+// puis signale le commentaire ajouté (une ligne dans l'historique du dossier)
+const COMMANDE_ASK = /^ask ([A-Z]{3}\d{6}-[A-Z]+\d+)$/;
+const COMMANDE_COMMENTE = /^line-commentaire ([A-Z]{3}\d{6}-[A-Z]+\d+)((?: F\d{11})+)$/;
+/** Réponse à l'extension : { etat, fci? } (etat : 'maj' | 'deja' | 'inconnu' | 'connu'), ou null si la commande est inconnue. */
+function reponseLine(commande) {
+  const ask = commande.match(COMMANDE_ASK);
+  if (ask) {
+    const d = store.tous().find(x => x.gcblo === ask[1]);
+    return d ? { etat: 'connu', fci: [...d.fci] } : { etat: 'inconnu' };
+  }
+  const c = commande.match(COMMANDE_COMMENTE);
+  if (c) {
+    const d = store.tous().find(x => x.gcblo === c[1]);
+    if (!d) return { etat: 'inconnu' };
+    regles.noter(d.id, 'line', `FCI écrit en commentaire sur LINE :${c[2]}`);
+    invite.ecran.journal(`<span class="dim">LINE · ${esc(d.gcblo)} : FCI${esc(c[2])} ajouté en commentaire</span>`, 'ok');
+    return { etat: 'maj' };
+  }
+  const etat = fciDepuisLine(commande);
+  return etat ? { etat } : null;
+}
 /**
  * Applique une commande venue de LINE → 'maj' | 'deja' | 'inconnu' (GCBLO absent du registre).
  *  - « fci ‹GCBLO› ‹FCI…› » : FCI ajoutés (rien si déjà connus) ;
@@ -428,8 +450,8 @@ addEventListener('message', e => {
   if (e.source === window && e.origin === location.origin && e.data?.registreGcbloTourneeProgres) return afficherTournee(e.data.registreGcbloTourneeProgres);
   // 2. L'extension « FCI depuis LINE » (extension/), relayée par son script dans cette page
   if (e.source === window && e.origin === location.origin && typeof e.data?.registreGcbloExtension === 'string') {
-    const etat = fciDepuisLine(e.data.registreGcbloExtension);
-    if (etat) postMessage({ registreGcbloEtat: etat, id: e.data.id }, location.origin);
+    const r = reponseLine(e.data.registreGcbloExtension);
+    if (r) postMessage({ registreGcbloEtat: r.etat, fci: r.fci, id: e.data.id }, location.origin);
   }
 });
 // Un clic sur le titre d'une section la replie ou la rouvre (retenu dans ce navigateur)
