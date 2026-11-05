@@ -25,6 +25,7 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `restore` | recharge une sauvegarde : remplace toute la base après confirmation (annulable) |
 | `fci ‹dossier› ‹fci›` | met à jour le FCI d'un dossier (raccourci de `edit ‹dossier› fci ‹fci›`) ; `fci ‹dossier› -` l'efface ; `cancel` revient en arrière |
 | *(un GCBLO seul)* | coller ou taper un GCBLO sans commande : un seul dossier reconnu → `open`, sinon → `ls` (plusieurs dossiers, colonne collée) |
+| `line ‹dossier› [chrome\|mozilla]` | dossier LINE (flashback.orange.fr) du GCBLO : chrome ouvre un onglet, mozilla copie le lien à coller dans Firefox. Aussi dans le menu ⋯ (« Accès LINE chrome / mozilla ») |
 | `refresh` | recharge la page avec la dernière version publiée (comme Ctrl+F5) ; les dossiers restent |
 | `today` | « Aujourd'hui », à l'ouverture : une carte par sujet (FCI en retard, relances, litiges, refusés, écarts d'affect, sans affect) avec tous les dossiers (liste défilable dans la carte) et leur action en un clic ; l'en-tête de la carte ouvre la liste complète |
 | `ls … tri:colonne` | trie la liste (`tri:valo`, `tri:valo-` décroissant ; date, affect, gcblo, commune, fci, statut). Ou un clic sur le titre de la colonne (2e clic : sens inverse) |
@@ -83,6 +84,7 @@ js/collage.js            lit une liste collée (Excel, mail, classeur robot)
 js/xlsx.js               lit un classeur Excel (.xlsx, .xlsm) et en écrit une copie modifiée, sans bibliothèque
 js/import-excel.js       quels dossiers et FCI prendre dans le classeur (commande import)
 js/attachement.js        quelles cellules remplir dans l'attachement d'un dossier
+js/line.js              lien vers le dossier LINE (région selon les 3 lettres)
 js/dossiers-lies.js     dossiers liés (même affaire, autre suffixe) : lecture, total, couleur
 js/affects-classeur.js   affect de la colonne I retenu, écarts avec le registre (ls ecart-affect)
 js/jarvis/aujourdhui.js  écran « Aujourd'hui » (commande today)
@@ -99,7 +101,7 @@ js/jarvis/actions.js     exécute une commande via les règles
 js/jarvis/menus.js       le menu ⋯ d'un dossier : des commandes écrites à l'avance
 js/jarvis/tableau-bord.js le tableau de bord ASCII, toujours visible à droite
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   275 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
+tests/                   279 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
 ```
 
 ## Refonte (04/11/2026, à l'essai)

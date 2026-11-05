@@ -95,6 +95,7 @@ export function proposer(analyse, ctx) {
     case 'dossier': liste = dossiers(mot, ctx, ec, analyse); break;
     case 'gcblo': liste = dossiers(mot, ctx, ec, analyse); break;
     case 'option-sauvegarde': liste = commencePar([{ inserer: 'folder ', libelle: 'folder', detail: 'choisir un autre dossier', sorte: 'valeur' }], mot); break;
+    case 'navigateur': liste = commencePar([{ inserer: 'chrome ', libelle: 'chrome', detail: 'ouvre un onglet', sorte: 'valeur' }, { inserer: 'mozilla ', libelle: 'mozilla', detail: 'copie le lien pour Firefox', sorte: 'valeur' }], mot); break;
     case 'motif-relance': liste = commencePar([{ inserer: 'fci ', libelle: 'fci', detail: 'numéro de commande', sorte: 'valeur' }, { inserer: 'dft ', libelle: 'dft', detail: 'DFT, docs GCB1 et GCB2', sorte: 'valeur' }], mot); break;
     case 'attachement': liste = [...commencePar([{ inserer: 'fichier ', libelle: 'fichier', detail: 'choisir la référence', sorte: 'valeur' },
       ...STATUTS.map(st => ({ inserer: motPourCode(MOTS_STATUT, st.code) + ' ', libelle: motPourCode(MOTS_STATUT, st.code), detail: `tous les dossiers ${st.libelle}`, sorte: 'valeur' }))], mot),

@@ -24,6 +24,8 @@ export function optionsDossier(d) {
     ...(!d.type ? [{ libelle: 'Affecter NUM21 (mail)', commande: `affect ${d.gcblo} num21` }, { libelle: 'Affecter AIR (mail)', commande: `affect ${d.gcblo} air` }] : []),
     ...(['NUM21', 'AIR'].includes(d.type) && !d.fci.length ? [{ libelle: 'Relance FCI (mail)', commande: `relance ${d.gcblo} fci` }] : []),
     ...(['NUM21', 'AIR'].includes(d.type) ? [{ libelle: 'Relance DFT (mail)', commande: `relance ${d.gcblo} dft` }] : []),
+    { libelle: 'Accès LINE chrome', commande: `line ${d.gcblo} chrome` },
+    { libelle: 'Accès LINE mozilla', commande: `line ${d.gcblo} mozilla` },
     { libelle: 'Attachement', commande: `attachement ${d.gcblo}` },
     // Toujours en dernier, en rouge ; la commande demande confirmation
     { libelle: 'Supprimer', commande: `delete ${d.gcblo}`, classe: 'err' }

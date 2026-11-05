@@ -118,6 +118,8 @@ export function accepter(sorte, mot, ctx, { multiple = false } = {}) {
     }
     case 'option-sauvegarde':
       return p === 'folder' ? { ok: true, valeur: 'folder' } : { ok: false, erreur: `save « ${mot} » : « folder » pour changer de dossier` };
+    case 'navigateur':
+      return ['chrome', 'mozilla', 'firefox'].includes(p) ? { ok: true, valeur: p === 'firefox' ? 'mozilla' : p } : { ok: false, erreur: `${mot} : chrome ou mozilla` };
     case 'motif-relance':
       return ['fci', 'dft'].includes(p) ? { ok: true, valeur: p } : { ok: false, erreur: `relance « ${mot} » : fci ou dft` };
     case 'attachement': {
@@ -194,6 +196,7 @@ const MOTS_CONNUS = {
   dossier: Object.keys(GROUPES),
   'dossier-ou-fichier': ['fichier'],
   'motif-relance': ['fci', 'dft'],
+  navigateur: ['chrome', 'mozilla', 'firefox'],
   'option-sauvegarde': ['folder'],
   attachement: ['fichier', ...Object.keys(GROUPES), ...Object.keys(MOTS_STATUT)],
   champ: Object.keys(CHAMPS),

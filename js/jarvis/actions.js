@@ -37,6 +37,7 @@ import { CARTES, carteHtml } from './aujourdhui.js';
 import { demarrerMorpion } from './morpion.js';
 import { demarrerDame } from './dame.js';
 import { lireLies } from '../dossiers-lies.js';
+import { lienLine } from '../line.js';
 import { relanceRecente, quandRelance } from '../dossiers.js';
 import { RELANCE_DFT_JOURS } from '../config.js';
 import { depuisJour, ajouterJours, formater } from '../dates.js';
@@ -180,6 +181,25 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       if (r.inchange) return info(`${esc(nom)} déjà à jour`);
       annulation = { libelle: `${nom} de ${r.dossier.gcblo}`, faire: () => regles.restaurer([r.avant]) };
       ok(`${esc(r.dossier.gcblo)} : ${esc(r.dossier.historique.at(-1).detail)} <span class="dim">·</span> ${LIEN_ANNULE}`);
+    },
+
+    /**
+     * Le dossier LINE (flashback.orange.fr) du GCBLO. chrome (par défaut) : ouvre un nouvel onglet ;
+     * mozilla : une page web ne peut pas lancer un autre navigateur, le lien est copié pour être collé dans Firefox.
+     */
+    async line(v) {
+      const d = store.parId(v.cible.id) || v.cible;
+      const l = lienLine(d.gcblo);
+      if (!l.ok) return erreur(esc(l.erreur));
+      const lien = `<a class="lien" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.url)}</a>`;
+      if (v.navigateur === 'mozilla') {
+        let copie = false;
+        try { await navigator.clipboard.writeText(l.url); copie = true; } catch { /* refusé */ }
+        return copie ? ok(`lien LINE de ${esc(d.gcblo)} copié · colle-le dans Firefox (Ctrl+V) <span class="dim">· ${lien}</span>`)
+          : info(`lien LINE de ${esc(d.gcblo)} : ${lien}`);
+      }
+      window.open(l.url, '_blank', 'noopener');
+      ok(`LINE de ${esc(d.gcblo)} ouvert dans un nouvel onglet <span class="dim">· ${lien}</span>`);
     },
 
     /** Raccourci de « edit ‹dossier› fci ‹fci› » : met à jour le FCI (« - » pour l'effacer). */
