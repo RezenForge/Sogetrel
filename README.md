@@ -119,7 +119,7 @@ Dans le classeur partagé, un GCBLO (ex. `SBA301460-THF010`) peut avoir d'autres
 - **colonne LIÉS** des listes : la valo totale des dossiers liés, en couleur selon l'enjeu (rouge = top 10 % du registre, orange = top 30 %) ; survol = détail, clic = la fiche ;
 - **fiche** (`open`) : une carte « dossiers liés », du plus gros au plus petit, avec une barre de valo, l'affect, le statut et le commentaire ;
 - **today** : la carte « Gros enjeux liés » ;
-- **tableau de bord** : « valo liés » dans valorisation, le total de tous les dossiers liés ;
+- **tableau de bord** : « valo liés » dans valorisation, le total des dossiers liés (hors GCBLO annulés et attachés) ;
 - `ls lies` (ceux qui en ont), `tri:lies-` (du plus gros au plus petit), ou un clic sur le titre LIÉS.
 
 La macro doit être à jour (elle envoie maintenant toutes les lignes, pas seulement les GCBLO).

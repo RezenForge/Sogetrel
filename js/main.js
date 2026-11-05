@@ -310,8 +310,8 @@ invite.brancher(analyse => actions.executer(analyse));
 /* 5. Le tableau de bord à droite : redessiné à chaque changement, et chaque minute (date, retards). */
 const tableauBord = document.getElementById('tableauBord');
 const derniereSauvegarde = () => { try { return localStorage.getItem(CLE_DERNIERE_SAUVEGARDE); } catch { return null; } };
-/** Valo totale des dossiers liés de tous les GCBLO (tableau de bord). */
-function valoDesLies() { const l = lireLies(); return Math.round(store.tous().reduce((s, d) => s + (totalLies(d, l) || 0), 0) * 100) / 100; }
+/** Valo totale des dossiers liés des GCBLO (tableau de bord), sans les GCBLO annulés ni attachés. */
+function valoDesLies() { const l = lireLies(); return Math.round(store.tous().filter(d => !['ANNULE', 'ATTACH'].includes(d.statutDft)).reduce((s, d) => s + (totalLies(d, l) || 0), 0) * 100) / 100; }
 /** Nombre de dossiers dont l'affect diffère de la colonne I (tableau de bord). */
 function nbEcartsAffect() { const a = lireAffectsClasseur(); return store.tous().filter(d => ecartAffect(d, a)).length; }
 function dessinerBord() { tableauBord.innerHTML = `<div class="dessin">${dessinerTableauBord(regles.statistiques(), regles.aujourdhui(), { derniereSauvegarde: derniereSauvegarde(), maintenant: new Date(), ecartsAffect: nbEcartsAffect(), valoLies: valoDesLies(), classeur: lireLocal(CLE_CLASSEUR_LE, null), replies: lireLocal(CLE_REPLIES, []) }).html}</div>`; }
