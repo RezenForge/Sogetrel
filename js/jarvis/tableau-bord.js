@@ -126,7 +126,7 @@ export function dessinerTableauBord(s, jour, { derniereSauvegarde = undefined, m
     lignes.push(rangeeMontant('attaché', attache, attache ? 'st-ATTACH' : 'dim', 'ls attach'));
     lignes.push(rangeeMontant('à attacher', Math.round((s.valo.total - attache - annule) * 100) / 100));
     // Valo des dossiers liés (même affaire dans le classeur partagé), tous GCBLO confondus
-    if (valoLies) lignes.push(rangeeMontant('valo liés', valoLies, 'lie-total', 'ls lies tri:lies-'));
+    if (valoLies) lignes.push(rangeeMontant('valo travaux', valoLies, 'lie-total', 'ls lies tri:lies-'));
     if (s.valo.sans) lignes.push(rangee(['sans valo'.padEnd(INTERIEUR - 16), 'dim', 'ls sans-valo'], [String(s.valo.sans).padStart(16), 'proche']));
     }
   }
