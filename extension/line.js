@@ -2,8 +2,10 @@
  * Sur les pages LINE (flashback.orange.fr) : dès que la page d'un dossier affiche un FCI dans ses
  * commentaires (« Num GCBLO : F99496231124 »), on envoie « fci ‹GCBLO› ‹FCI› » au registre GCBLO ouvert.
  * La page étant une application qui se charge petit à petit, on regarde à chaque changement de la page.
- * Onglet « Documents » (…/document) : si une pièce jointe contient « GCB_1 » et une autre « GCB_2 » (GCB1, GCB-1… aussi reconnus),
- * on demande au registre de passer le GCBLO en « Mis à disposition » (seulement depuis un statut ouvert).
+ * Onglet « Documents » (…/document) : pour NIO300747-THF010, il faut une pièce jointe dont le nom contient
+ * « GCB_1 » ET « NIO300747_DFT », et une autre dont le nom contient « GCB_2 » ET « NIO300747_DFT_AUTORISE »
+ * (tirets, espaces, GCB1/GCB-1, AUTORISÉ aussi reconnus) ; alors on demande au registre de passer le GCBLO
+ * en « Mis à disposition » (seulement depuis un statut ouvert).
  * Chaque envoi n'est fait qu'une fois par onglet.
  *
  * Commentaire FCI (onglet « Informations », la page qui a le bloc « Commentaire(s) ») : si AUCUN commentaire ne
@@ -24,12 +26,17 @@
     // Documents : les noms de pièces jointes (liens et textes de la zone principale de la page)
     let gcb1 = false, gcb2 = false;
     if (/\/document/i.test(location.pathname)) {
-      // Tout le texte de la page, plus les attributs où un nom de fichier peut se cacher (lien, titre, téléchargement)
+      // Chaque nom de fichier possible, un par un : les lignes du texte de la page, et les attributs
+      // où un nom de fichier peut se cacher (lien, titre, téléchargement). Les deux mots doivent être DANS LE MÊME nom.
       const attributs = [...document.querySelectorAll('[href], [title], [download], [aria-label], [data-name], [alt]')]
         .flatMap(e => ['href', 'title', 'download', 'aria-label', 'data-name', 'alt'].map(a => e.getAttribute(a) || ''));
-      const noms = [document.body.innerText, ...attributs].map(t => { try { return decodeURIComponent(t); } catch { return t; } }).join('\n');
-      gcb1 = /GCB\s*[-_]?\s*1(?!\d)/i.test(noms);
-      gcb2 = /GCB\s*[-_]?\s*2(?!\d)/i.test(noms);
+      const noms = [...document.body.innerText.split('\n'), ...attributs].map(t => { try { return decodeURIComponent(t); } catch { return t; } });
+      const affaire = gcblo.slice(0, 9);                       // NIO300747
+      const sep = '[\\s_-]*';
+      const dft = new RegExp(`${affaire}${sep}DFT`, 'i');
+      const autorise = new RegExp(`${affaire}${sep}DFT${sep}AUTORIS[EÉ]`, 'i');
+      gcb1 = noms.some(n => /GCB\s*[-_]?\s*1(?!\d)/i.test(n) && dft.test(n));
+      gcb2 = noms.some(n => /GCB\s*[-_]?\s*2(?!\d)/i.test(n) && autorise.test(n));
     }
     return { gcblo, fci, mad: gcb1 && gcb2 };
   }
@@ -126,7 +133,7 @@
     if (!r) return;
     if (document.querySelector('app-add-comment')) essayerCommentaire();
     // GCB1 + GCB2 dans les documents → mis à disposition
-    if (r.mad) envoyer(`set ${r.gcblo} to mis-a-dispo`, { maj: `✓ registre : ${r.gcblo} mis à disposition (GCB_1 et GCB_2 présents)`, inconnu: `registre : ${r.gcblo} n'est pas dans le registre` });
+    if (r.mad) envoyer(`set ${r.gcblo} to mis-a-dispo`, { maj: `✓ registre : ${r.gcblo} mis à disposition (GCB_1 DFT et GCB_2 DFT_AUTORISE présents)`, inconnu: `registre : ${r.gcblo} n'est pas dans le registre` });
     if (!r.fci.length) return;
     const commande = `fci ${r.gcblo} ${r.fci.join(' ')}`;
     // « deja » (FCI déjà connu) : rien à signaler

@@ -122,6 +122,12 @@ Un dossier **clos** n'a plus d'alerte de relance.
     - La tournée (`sync`) attend la fin du commentaire avant de passer aux documents.
     - Repères tirés de la page réelle enregistrée : `app-add-comment` (bouton « Ajouter un commentaire », `textarea[name=newCommentaire]` limité à 255 caractères, bouton `submit` « Valider »), commentaires dans `app-comment [name=comment-text-container]`.
 
+17. **Mis à disposition détecté sur LINE** (extension 1.5, onglet Documents) : pour le GCBLO `NIO300747-THF010` (affaire = les 9 premiers caractères, `NIO300747`), il faut **deux pièces jointes** :
+    - une dont le nom contient `GCB_1` **et** `NIO300747_DFT` ;
+    - une dont le nom contient `GCB_2` **et** `NIO300747_DFT_AUTORISE`.
+    Les deux mots doivent être dans **le même nom** (chaque ligne du texte de la page et chaque attribut lien/titre/téléchargement est examiné séparément). Tolérés : tirets, espaces ou `_` entre les morceaux, `GCB1` / `GCB-1`, `AUTORISÉ`, la casse. Alors : `set ‹GCBLO› to mis-a-dispo`, seulement depuis un statut ouvert. Un GCB_1 et un GCB_2 sans le DFT de l'affaire ne suffisent plus (règle de Dylan du 05/11/2026).
+    Tournée : une page qui ne s'est pas manifestée au bout de 12 s est rechargée une fois (onglet resté blanc en arrière-plan).
+
 Toutes ces règles vivent dans **un seul fichier** (`js/dossiers.js`), et chacune a un test.
 
 ---
@@ -456,3 +462,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 05/11/2026 | Macro Outlook : vérifie avant chaque brouillon que l'attachement n'a pas déjà été envoyé à une boîte BL (réception, envoyés, boîtes partagées) ; `BrouillonsAttachementForcer` pour passer outre |
 | 05/11/2026 | R16 : extension 1.4 — le FCI du registre est écrit en commentaire sur LINE (« Num GCBLO : F… », Valider) quand aucun commentaire n'en contient ; tracé dans l'historique |
 | 05/11/2026 | Commandes venues de LINE en file : hors historique des commandes, en attente pendant une question o/n (auparavant ignorées) — le registre reste utilisable pendant un `sync` |
+| 05/11/2026 | R17 : extension 1.5 — Mis à disposition seulement si GCB_1 + ‹affaire›_DFT et GCB_2 + ‹affaire›_DFT_AUTORISE (dans le même nom de fichier) ; tournée : page muette rechargée une fois après 12 s |

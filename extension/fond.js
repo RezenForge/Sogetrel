@@ -39,6 +39,14 @@ async function versRegistre(message) {
 const tournee = { file: [], actifs: new Map(), enCreation: 0, registre: null, total: 0, fait: 0, echecs: 0 };
 
 const versDocuments = url => url.replace(/\/[^/]*$/, '/document');
+// Une page qui ne s'est pas manifestée (« tournee-qui ») au bout de RECHARGE_MS est rechargée, une fois :
+// il arrive qu'un onglet ouvert en arrière-plan reste blanc
+const RECHARGE_MS = 12000;
+function surveillerChargement(id, a, url) {
+  a.vu = false;
+  clearTimeout(a.recharge);
+  a.recharge = setTimeout(() => { if (!a.vu && tournee.actifs.get(id) === a) chrome.tabs.update(id, { url }).catch(() => {}); }, RECHARGE_MS);
+}
 
 function progres(encours = '') {
   if (tournee.registre === null) return;
@@ -59,6 +67,7 @@ async function suivants() {
     a.minuteur = setTimeout(() => terminer(onglet.id, false), DELAI_MS);
     tournee.actifs.set(onglet.id, a);
     chrome.tabs.update(onglet.id, { url: item.url }).catch(() => terminer(onglet.id, false));
+    surveillerChargement(onglet.id, a, item.url);
     progres(item.gcblo);
   }
 }
@@ -66,7 +75,7 @@ async function suivants() {
 function terminer(id, ok) {
   const a = tournee.actifs.get(id);
   if (!a) return;
-  clearTimeout(a.minuteur);
+  clearTimeout(a.minuteur); clearTimeout(a.recharge);
   tournee.actifs.delete(id);
   tournee.fait++;
   if (!ok) tournee.echecs++;
@@ -83,11 +92,12 @@ function etapeFinie(id, ok) {
     clearTimeout(a.minuteur);
     a.minuteur = setTimeout(() => terminer(id, false), DELAI_MS);
     chrome.tabs.update(id, { url: versDocuments(a.item.url) }).catch(() => terminer(id, false));
+    surveillerChargement(id, a, versDocuments(a.item.url));
   } else terminer(id, ok);
 }
 
 function arreter() {
-  for (const [id, a] of tournee.actifs) { clearTimeout(a.minuteur); chrome.tabs.remove(id).catch(() => {}); }
+  for (const [id, a] of tournee.actifs) { clearTimeout(a.minuteur); clearTimeout(a.recharge); chrome.tabs.remove(id).catch(() => {}); }
   tournee.actifs.clear();
   tournee.file = [];
   progres();
@@ -116,9 +126,12 @@ chrome.runtime.onMessage.addListener((message, expediteur, repondre) => {
       arreter();
       repondre({ ok: true });
       return;
-    case 'tournee-qui':
-      repondre({ etape: tournee.actifs.get(expediteur.tab?.id)?.etape || null });
+    case 'tournee-qui': {
+      const a = tournee.actifs.get(expediteur.tab?.id);
+      if (a) a.vu = true;
+      repondre({ etape: a?.etape || null });
       return;
+    }
     case 'tournee-fini':
       etapeFinie(expediteur.tab?.id, !!message.ok);
       repondre({ ok: true });

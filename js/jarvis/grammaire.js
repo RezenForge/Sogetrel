@@ -34,7 +34,7 @@ export const COMMANDES = Object.freeze([
   { id: 'relance', verbes: ['relance'], resume: 'prépare un mail de relance',
     forme: 'relance ‹dossier› ‹fci|dft›',
     emplacements: [{ nom: 'cible', sorte: 'dossier' }, { nom: 'motif', sorte: 'motif-relance' }] },
-  { id: 'sync', verbes: ['sync'], resume: 'vérifie les dossiers sur LINE (extension) : FCI, GCB_1 et GCB_2',
+  { id: 'sync', verbes: ['sync'], resume: 'vérifie les dossiers sur LINE (extension) : FCI, GCB_1 DFT et GCB_2 DFT_AUTORISE',
     forme: 'sync [filtres comme ls] · sync stop',
     emplacements: [{ nom: 'filtres', sorte: 'filtre', optionnel: true, multiple: true }] },
   { id: 'line', verbes: ['line'], resume: 'ouvre le dossier LINE (flashback)',

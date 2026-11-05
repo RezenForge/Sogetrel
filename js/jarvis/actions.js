@@ -230,7 +230,7 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
 
     /**
      * Tournée LINE : l'extension « FCI depuis LINE » ouvre en arrière-plan la page LINE de chaque dossier
-     * (informations puis documents), met à jour le FCI et passe en Mis à disposition si GCB_1 et GCB_2
+     * (informations puis documents), met à jour le FCI et passe en Mis à disposition si GCB_1 (‹affaire›_DFT) et GCB_2 (‹affaire›_DFT_AUTORISE)
      * sont là, puis referme l'onglet. Sans filtre : les dossiers affectés et pas encore clos.
      * Avec filtres : comme ls (ex. « sync fci-retard », « sync air »). « sync stop » arrête.
      */

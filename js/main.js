@@ -434,7 +434,7 @@ function reponseLine(commande) {
 /**
  * Applique une commande venue de LINE → 'maj' | 'deja' | 'inconnu' (GCBLO absent du registre).
  *  - « fci ‹GCBLO› ‹FCI…› » : FCI ajoutés (rien si déjà connus) ;
- *  - « set ‹GCBLO› to mis-a-dispo » (GCB1 et GCB2 dans les documents) : seulement depuis un statut
+ *  - « set ‹GCBLO› to mis-a-dispo » (GCB_1 ‹affaire›_DFT et GCB_2 ‹affaire›_DFT_AUTORISE dans les documents) : seulement depuis un statut
  *    ouvert ; un dossier déjà mis à disposition, attaché ou annulé ne bouge pas.
  */
 function fciDepuisLine(commande) {
