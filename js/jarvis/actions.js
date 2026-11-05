@@ -61,7 +61,7 @@ export function texteClasseur(c, complet = false) {
   return `classeur partagé${esc(quand)} : ${morceaux.join(' · ')}${exemples ? ` <span class="dim">· ${esc(exemples)}</span>` : ''}`;
 }
 
-export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre, sauvegarderDans, choisirSauvegarde, choisirDossier, ecrireDansDossier, ouvrirMail = () => {}, recharger = () => location.reload() }) {
+export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre, sauvegarderDans, choisirSauvegarde, choisirDossier, ecrireDansDossier, ouvrirMail = () => {}, recharger = () => location.reload(), lancerTournee = async () => false }) {
   let annulation = null;       // { libelle, faire() } : de quoi défaire la dernière modification
 
   // Comme les outils Linux : un succès s'écrit simplement, une erreur est préfixée du nom du programme
@@ -204,6 +204,29 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       // Sans « noopener » : la page LINE garde le lien vers le registre, le favori « FCI → registre » peut lui envoyer le FCI
       window.open(l.url, '_blank');
       ok(`LINE de ${esc(d.gcblo)} ouvert dans un nouvel onglet <span class="dim">· ${lien}</span>`);
+    },
+
+    /**
+     * Tournée LINE : l'extension « FCI depuis LINE » ouvre en arrière-plan la page LINE de chaque dossier
+     * (informations puis documents), met à jour le FCI et passe en Mis à disposition si GCB_1 et GCB_2
+     * sont là, puis referme l'onglet. Sans filtre : les dossiers affectés et pas encore clos.
+     * Avec filtres : comme ls (ex. « sync fci-retard », « sync air »). « sync stop » arrête.
+     */
+    async sync(v) {
+      const criteres = criteresListe(v);
+      if (criteres.texte.trim().toLowerCase() === 'stop') {
+        lancerTournee(null);
+        return info('tournée LINE arrêtée');
+      }
+      const dossiers = store.tous();
+      const avecFiltre = (v.filtres || []).length > 0;
+      const liste = avecFiltre ? resultatLs(criteres, regles, dossiers).liste
+        : dossiers.filter(d => d.type && !statutParCode(d.statutDft)?.clos);
+      const items = liste.map(d => ({ gcblo: d.gcblo, url: lienLine(d.gcblo).url })).filter(x => x.url);
+      if (!items.length) return info('aucun dossier à vérifier sur LINE');
+      const ok = await lancerTournee(items);
+      if (!ok) return erreur('extension « FCI depuis LINE » introuvable (version 1.3 ou plus) : installe-la ou mets-la à jour, puis refresh');
+      info(`tournée LINE : ${pluriel(items.length, 'dossier', 'dossiers')} · les pages s'ouvrent en arrière-plan · <button type="button" class="lien c-verbe" data-commande="sync stop">sync stop</button> pour arrêter`);
     },
 
     /** Raccourci de « edit ‹dossier› fci ‹fci› » : met à jour le FCI (« - » pour l'effacer). */

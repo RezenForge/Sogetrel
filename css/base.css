@@ -349,3 +349,13 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .histo[open] > summary::before, .lies-carte[open] > summary::before { content: '▾'; }
 .histo:not([open]) > summary, .lies-carte:not([open]) > summary { border-bottom: 0; }
 .histo > summary:hover, .lies-carte > summary:hover { background: var(--repere-ligne); }
+
+/* Tournée LINE (commande sync) : barre d'avancement en bas de l'écran */
+.tournee { position: fixed; z-index: 26; left: 16px; bottom: 64px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; max-width: min(80ch, 60vw);
+  padding: 7px 12px 9px; font-size: 14px; background: var(--fond-menu); border: 1px solid var(--trait); border-left: 3px solid var(--accent); border-radius: 4px; box-shadow: 0 4px 14px rgba(0,0,0,.35); }
+.tournee-titre { font-weight: 700; }
+.tournee-barre { flex: 1 0 100%; height: 3px; background: var(--trait); border-radius: 2px; overflow: hidden; }
+.tournee-barre span { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+.jc { position: relative; }
+.jc-outil { position: absolute; top: 12px; right: 12px; }
+.jc:has(.jc-outil) .jc-voir { display: none; }

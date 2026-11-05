@@ -230,6 +230,18 @@ const actions = creerActions({
   // Mail prêt : le lien mailto: ouvre la messagerie (Outlook…) avec destinataires, objet et texte
   // « refresh » : les fichiers de l'appli sont redemandés au serveur (pas au cache), puis la page est rechargée.
   // Les dossiers ne bougent pas : ils sont enregistrés dans le navigateur à chaque modification.
+  // « sync » : la liste des dossiers part vers l'extension (son script dans cette page) ; true si elle a répondu
+  lancerTournee: items => new Promise(resoudre => {
+    if (items === null) { postMessage({ registreGcbloTourneeStop: true }, location.origin); return resoudre(true); }
+    const id = Math.random().toString(36).slice(2);
+    const accuse = e => {
+      if (e.source !== window || e.data?.registreGcbloTourneeAck !== id) return;
+      removeEventListener('message', accuse); clearTimeout(minuteur); resoudre(true);
+    };
+    addEventListener('message', accuse);
+    const minuteur = setTimeout(() => { removeEventListener('message', accuse); resoudre(false); }, 1500);
+    postMessage({ registreGcbloTournee: items, id }, location.origin);
+  }),
   recharger: async () => {
     const urls = [location.href.split('#')[0], ...performance.getEntriesByType('resource').map(e => e.name).filter(u => u.startsWith(location.origin))];
     await Promise.all([...new Set(urls)].map(u => fetch(u, { cache: 'reload' }).catch(() => {})));
@@ -323,6 +335,24 @@ store.ecouter(dessinerBord);
  * si on l'avait tapée (écho, historique des modifications, cancel).
  */
 const ORIGINE_LINE = 'https://flashback.orange.fr';
+
+/** Tournée LINE : une petite barre en bas de l'écran (avancement, dossier en cours, arrêter), puis le bilan. */
+let barreTournee = null;
+function afficherTournee(p) {
+  if (!barreTournee) {
+    barreTournee = document.createElement('div');
+    barreTournee.className = 'tournee';
+    document.body.appendChild(barreTournee);
+  }
+  clearTimeout(barreTournee.minuteur);
+  const pourcent = p.total ? Math.round((p.fait / p.total) * 100) : 100;
+  barreTournee.innerHTML = p.fini
+    ? `<span class="tournee-titre">tournée LINE terminée</span><span class="dim">${p.fait}/${p.total} vérifiés${p.echecs ? ` · ${p.echecs} sans réponse` : ''}</span>`
+    : `<span class="tournee-titre">tournée LINE</span><span>${p.fait}/${p.total}</span><span class="dim">${esc(p.encours || '')}</span>`
+      + `<button type="button" class="lien c-verbe" data-commande="sync stop">arrêter</button>`;
+  barreTournee.insertAdjacentHTML('beforeend', `<span class="tournee-barre"><span style="width:${pourcent}%"></span></span>`);
+  if (p.fini) barreTournee.minuteur = setTimeout(() => { barreTournee?.remove(); barreTournee = null; }, 8000);
+}
 const COMMANDE_FCI = /^fci ([A-Z]{3}\d{6}-[A-Z]+\d+)((?: F\d{11})+)$/;
 const COMMANDE_MAD = /^set ([A-Z]{3}\d{6}-[A-Z]+\d+) to mis-a-dispo$/;
 /**
@@ -358,6 +388,8 @@ addEventListener('message', e => {
     fciDepuisLine(commande);
     return;
   }
+  // 3. Avancement de la tournée LINE (commande sync)
+  if (e.source === window && e.origin === location.origin && e.data?.registreGcbloTourneeProgres) return afficherTournee(e.data.registreGcbloTourneeProgres);
   // 2. L'extension « FCI depuis LINE » (extension/), relayée par son script dans cette page
   if (e.source === window && e.origin === location.origin && typeof e.data?.registreGcbloExtension === 'string') {
     const etat = fciDepuisLine(e.data.registreGcbloExtension);

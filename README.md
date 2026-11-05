@@ -26,6 +26,7 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `fci ‹dossier› ‹fci›` | met à jour le FCI d'un dossier (raccourci de `edit ‹dossier› fci ‹fci›`) ; `fci ‹dossier› -` l'efface ; `cancel` revient en arrière |
 | *(un GCBLO seul)* | coller ou taper un GCBLO sans commande : un seul dossier reconnu → `open`, sinon → `ls` (plusieurs dossiers, colonne collée) |
 | `line ‹dossier› [chrome\|mozilla]` | dossier LINE (flashback.orange.fr) du GCBLO : chrome ouvre un onglet ; mozilla ouvre un onglet dans Firefox (réglage `outils/ouvrir-dans-firefox.reg` à installer une fois) et copie aussi le lien. Aussi dans le menu ⋯ (« Accès LINE chrome / mozilla ») |
+| `sync [filtres]` · `sync stop` | tournée LINE (extension 1.3) : ouvre en arrière-plan la page LINE de chaque dossier (informations puis documents), met à jour le FCI, passe en Mis à disposition si GCB_1 et GCB_2, referme l'onglet. Sans filtre : dossiers affectés non clos ; filtres comme `ls` (`sync fci-retard`). Bouton « vérifier sur LINE » sur la carte FCI en retard de today |
 | `refresh` | recharge la page avec la dernière version publiée (comme Ctrl+F5) ; les dossiers restent |
 | `today` | « Aujourd'hui », à l'ouverture : une carte par sujet (FCI en retard, relances, litiges, refusés, écarts d'affect, sans affect) avec tous les dossiers (liste défilable dans la carte) et leur action en un clic ; l'en-tête de la carte ouvre la liste complète |
 | `ls … tri:colonne` | trie la liste (`tri:valo`, `tri:valo-` décroissant ; date, affect, gcblo, commune, fci, statut). Ou un clic sur le titre de la colonne (2e clic : sens inverse) |
@@ -117,6 +118,8 @@ Version d'avant la refonte : branche `avant-refonte`.
 ## Extension « FCI depuis LINE » (sans clic)
 
 Dossier `extension/` (Chrome ou Edge) : dès qu'une page LINE affiche un FCI dans ses commentaires, le registre ouvert est mis à jour tout seul (bulle verte sur la page LINE ; rien si le FCI est déjà connu). Sur l'onglet Documents, une pièce jointe « GCB_1 » et une « GCB_2 » passent le GCBLO en Mis à disposition (seulement depuis un statut ouvert). Installation : décompresser le dossier, `chrome://extensions` › Mode développeur › « Charger l'extension non empaquetée » › choisir le dossier.
+
+**Tournée LINE** (`sync`) : l'extension ouvre elle-même les pages LINE des dossiers, deux à la fois, en arrière-plan, et les referme ; une barre en bas du registre suit l'avancement.
 
 ## Favori « FCI → registre »
 

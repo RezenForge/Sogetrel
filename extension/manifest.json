@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Registre GCBLO · FCI depuis LINE",
-  "version": "1.2.1",
-  "description": "Sur les pages LINE (flashback.orange.fr) : met à jour le registre GCBLO ouvert avec le FCI des commentaires, et passe le GCBLO en « Mis à disposition » quand les documents contiennent GCB1 et GCB2.",
+  "version": "1.3.0",
+  "description": "Sur les pages LINE (flashback.orange.fr) : met à jour le registre GCBLO ouvert (FCI des commentaires ; Mis à disposition si GCB_1 et GCB_2 sont dans les documents). Tournée LINE : vérifie une liste de dossiers en arrière-plan.",
   "background": {
     "service_worker": "fond.js"
   },
   "host_permissions": [
-    "https://rezenforge.github.io/*"
+    "https://rezenforge.github.io/*",
+    "https://flashback.orange.fr/*"
   ],
   "content_scripts": [
     {

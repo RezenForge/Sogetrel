@@ -24,6 +24,7 @@ const depuis = (jour, iso) => { if (!iso) return ''; const n = ecartJours(jour, 
 
 export const CARTES = Object.freeze([
   { commande: 'ls fci-retard', libelle: 'FCI en retard', conseil: 'affectés depuis plus de 24 h, sans FCI', classe: 'retard', stat: s => s.fciRetard,
+    outil: ['vérifier sur LINE', 'sync fci-retard'],
     indice: (d, c) => `affecté ${depuis(c.jour, d.dateAffectation)}`,
     actions: (d, c) => [relancer(d, 'fci', c.jour)] },
   { commande: 'ls retard', libelle: 'Relances en retard', conseil: 'date de relance dépassée', classe: 'retard', stat: s => s.retard,
@@ -80,6 +81,8 @@ export function carteHtml(carte, dossiers, ctx, esc) {
     + `<button type="button" class="jc-tete" data-commande="${esc(carte.commande)}" title="${esc(carte.commande)}">`
     + `<span class="jc-n">${dossiers.length}</span><span class="jc-titres"><span class="jc-libelle">${esc(carte.libelle)}</span><span class="jc-conseil dim">${esc(carte.conseil)}</span></span><span class="jc-voir">liste →</span></button>`
     // Tous les dossiers, dans une liste qui défile à l'intérieur de la carte au-delà de LIGNES_VISIBLES
+    // Outil de la carte (ex. tournée LINE), sous l'en-tête
+    + (carte.outil ? `<div class="jc-outil"><button type="button" class="jc-action" data-commande="${esc(carte.outil[1])}" title="${esc(carte.outil[1])}">${esc(carte.outil[0])}</button></div>` : '')
     + `<div class="jc-corps${dossiers.length > LIGNES_VISIBLES ? ' defile' : ''}" style="--lignes:${LIGNES_VISIBLES}">${lignes}</div>`
     + '</section>';
 }

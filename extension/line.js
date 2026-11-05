@@ -63,8 +63,23 @@
     envoyer(commande, { maj: `✓ registre mis à jour : ${commande}`, inconnu: `registre : ${r.gcblo} n'est pas dans le registre` });
   }
 
-  let attente = null;
-  new MutationObserver(() => { clearTimeout(attente); attente = setTimeout(verifier, 600); })
+  let attente = null, derniereMutation = Date.now();
+  new MutationObserver(() => { derniereMutation = Date.now(); clearTimeout(attente); attente = setTimeout(verifier, 600); })
     .observe(document.documentElement, { childList: true, subtree: true, characterData: true });
   verifier();
+
+  // Tournée LINE (commande sync du registre) : cet onglet a été ouvert par l'extension ? Quand la page
+  // est chargée et calme (2 s sans changement, 20 s au plus), on lit, puis on prévient l'extension.
+  chrome.runtime.sendMessage({ type: 'tournee-qui' }, rep => {
+    if (!rep?.etape) return;
+    const debut = Date.now();
+    const surveiller = setInterval(() => {
+      const prete = !!document.querySelector('h2.dossier') && Date.now() - derniereMutation > 2000;
+      if (!prete && Date.now() - debut < 20000) return;
+      clearInterval(surveiller);
+      verifier();
+      // Laisse le temps aux messages vers le registre de partir
+      setTimeout(() => chrome.runtime.sendMessage({ type: 'tournee-fini', ok: !!lire() }), 1500);
+    }, 500);
+  });
 })();
