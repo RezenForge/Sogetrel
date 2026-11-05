@@ -24,7 +24,6 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `save` · `save folder` | la première fois, choisit un dossier ; ensuite, sauvegarde directement dans ce dossier sans rien redemander (`save folder` pour en changer). Écrit une sauvegarde datée ; seules les 10 plus récentes y restent. Ensuite, sauvegarde automatique toutes les heures dans ce dossier, tant que l'appli est ouverte. Écrit aussi `registre-gcblo.csv` pour le classeur partagé (voir plus bas) |
 | `restore` | recharge une sauvegarde : remplace toute la base après confirmation (annulable) |
 | `fci ‹dossier› ‹fci›` | met à jour le FCI d'un dossier (raccourci de `edit ‹dossier› fci ‹fci›`) ; `fci ‹dossier› -` l'efface ; `cancel` revient en arrière |
-| `morpion` | une partie de morpion en ASCII contre une IA imbattable : clic sur une case ou touche 1-9 ; disparaît à la fin ou dès qu'une commande est lancée |
 | `refresh` | recharge la page avec la dernière version publiée (comme Ctrl+F5) ; les dossiers restent |
 | `today` | « Aujourd'hui », à l'ouverture : une carte par sujet (FCI en retard, relances, litiges, refusés, écarts d'affect, sans affect) avec tous les dossiers (liste défilable dans la carte) et leur action en un clic ; l'en-tête de la carte ouvre la liste complète |
 | `ls … tri:colonne` | trie la liste (`tri:valo`, `tri:valo-` décroissant ; date, affect, gcblo, commune, fci, statut). Ou un clic sur le titre de la colonne (2e clic : sens inverse) |
@@ -98,7 +97,7 @@ js/jarvis/actions.js     exécute une commande via les règles
 js/jarvis/menus.js       le menu ⋯ d'un dossier : des commandes écrites à l'avance
 js/jarvis/tableau-bord.js le tableau de bord ASCII, toujours visible à droite
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   258 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
+tests/                   260 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
 ```
 
 ## Refonte (04/11/2026, à l'essai)

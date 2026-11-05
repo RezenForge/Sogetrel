@@ -26,7 +26,7 @@ const commencePar = (liste, mot) => liste.filter(p => plat(p.inserer).startsWith
 
 function verbes(mot, ctx) {
   const p = plat(mot);
-  const liste = COMMANDES.map(c => {
+  const liste = COMMANDES.filter(c => !c.cachee).map(c => {
     const verbe = c.verbes.find(v => v.startsWith(p));
     return verbe ? { inserer: verbe + ' ', libelle: c.forme, detail: c.resume, sorte: 'verbe', id: c.id } : null;
   }).filter(Boolean);

@@ -57,7 +57,7 @@ export function creerInvite({ racine, contexte }) {
    * Où s'écrit la sortie : la console, ou le volet de droite (sous le tableau de bord) pour
    * les commandes qui ne doivent pas faire défiler la console (open, set, edit, cancel, help).
    */
-  const DANS_LE_VOLET = new Set(['open', 'set', 'edit', 'fci', 'cancel', 'help', 'save', 'restore', 'attachement', 'delete', 'affect', 'relance']);
+  const DANS_LE_VOLET = new Set(['morpion', 'open', 'set', 'edit', 'fci', 'cancel', 'help', 'save', 'restore', 'attachement', 'delete', 'affect', 'relance']);
   const VIDE_LA_CONSOLE = new Set(['ls', 'today']);
   let sortie = ecranEl;
   const defiler = () => { sortie.scrollTop = sortie.scrollHeight; };
@@ -383,10 +383,12 @@ export function creerInvite({ racine, contexte }) {
 
   async function lancerDans(texte, analyse, echoDansLeVolet = false, noter = true) {
     const ici = sortie;
+    // Commande cachée : pas d'écho, pas d'historique
+    const cachee = !!analyse.commande?.cachee;
     if (echoDansLeVolet) sortie = voletEl;
-    ecran.ligne(`<span class="invite-echo">${INVITE}</span> ${colorer(texte, analyse)}`, 'echo');
+    if (!cachee) ecran.ligne(`<span class="invite-echo">${INVITE}</span> ${colorer(texte, analyse)}`, 'echo');
     sortie = ici;
-    if (noter) {
+    if (noter && !cachee) {
       historique = [texte, ...historique.filter(h => h !== texte)].slice(0, 100);
       try { localStorage.setItem(CLE_HISTORIQUE, JSON.stringify(historique)); } catch { /* facultatif */ }
     }
@@ -398,7 +400,7 @@ export function creerInvite({ racine, contexte }) {
       const pb = analyse.erreurs[0] || analyse.erreurCourante || `il manque : ${analyse.manquants.join(', ')}`;
       return ecran.ligne(`${esc(analyse.commande.verbes[0])}: ${esc(pb)}<br><span class="dim">usage : ${esc(analyse.commande.forme)}</span>`, 'err');
     }
-    contexte().memoriser?.(analyse.commande.id);
+    if (!analyse.commande.cachee) contexte().memoriser?.(analyse.commande.id);
     commandeEnCours = texte;
     await executer(analyse);
     rafraichir();

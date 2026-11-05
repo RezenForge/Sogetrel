@@ -1,5 +1,6 @@
 /**
- * morpion.js — un petit morpion en ASCII (commande `morpion`), contre une IA imbattable (minimax).
+ * morpion.js — un petit morpion en ASCII (commande cachée `morpion`), contre une IA forte mais battable :
+ * elle joue le meilleur coup (minimax), sauf une fois sur ERREUR_IA où elle joue au hasard.
  * Tu joues X et tu commences ; l'IA joue O. Clic sur une case, ou touche 1 à 9 (ligne de saisie vide).
  * La partie disparaît une fois gagnée, perdue ou nulle, ou dès qu'une commande est lancée.
  *
@@ -45,9 +46,19 @@ export function coupIA(plateau, ia = 'O') {
   return coup;
 }
 
+/** Probabilité que l'IA joue un coup au hasard plutôt que le meilleur (0 = imbattable). */
+export const ERREUR_IA = 0.3;
+
+/** Le coup de l'IA en partie : le meilleur, sauf erreur volontaire (hasard). */
+export function coupPartie(plateau, ia = 'O', hasard = Math.random) {
+  const libres = plateau.map((c, i) => c ? -1 : i).filter(i => i >= 0);
+  if (hasard() < ERREUR_IA) return libres[Math.floor(hasard() * libres.length)];
+  return coupIA(plateau, ia);
+}
+
 export function demarrerMorpion(el, { finir = () => {} } = {}) {
   const p = Array(9).fill(null);
-  let fini = false, message = 'à toi · clic sur une case ou touche 1-9';
+  let fini = false, message = 'à toi · clic ou touche 1-9';
   const champ = document.querySelector('#saisie');
 
   const case_ = i => p[i]
@@ -59,7 +70,7 @@ export function demarrerMorpion(el, { finir = () => {} } = {}) {
   }
   function terminer(g) {
     fini = true;
-    message = g === 'X' ? '<span class="mp-gagne">gagné !</span> (vraiment ?)' : g === 'O' ? '<span class="mp-perdu">perdu</span> · l\'IA ne pardonne pas' : 'match nul · c\'est le mieux qu\'on puisse faire';
+    message = g === 'X' ? '<span class="mp-gagne">gagné !</span> bien joué' : g === 'O' ? '<span class="mp-perdu">perdu</span> · retente ta chance' : 'match nul';
     dessiner();
     arreter();
     setTimeout(finir, 2200);
@@ -69,7 +80,7 @@ export function demarrerMorpion(el, { finir = () => {} } = {}) {
     p[i] = 'X';
     let g = gagnant(p);
     if (g) return terminer(g);
-    p[coupIA(p, 'O')] = 'O';
+    p[coupPartie(p, 'O')] = 'O';
     g = gagnant(p);
     if (g) return terminer(g);
     dessiner();

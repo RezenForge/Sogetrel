@@ -295,6 +295,7 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       const div = ecran.ligne('<div class="morpion"></div>', 'jeu');
       if (!div) return;
       div.arreter = demarrerMorpion(div.querySelector('.morpion'), { finir: () => div.remove() });
+      div.scrollIntoView({ block: 'end' });
     },
 
     /**
@@ -332,7 +333,7 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
         c.emplacements.filter(e => !e.mot).forEach(e => info(`<span class="dim">  ${esc(e.nom)} : ${esc(SORTES[e.sorte])}</span>`));
         return;
       }
-      COMMANDES.forEach(c => info(`<button type="button" class="lien c-verbe" data-commande="help ${esc(c.verbes[0])}">${esc(c.verbes[0])}</button>${' '.repeat(Math.max(1, 8 - c.verbes[0].length))}<span class="dim">${esc(c.resume)}</span>`));
+      COMMANDES.filter(c => !c.cachee).forEach(c => info(`<button type="button" class="lien c-verbe" data-commande="help ${esc(c.verbes[0])}">${esc(c.verbes[0])}</button>${' '.repeat(Math.max(1, 8 - c.verbes[0].length))}<span class="dim">${esc(c.resume)}</span>`));
     }
   };
 

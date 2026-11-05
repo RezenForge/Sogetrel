@@ -2,7 +2,7 @@
  * morpion.test.js — l'IA du morpion ne perd jamais.
  */
 import { groupe, test, egal, vrai } from './outil.js';
-import { gagnant, coupIA } from '../js/jarvis/morpion.js';
+import { gagnant, coupIA, coupPartie } from '../js/jarvis/morpion.js';
 
 groupe('Morpion', () => {
   test('gagnant : ligne, colonne, diagonale, nul', () => egal(
@@ -25,5 +25,15 @@ groupe('Morpion', () => {
     };
     explorer(Array(9).fill(null));
     egal(perdues, 0);
+  });
+  test('en partie : parfois un coup au hasard (battable), toujours sur une case libre', () => {
+    const p = ['X', null, null, null, 'O', null, null, null, 'X'];
+    const coups = new Set(Array.from({ length: 200 }, () => coupPartie(p)));
+    vrai(coups.size > 1 && [...coups].every(i => !p[i]));
+  });
+  test('commande cachée : absente de l\'autocomplétion', async () => {
+    const { proposer } = await import('../js/jarvis/completion.js');
+    const r = proposer('mor', 3, { dossiers: [], aujourdhui: '2026-11-05' });
+    vrai(!JSON.stringify(r).includes('morpion'));
   });
 });

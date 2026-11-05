@@ -176,7 +176,7 @@ export function accepter(sorte, mot, ctx, { multiple = false } = {}) {
     case 'champ':
       return CHAMPS[p] ? { ok: true, valeur: CHAMPS[p] } : { ok: false, erreur: `champ inconnu : « ${mot} »` };
     case 'commande':
-      return commandeParVerbe(mot) ? { ok: true, valeur: commandeParVerbe(mot) } : { ok: false, erreur: `${mot} : commande introuvable` };
+      return commandeParVerbe(mot) && !commandeParVerbe(mot).cachee ? { ok: true, valeur: commandeParVerbe(mot) } : { ok: false, erreur: `${mot} : commande introuvable` };
     case 'texte':
       return { ok: true, valeur: mot };
     default:
@@ -197,7 +197,7 @@ const MOTS_CONNUS = {
   attachement: ['fichier', ...Object.keys(GROUPES), ...Object.keys(MOTS_STATUT)],
   champ: Object.keys(CHAMPS),
   periode: Object.keys(PERIODES),
-  commande: COMMANDES.flatMap(c => c.verbes)
+  commande: COMMANDES.filter(c => !c.cachee).flatMap(c => c.verbes)
 };
 /** Vrai si `mot` est le début d'un mot connu de cette sorte (« re » → « refuse »). */
 export const debutPossible = (sorte, mot) => !!plat(mot) && (MOTS_CONNUS[sorte] || []).some(m => m.startsWith(plat(mot)));
