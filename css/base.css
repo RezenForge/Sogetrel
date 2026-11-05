@@ -37,7 +37,13 @@ body {
   width: calc(40ch + 32px); padding: 10px 16px; border-top: 1px solid var(--trait);
 }
 .volet .l + .echo { margin-top: 8px; }
-.volet pre.fiche { white-space: pre-wrap; overflow-wrap: anywhere; }
+.volet pre.fiche { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.4; margin: 0; }
+/* Fiche (open) : elle occupe la hauteur restante du volet ; seul l'historique défile, dans sa carte */
+.volet { display: flex; flex-direction: column; }
+.volet > .l { flex: none; }
+.volet > .vue-fiche { flex: 1 1 auto; min-height: 12em; display: flex; flex-direction: column; }
+.volet > .vue-fiche .histo { flex: 1 1 auto; min-height: 7em; display: flex; flex-direction: column; margin-top: 8px; }
+.volet > .vue-fiche .histo-corps { flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto; }
 /* Dessin : chaque morceau dans une case de largeur fixe, les traits remplissent le reste (cadre toujours droit) */
 /* --ch : largeur d'un caractère, figée une fois pour toutes (le gras ou une autre police ne la change pas) */
 @property --ch { syntax: '<length>'; inherits: true; initial-value: 8px; }

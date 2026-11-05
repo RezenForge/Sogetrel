@@ -86,7 +86,7 @@ export const MOTS_FILTRE = Object.freeze({ retard: 'retard', 'en-retard': 'retar
  */
 export const CHAMPS = Object.freeze({
   affect: 'type', statut: 'statutDft', commune: 'commune', valo: 'valorisation', fci: 'fci',
-  date: 'dateAffectation', affectation: 'dateAffectation', relance: 'dateRelance', commentaire: 'commentaire', gcblo: 'gcblo'
+  date: 'dateAffectation', affectation: 'dateAffectation', relance: 'dateRelance', commentaire: 'commentaire', note: 'commentaire', gcblo: 'gcblo'
 });
 
 /** Jours de la semaine, dimanche = 0 (comme Date.getDay). */

@@ -79,17 +79,17 @@ export function creerInvite({ racine, contexte }) {
    */
   function ficheHtml(d) {
     const alerte = contexte().regles.etatRelance(d);
-    const champ = (nom, cle, valeur, classe = '') => `<span class="dim">${esc(nom.padEnd(14))}</span><span class="editable${classe ? ` ${classe}` : ''}" data-champ="${cle}" title="double-clic pour modifier${classe.startsWith('fci-') ? ' · clic droit : relance FCI' : ''}">${valeur}</span>`;
+    const champ = (nom, cle, valeur, classe = '') => `<span class="dim">${esc(nom.padEnd(10))}</span><span class="editable${classe ? ` ${classe}` : ''}" data-champ="${cle}" title="double-clic pour modifier${classe.startsWith('fci-') ? ' · clic droit : relance FCI' : ''}">${valeur}</span>`;
     const lignes = [
       `<b>${lienDossier(d)}</b> ${boutonMenu(d)}`,
       champ('affect', 'affect', d.type ? `<span class="ty-${d.type}">${esc(typeParCode(d.type).libelle)}</span>` : '<span class="dim">—</span>'),
-      champ('statut DFT', 'statut', `<span class="st-${d.statutDft}">${esc(statutParCode(d.statutDft).libelle)}</span>`),
+      champ('statut', 'statut', `<span class="st-${d.statutDft}">${esc(statutParCode(d.statutDft).libelle)}</span>`),
       champ('FCI', 'fci', copieFci(d, esc(d.fci.join(', ') || 'aucun')), { retard: 'fci-retard', relance: 'fci-relance' }[etatFci(d, contexte().aujourdhui)] || ''),
       champ('commune', 'commune', esc(d.commune || '—')),
-      champ('valorisation', 'valo', d.valorisation !== null && d.valorisation !== undefined ? esc(formaterMontant(d.valorisation)) : '—'),
+      champ('valo', 'valo', d.valorisation !== null && d.valorisation !== undefined ? esc(formaterMontant(d.valorisation)) : '—'),
       champ('date', 'date', d.dateAffectation ? esc(formater(d.dateAffectation)) : '—'),
       champ('relance', 'relance', d.dateRelance ? `<span class="${alerte || ''}">${esc(formater(d.dateRelance))}${alerte === 'retard' ? ' (en retard)' : alerte === 'proche' ? ' (proche)' : ''}</span>` : 'aucune'),
-      champ('commentaire', 'commentaire', esc(d.commentaire || '—').replace(/\n/g, '<br>' + ' '.repeat(14)))
+      champ('note', 'commentaire', esc(d.commentaire || '—').replace(/\n/g, '<br>' + ' '.repeat(10)))
     ];
     return `<pre class="fiche">${lignes.join('\n')}</pre>${historiqueHtml(d)}`;
   }
@@ -201,7 +201,7 @@ export function creerInvite({ racine, contexte }) {
       Object.assign(sortie.lastElementChild.dataset, { liste: dossiers.map(d => d.id).join(','), ls: commandeEnCours, triActuel: tri.toLowerCase() });
     },
     fiche(d) {
-      ecran.ligne(ficheHtml(d), 'vue');
+      ecran.ligne(ficheHtml(d), 'vue vue-fiche');
       const el = sortie.lastElementChild;
       el.dataset.fiche = d.id;
     },
@@ -357,6 +357,8 @@ export function creerInvite({ racine, contexte }) {
     let echoDansLeVolet = false;
     // Commande inconnue ou incomplète : le message d'erreur va aussi dans le volet (la console ne bouge pas)
     if (voletEl && (DANS_LE_VOLET.has(id) || !analyse.commande || !analyse.complet)) sortie = voletEl;
+    // open : le volet repart de zéro, la fiche y tient entière sans défiler
+    if (voletEl && id === 'open' && analyse.complet) voletEl.innerHTML = '';
     if (voletEl && VIDE_LA_CONSOLE.has(id) && analyse.complet) {
       // ls (list) et info : la commande s'écrit dans le volet, comme les autres ;
       // la console est vidée et ne montre que la liste. Sans résultat, tout va dans le volet
