@@ -357,7 +357,14 @@ export function creerInvite({ racine, contexte }) {
     fermerMenu();
     // Une commande lancée : un jeu en cours (morpion) disparaît
     racine.querySelectorAll('.l.jeu').forEach(j => { j.arreter?.(); j.remove(); });
-    const analyse = analyser(texte, texte.length, contexte());
+    let analyse = analyser(texte, texte.length, contexte());
+    // GCBLO collé (ou tapé) sans commande : un seul dossier reconnu → open, sinon → ls (liste collée)
+    if (!analyse.commande && /[A-Za-z]{3}\s*[-‐‑‒–—]?\s*\d{6}|(?:^|\s)\d{6}(?:\s|$)/.test(texte)) {
+      const ouvrir = `open ${texte.trim()}`;
+      const a = texte.trim().split(/\s+/).length === 1 && analyser(ouvrir, ouvrir.length, contexte());
+      texte = a?.commande && a.complet ? ouvrir : `ls ${texte.trim()}`;
+      analyse = analyser(texte, texte.length, contexte());
+    }
     const id = analyse.commande?.id;
     let echoDansLeVolet = false;
     // Commande inconnue ou incomplète : le message d'erreur va aussi dans le volet (la console ne bouge pas)
