@@ -149,7 +149,7 @@ Chaque attachement d'un dossier NUM21 ou AIR prépare son mail dans `mails-attac
 
 La macro Outlook `BrouillonsAttachement` en fait des **brouillons**, avec ta signature et l'attachement en pièce jointe. Rien n'est envoyé : on relit, on clique sur Envoyer. Les mails traités sont retirés du fichier, donc relancer la macro ne crée pas de doublon.
 
-**Installer (une fois)** : dans Outlook classique, Alt+F11, *Fichier › Importer un fichier…*, choisir `outlook/BrouillonsAttachement.bas`, puis *Fichier › Enregistrer*. **Lancer** : Alt+F8 › `BrouillonsAttachement`. La première fois, elle demande le dossier des attachements ; `ChoisirDossierAttachements` permet d'en changer.
+**Installer (une fois)** : dans Outlook classique, Alt+F11, *Fichier › Importer un fichier…*, choisir `outlook/BrouillonsAttachement.bas`, puis *Fichier › Enregistrer*. Le module importé s'appelle `RegistreGcbloOutlook` (s'il reste un ancien module `BrouillonsAttachement`, le supprimer : un module du même nom que la macro empêche Outlook de la lancer). **Lancer** : Alt+F8 › `BrouillonsAttachement`. La première fois, elle demande le dossier des attachements ; `ChoisirDossierAttachements` permet d'en changer.
 
 ## Classeur partagé IMMO-COORDI-DISSIM.xlsm
 

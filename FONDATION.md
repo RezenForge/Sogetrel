@@ -444,3 +444,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | Macro : E = `FACTU` (et non VALIDÉ GDP) pour les dossiers Attach ; onglet Journal registre retiré, le compte rendu suffit |
 | 05/11/2026 | Macro : ` / GCBLO OK` après le numéro FCI dans J pour les dossiers Mis à disposition (et Attach) |
 | 05/11/2026 | R15 : mail d'attachement au pôle facturation — le registre prépare `mails-attachement.csv`, la macro Outlook `BrouillonsAttachement` en fait des brouillons (signature, pièce jointe) ; dossier des attachements retenu, `attachement folder` pour en changer ; un seul attachement ne passe plus par « Enregistrer sous » |
+| 05/11/2026 | Macro Outlook : module renommé `RegistreGcbloOutlook` (même nom que la macro → « Sub ou Function non définie » à Alt+F8) |

@@ -1,4 +1,4 @@
-Attribute VB_Name = "BrouillonsAttachement"
+Attribute VB_Name = "RegistreGcbloOutlook"
 '==============================================================================
 ' BrouillonsAttachement - macro OUTLOOK (classique) du Registre GCBLO
 '
@@ -16,6 +16,8 @@ Attribute VB_Name = "BrouillonsAttachement"
 '
 ' Installer (une fois) : dans Outlook, Alt+F11, Fichier > Importer un fichier...,
 ' choisir BrouillonsAttachement.bas, puis Fichier > Enregistrer.
+' Le module s'appelle RegistreGcbloOutlook : un module du meme nom que la macro
+' empeche Outlook de la lancer ("Sub ou Function non definie").
 ' Lancer : Alt+F8 > BrouillonsAttachement. La premiere fois, la macro demande le dossier
 ' des attachements (celui choisi dans le registre) ; il est garde sur ce PC.
 ' ChoisirDossierAttachements permet d'en changer.
