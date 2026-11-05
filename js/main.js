@@ -328,6 +328,26 @@ function valoDesLies() { const l = lireLies(); return Math.round(store.tous().fi
 function nbEcartsAffect() { const a = lireAffectsClasseur(); return store.tous().filter(d => ecartAffect(d, a)).length; }
 function dessinerBord() { tableauBord.innerHTML = `<div class="dessin">${dessinerTableauBord(regles.statistiques(), regles.aujourdhui(), { derniereSauvegarde: derniereSauvegarde(), maintenant: new Date(), ecartsAffect: nbEcartsAffect(), valoLies: valoDesLies(), classeur: lireLocal(CLE_CLASSEUR_LE, null), replies: lireLocal(CLE_REPLIES, []) }).html}</div>`; }
 store.ecouter(dessinerBord);
+
+/*
+ * registre-gcblo.csv toujours à jour pour la macro Excel : réécrit quelques secondes après chaque
+ * changement (FCI, statut…), sans attendre la sauvegarde horaire. Seulement si le navigateur a déjà
+ * donné l'accès au dossier des sauvegardes (aucune question posée ici) ; sinon, au prochain « save ».
+ */
+let minuteurCsv = null;
+store.ecouter(() => {
+  clearTimeout(minuteurCsv);
+  minuteurCsv = setTimeout(async () => {
+    try {
+      const dossier = await coffre.lire('dossier-sauvegarde');
+      if (!dossier?.queryPermission || await dossier.queryPermission({ mode: 'readwrite' }) !== 'granted') return;
+      const csv = await dossier.getFileHandle(NOM_CSV, { create: true });
+      const flux = await csv.createWritable();
+      await flux.write(csvRegistre(store.tous())); await flux.close();
+      try { localStorage.setItem('gcblo.v2.csvEcrit', new Date().toISOString()); } catch { /* facultatif */ }
+    } catch { /* dossier indisponible : au prochain save */ }
+  }, 3000);
+});
 /*
  * Favori « FCI → registre » (outils/favori-line.js) : depuis une page LINE ouverte par le registre
  * (menu ⋯ › Accès LINE chrome), il envoie directement « fci ‹GCBLO› ‹FCI› ». On n'accepte que ce

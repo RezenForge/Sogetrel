@@ -139,7 +139,7 @@ La macro doit être à jour (elle envoie maintenant toutes les lignes, pas seule
 
 ## Classeur partagé IMMO-COORDI-DISSIM.xlsm
 
-Le registre écrit `registre-gcblo.csv` à chaque sauvegarde (manuelle ou toutes les heures). La macro `MajDepuisRegistre` met le classeur à jour depuis ce fichier, sans rien effacer :
+Le registre écrit `registre-gcblo.csv` à chaque sauvegarde, et quelques secondes après chaque changement (dès que l'accès au dossier des sauvegardes est accordé). La macro `MajDepuisRegistre` met le classeur à jour depuis ce fichier, sans rien effacer :
 
 - colonne **J** : `Numéro de commande FCI : ‹fci›`, sauf si le FCI s'y trouve déjà (à n'importe quel endroit) ;
 - colonne **E** : `FACTU` pour les dossiers en Attach ;
