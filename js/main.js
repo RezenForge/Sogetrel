@@ -7,6 +7,7 @@
  * Au premier lancement, si la v1 a laissé des dossiers dans ce navigateur,
  * ils sont repris automatiquement.
  */
+import { lireCsvMailsRecus, trierMailsRecus, NOM_CSV_MAILS_RECUS } from './mails-recus.js';
 import { creerStore, supportNavigateur, supportMemoire } from './store.js';
 import { creerDossiers } from './dossiers.js';
 import { creerReglages } from './reglages.js';
@@ -120,10 +121,48 @@ async function lireClasseurPartage(dossier) {
   return { lus: r.lus, crees: fait.crees.map(d => d.gcblo), completes: fait.avant.length, refuses: r.refuses.length + fait.refuses.length, le: fichier.lastModified };
 }
 
+/*
+ * R18 — FCI reçus par mail : mails-gcblo.csv (écrit par la macro Outlook LireFciMails) dans le dossier des
+ * sauvegardes, lu chaque minute et à chaque sauvegarde. Dossier sans FCI : le FCI est appliqué (commande fci,
+ * annulable) et l'historique note le mail. Autre FCI déjà connu, ou GCBLO absent : signalé une seule fois.
+ */
+const CLE_MAILS_SIGNALES = 'gcblo.v2.mailsSignales';
+let derniereLectureMails = { modifie: 0, lu: 0 };
+async function lireMailsRecus(dossier) {
+  let fichier;
+  try { fichier = await (await dossier.getFileHandle(NOM_CSV_MAILS_RECUS)).getFile(); } catch { return; }
+  // Fichier inchangé depuis la dernière lecture : rien de neuf (relu quand même toutes les 10 min,
+  // pour un GCBLO créé entre-temps)
+  if (fichier.lastModified === derniereLectureMails.modifie && Date.now() - derniereLectureMails.lu < 10 * 60 * 1000) return;
+  derniereLectureMails = { modifie: fichier.lastModified, lu: Date.now() };
+  const { appliquer, differents, inconnus } = trierMailsRecus(store.tous(), lireCsvMailsRecus(await fichier.text()));
+  const quand = l => `${l.de ? ` de ${l.de}` : ''}${l.recuLe ? ` le ${l.recuLe}` : ''}`;
+  for (const a of appliquer) {
+    regles.noter(a.dossier.id, 'mail', `FCI reçu par mail${quand(a.ligne)} : ${a.fci.join(' ')}`);
+    invite.ecran.journal(`✉ FCI reçu par mail · ${esc(a.dossier.gcblo)} → ${esc(a.fci.join(' '))}<span class="dim">${esc(quand(a.ligne))}</span>`, 'ok');
+    lancerDepuisLine(`fci ${a.dossier.gcblo} ${[...new Set([...a.dossier.fci, ...a.fci])].join(' ')}`);
+  }
+  const signales = new Set(lireLocal(CLE_MAILS_SIGNALES, []));
+  const nouveau = cle => { if (signales.has(cle)) return false; signales.add(cle); return true; };
+  for (const a of differents) {
+    if (nouveau(`${a.dossier.gcblo}:${a.fci.join(' ')}`)) invite.ecran.journal(`<span class="dim">✉ ${esc(a.dossier.gcblo)} : un mail${esc(quand(a.ligne))} donne le FCI ${esc(a.fci.join(' '))}, le registre a ${esc(a.dossier.fci.join(' '))} · à vérifier (rien changé)</span>`, 'info');
+  }
+  for (const l of inconnus) {
+    if (nouveau(`${l.gcblo}:?`)) invite.ecran.journal(`<span class="dim">✉ FCI ${esc(l.fci.join(' '))} reçu par mail pour ${esc(l.gcblo)}, absent du registre</span>`, 'info');
+  }
+  try { localStorage.setItem(CLE_MAILS_SIGNALES, JSON.stringify([...signales].slice(-500))); } catch { /* facultatif */ }
+}
+async function lireMailsSiAccesDonne() {
+  let dossier;
+  try { dossier = await coffre.lire('dossier-sauvegarde'); } catch { return; }
+  try { if (dossier?.queryPermission && await dossier.queryPermission({ mode: 'readwrite' }) === 'granted') await lireMailsRecus(dossier); } catch { /* rien */ }
+}
+
 async function ecrireSauvegarde(dossier, nom, contenu) {
   // D'abord les nouveautés du classeur partagé : la sauvegarde et le CSV les contiennent déjà
   let classeur = null;
   try { classeur = await lireClasseurPartage(dossier); } catch (e) { invite.ecran.journal(`gcblo: ${esc(NOM_CSV_CLASSEUR)} illisible : ${esc(e.message)}`, 'err'); }
+  try { derniereLectureMails = { modifie: 0, lu: 0 }; await lireMailsRecus(dossier); } catch (e) { invite.ecran.journal(`gcblo: ${esc(NOM_CSV_MAILS_RECUS)} illisible : ${esc(e.message)}`, 'err'); }
   const texte = typeof contenu === 'function' ? contenu() : contenu;
   const fichier = await dossier.getFileHandle(nom, { create: true });
   const flux = await fichier.createWritable();
@@ -481,7 +520,8 @@ tableauBord.addEventListener('click', e => {
   try { localStorage.setItem(CLE_REPLIES, JSON.stringify(suite)); } catch { /* facultatif */ }
   dessinerBord();
 });
-setInterval(() => { dessinerBord(); sauvegardeAutomatique(); }, 60 * 1000);
+setInterval(() => { dessinerBord(); sauvegardeAutomatique(); lireMailsSiAccesDonne(); }, 60 * 1000);
+setTimeout(lireMailsSiAccesDonne, 5000);
 dessinerBord();
 setTimeout(sauvegardeAutomatique, 3000);   // à l'ouverture, si la dernière date de plus d'une heure
 

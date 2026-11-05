@@ -128,6 +128,12 @@ Un dossier **clos** n'a plus d'alerte de relance.
     Les deux mots doivent être dans **le même nom** (chaque ligne du texte de la page et chaque attribut lien/titre/téléchargement est examiné séparément). Tolérés : tirets, espaces ou `_` entre les morceaux, `GCB1` / `GCB-1`, `AUTORISÉ`, la casse. Alors : `set ‹GCBLO› to mis-a-dispo`, seulement depuis un statut ouvert. Un GCB_1 et un GCB_2 sans le DFT de l'affaire ne suffisent plus (règle de Dylan du 05/11/2026).
     Tournée : une page qui ne s'est pas manifestée au bout de 12 s est rechargée une fois (onglet resté blanc en arrière-plan).
 
+18. **FCI reçu par mail** (`js/mails-recus.js`, macro Outlook `outlook/LireFciMails.bas`) :
+    - La macro cherche dans les Boîtes de réception (sous-dossiers, boîtes partagées ouvertes) les mails des **60 derniers jours** dont l'objet contient `GCBLO | ‹GCBLO›` (règle 12 : les réponses à l'affectation et aux relances), pas envoyés par Dylan. Dans le texte **hors partie citée** (coupé au premier « De : », « From: », « Envoyé : », « ----- », « _____ »), les FCI (`F` + 11 chiffres) sont retenus. Une ligne par GCBLO (le mail le plus récent) dans **`mails-gcblo.csv`**, dossier du registre (celui de `registre-gcblo.csv`), remplacé à chaque passage : `GCBLO;FCI;RECU LE;DE;OBJET`.
+    - Lancement : Alt+F8 › `LireFciMails` (bilan), ou automatique (`Application_Startup` et `Application_NewMailEx` dans ThisOutlookSession : tout mail reçu avec « GCBLO » dans l'objet relance la recherche, sans fenêtre). Le dossier est repris de la macro Excel (`GetSetting RegistreGCBLO/Macro/CheminCSV`), sinon demandé une fois.
+    - Le registre lit ce fichier **chaque minute** (si l'accès au dossier des sauvegardes est déjà accordé, sans rien demander) et à chaque sauvegarde. Dossier **sans FCI** → `fci ‹GCBLO› ‹FCI›` (dans le volet, annulable) et historique « FCI reçu par mail de ‹expéditeur› le ‹date› : ‹FCI› ». FCI déjà connu → rien. **Autre FCI** déjà au registre → notification « à vérifier », rien de changé. GCBLO absent → notification. Chaque signalement une seule fois (`gcblo.v2.mailsSignales`).
+    - Limite connue : un autre numéro au format FCI collé dans la réponse (ex. un DEG) serait pris pour un FCI ; il ne remplace jamais un FCI existant.
+
 Toutes ces règles vivent dans **un seul fichier** (`js/dossiers.js`), et chacune a un test.
 
 ---
@@ -463,3 +469,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 05/11/2026 | R16 : extension 1.4 — le FCI du registre est écrit en commentaire sur LINE (« Num GCBLO : F… », Valider) quand aucun commentaire n'en contient ; tracé dans l'historique |
 | 05/11/2026 | Commandes venues de LINE en file : hors historique des commandes, en attente pendant une question o/n (auparavant ignorées) — le registre reste utilisable pendant un `sync` |
 | 05/11/2026 | R17 : extension 1.5 — Mis à disposition seulement si GCB_1 + ‹affaire›_DFT et GCB_2 + ‹affaire›_DFT_AUTORISE (dans le même nom de fichier) ; tournée : page muette rechargée une fois après 12 s |
+| 05/11/2026 | R18 : FCI reçus par mail — macro Outlook `LireFciMails` → `mails-gcblo.csv`, lu chaque minute par le registre ; dossier sans FCI complété |

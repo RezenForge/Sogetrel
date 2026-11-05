@@ -95,6 +95,8 @@ js/sauvegarde.js         nom, contenu et rotation des sauvegardes
 js/export-excel.js       registre-gcblo.csv (vers le classeur) · lecture de classeur-gcblo.csv
 excel/MajDepuisRegistre.bas  macro VBA du classeur IMMO-COORDI-DISSIM.xlsm
 outlook/BrouillonsAttachement.bas  macro Outlook : brouillons des mails d'attachement
+outlook/LireFciMails.bas  macro Outlook : FCI reçus par mail → mails-gcblo.csv
+js/mails-recus.js        lecture de mails-gcblo.csv, que faire de chaque FCI reçu
 js/mails.js              mails d'affectation et de relance (adresses : config.js)
 js/coffre.js             garde la référence d'attachement dans le navigateur (IndexedDB)
 js/jarvis/grammaire.js   les commandes, sous forme de tableau (vide : en refonte)
@@ -152,6 +154,23 @@ La macro Outlook `BrouillonsAttachement` en fait des **brouillons**, avec ta sig
 **Déjà envoyé ?** Avant chaque brouillon, la macro cherche dans ta Boîte de réception et tes Éléments envoyés (sous-dossiers compris, boîtes partagées ouvertes dans Outlook comprises) un mail à `info_lpc_BL` ou `info_aquitaine_BL` avec une pièce jointe au nom du GCBLO, envoyé par toi ou par quelqu'un d'autre. Si elle le trouve, pas de brouillon : elle te dit quand et par qui. `BrouillonsAttachementForcer` saute cette vérification.
 
 **Installer (une fois)** : dans Outlook classique, Alt+F11, *Fichier › Importer un fichier…*, choisir `outlook/BrouillonsAttachement.bas`, puis *Fichier › Enregistrer*. Le module importé s'appelle `RegistreGcbloOutlook` (s'il reste un ancien module `BrouillonsAttachement`, le supprimer : un module du même nom que la macro empêche Outlook de la lancer). **Lancer** : Alt+F8 › `BrouillonsAttachement`. La première fois, elle demande le dossier des attachements ; `ChoisirDossierAttachements` permet d'en changer.
+
+## FCI reçus par mail (Outlook)
+
+La macro Outlook `LireFciMails` (`outlook/LireFciMails.bas`) cherche dans la Boîte de réception (sous-dossiers et boîtes partagées compris) les mails des 60 derniers jours dont l'objet contient `GCBLO | ‹GCBLO›` — les réponses à l'affectation et aux relances — et, dans le texte hors partie citée, un FCI (`F` + 11 chiffres). Elle écrit `mails-gcblo.csv` dans le dossier du registre (celui des sauvegardes). Le registre le lit **chaque minute** : un dossier **sans FCI** reçoit celui du mail (annulable ; l'historique note « FCI reçu par mail de … le … ») ; un autre FCI déjà connu ou un GCBLO absent sont signalés, rien n'est changé. Ensuite l'extension l'écrit en commentaire sur LINE à la prochaine visite.
+
+**Installer (une fois)** : Alt+F11 dans Outlook, *Fichier › Importer un fichier…* › `LireFciMails.bas`, *Enregistrer*. À la main : Alt+F8 › `LireFciMails`. **Automatique** : dans l'éditeur, double-clic sur `ThisOutlookSession`, coller :
+
+```vb
+Private Sub Application_Startup()
+    LireFciMailsSilencieux
+End Sub
+Private Sub Application_NewMailEx(ByVal EntryIDCollection As String)
+    NouveauxMails EntryIDCollection
+End Sub
+```
+
+puis enregistrer et redémarrer Outlook : chaque mail reçu avec GCBLO dans l'objet relance la recherche, sans fenêtre. Le dossier du registre est repris de la macro Excel (même PC), sinon demandé une fois (`ChoisirDossierRegistre`).
 
 ## Classeur partagé IMMO-COORDI-DISSIM.xlsm
 
