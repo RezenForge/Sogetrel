@@ -62,6 +62,18 @@ const invite = creerInvite({
   })
 });
 
+/** L'explorateur de fichiers du navigateur (champ fichier caché), pour un fichier des types donnés. */
+async function choisirFichierSimple(types) {
+  if (!await avantExplorateur()) return null;
+  return new Promise(resoudre => {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = types;
+    input.addEventListener('change', () => { resoudre(input.files[0] || null); invite.focus(); });
+    input.addEventListener('cancel', () => { resoudre(null); invite.focus(); });
+    input.click();
+  });
+}
+
 /*
  * Avant d'ouvrir l'explorateur de fichiers. Sous Windows, si la commande a été lancée au
  * clavier (Entrée), l'explorateur peut s'ouvrir avec le pointeur de souris caché (option
@@ -190,16 +202,7 @@ const actions = creerActions({
   confirmer: question => invite.confirmer(question),
   demander: (question, choix) => invite.demander(question, choix),
   // Ouvre l'explorateur de fichiers ; renvoie le fichier choisi, ou null
-  choisirFichier: async types => {
-    if (!await avantExplorateur()) return null;
-    return new Promise(resoudre => {
-      const input = document.createElement('input');
-      input.type = 'file'; input.accept = types;
-      input.addEventListener('change', () => { resoudre(input.files[0] || null); invite.focus(); });
-      input.addEventListener('cancel', () => { resoudre(null); invite.focus(); });
-      input.click();
-    });
-  },
+  choisirFichier: choisirFichierSimple,
   // « Enregistrer sous » : l'explorateur de fichiers si le navigateur le permet (Chrome, Edge sur ordinateur), sinon téléchargement
   enregistrerFichier: async (nom, octets, { telecharger = false } = {}) => {
     const xlsm = /\.xlsm$/i.test(nom);
@@ -245,6 +248,19 @@ const actions = creerActions({
     await flux.write(octets); await flux.close();
   },
   // Restaurer : l'explorateur s'ouvre dans le dossier des sauvegardes quand le navigateur le permet
+  // « download » : l'explorateur s'ouvre directement sur le dossier Téléchargements (Chrome, Edge)
+  choisirTelechargement: async () => {
+    if (!window.showOpenFilePicker) return choisirFichierSimple('.xlsx,.xlsm,.json');
+    if (!await avantExplorateur()) return null;
+    try {
+      const [poignee] = await window.showOpenFilePicker({ startIn: 'downloads', types: [
+        { description: 'Classeur Excel ou sauvegarde du registre', accept: {
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
+          'application/vnd.ms-excel.sheet.macroEnabled.12': ['.xlsm'], 'application/json': ['.json'] } }] });
+      invite.focus();
+      return await poignee.getFile();
+    } catch { invite.focus(); return null; }
+  },
   choisirSauvegarde: async () => {
     let dossier = null;
     try { dossier = await coffre.lire('dossier-sauvegarde'); } catch { /* pas de dossier retenu */ }
