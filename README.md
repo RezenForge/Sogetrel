@@ -116,7 +116,7 @@ Version d'avant la refonte : branche `avant-refonte`.
 
 ## Extension « FCI depuis LINE » (sans clic)
 
-Dossier `extension/` (Chrome ou Edge) : dès qu'une page LINE affiche un FCI dans ses commentaires, le registre ouvert est mis à jour tout seul (bulle verte sur la page LINE ; rien si le FCI est déjà connu). Installation : décompresser le dossier, `chrome://extensions` › Mode développeur › « Charger l'extension non empaquetée » › choisir le dossier.
+Dossier `extension/` (Chrome ou Edge) : dès qu'une page LINE affiche un FCI dans ses commentaires, le registre ouvert est mis à jour tout seul (bulle verte sur la page LINE ; rien si le FCI est déjà connu). Sur l'onglet Documents, une pièce jointe « GCB1 » et une « GCB2 » passent le GCBLO en Mis à disposition (seulement depuis un statut ouvert). Installation : décompresser le dossier, `chrome://extensions` › Mode développeur › « Charger l'extension non empaquetée » › choisir le dossier.
 
 ## Favori « FCI → registre »
 

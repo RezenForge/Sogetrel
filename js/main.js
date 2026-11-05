@@ -16,7 +16,7 @@ import { csvRegistre, NOM_CSV, NOM_CSV_CLASSEUR, lireCsvClasseur } from './expor
 import { extraireDossiers, appliquerImport } from './import-excel.js';
 import { lireAffectsClasseur, noterAffectsClasseur, ecartAffect } from './affects-classeur.js';
 import { extraireLies, noterLies, lireLies, totalLies } from './dossiers-lies.js';
-import { SAUVEGARDE_AUTO_HEURES } from './config.js';
+import { SAUVEGARDE_AUTO_HEURES, statutParCode } from './config.js';
 import { aujourdhui } from './dates.js';
 import { convertirV1, lireV1Navigateur } from './reprise-v1.js';
 import { creerInvite } from './jarvis/invite.js';
@@ -324,8 +324,22 @@ store.ecouter(dessinerBord);
  */
 const ORIGINE_LINE = 'https://flashback.orange.fr';
 const COMMANDE_FCI = /^fci ([A-Z]{3}\d{6}-[A-Z]+\d+)((?: F\d{11})+)$/;
-/** Applique « fci ‹GCBLO› ‹FCI…› » venu de LINE → 'maj' | 'deja' (FCI déjà connus) | 'inconnu' (GCBLO absent du registre). */
+const COMMANDE_MAD = /^set ([A-Z]{3}\d{6}-[A-Z]+\d+) to mis-a-dispo$/;
+/**
+ * Applique une commande venue de LINE → 'maj' | 'deja' | 'inconnu' (GCBLO absent du registre).
+ *  - « fci ‹GCBLO› ‹FCI…› » : FCI ajoutés (rien si déjà connus) ;
+ *  - « set ‹GCBLO› to mis-a-dispo » (GCB1 et GCB2 dans les documents) : seulement depuis un statut
+ *    ouvert ; un dossier déjà mis à disposition, attaché ou annulé ne bouge pas.
+ */
 function fciDepuisLine(commande) {
+  const mad = commande.match(COMMANDE_MAD);
+  if (mad) {
+    const d = store.tous().find(x => x.gcblo === mad[1]);
+    if (!d) return 'inconnu';
+    if (statutParCode(d.statutDft)?.clos) return 'deja';
+    invite.lancer(`set ${d.gcblo} to mis-a-dispo`);
+    return 'maj';
+  }
   const m = commande.match(COMMANDE_FCI);
   if (!m) return null;
   const d = store.tous().find(x => x.gcblo === m[1]);
