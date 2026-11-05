@@ -25,12 +25,12 @@ groupe('R12 — Destinataires', () => {
 groupe('R12 — Mail d\'affectation', () => {
   test('NUM21', () => {
     const m = mailAffectation('SBA501404-THF010', 'NUM21');
-    egal(m.objet, 'Affectation GCBLO NUM21 | SBA501404-THF010');
+    egal(m.objet, 'GCBLO | SBA501404-THF010');
     egal(lignes(m), ['Bonjour,', '', '@info_lpc_BL : Merci d’affecter la ligne SBA501404-THF010 à NUM21.', '', '@NUM21 : Pouvez-vous nous fournir le numéro de commande.', '', 'Merci d’avance.']);
   });
   test('AIR (Aquitaine)', () => {
     const m = mailAffectation('MED501404-THF010', 'AIR');
-    egal(m.objet, 'Affectation GCBLO AIR | MED501404-THF010');
+    egal(m.objet, 'GCBLO | MED501404-THF010');
     egal(lignes(m), ['Bonjour,', '', '@info_aquitaine_BL : Merci d’affecter la ligne MED501404-THF010 à AIR.', '', '@Jérémie SANNIER : Peux-tu nous fournir le numéro de commande.', '', 'Merci d’avance.']);
   });
 });
@@ -38,22 +38,22 @@ groupe('R12 — Mail d\'affectation', () => {
 groupe('R12 — Mails de relance', () => {
   test('FCI NUM21', () => {
     const m = mailRelance('SBA501404-THF010', 'NUM21', 'fci');
-    egal(m.objet, 'Relance GCBLO NUM21 | SBA501404-THF010');
+    egal(m.objet, 'RE: GCBLO | SBA501404-THF010');
     egal(lignes(m), ['Bonjour,', '', 'Je me permets de vous relancer.', 'Nous avons besoin du numéro de commande, pouvez-vous nous le fournir ?', '', 'Merci d’avance.']);
   });
   test('FCI AIR', () => egal(lignes(mailRelance('SBA501404-THF010', 'AIR', 'fci')), ['Bonjour Jérémie,', '', 'Je me permets de te relancer.', 'Nous avons besoin du numéro de commande, peux-tu nous le fournir ?', '', 'Merci d’avance.']));
   test('DFT NUM21', () => {
     const m = mailRelance('SBA501404-THF010', 'NUM21', 'dft');
-    egal(m.objet, 'Relance GCBLO DFT NUM21 | SBA501404-THF010');
+    egal(m.objet, 'RE: GCBLO | SBA501404-THF010');
     egal(lignes(m), ['Bonjour,', '', 'Pouvez-vous réaliser le DFT du dossier en objet et mettre à disposition les docs GCB1 et GCB2 sur le LINE ?', '', 'Merci d’avance.']);
   });
   test('DFT AIR', () => {
     const m = mailRelance('SBA501404-THF010', 'AIR', 'dft');
-    egal([m.objet, lignes(m)[0], lignes(m)[2]], ['Relance GCBLO DFT AIR | SBA501404-THF010', 'Bonjour Jérémie,', 'Peux-tu réaliser le DFT du dossier en objet et mettre à disposition les docs GCB1 et GCB2 sur le LINE ?']);
+    egal([m.objet, lignes(m)[0], lignes(m)[2]], ['RE: GCBLO | SBA501404-THF010', 'Bonjour Jérémie,', 'Peux-tu réaliser le DFT du dossier en objet et mettre à disposition les docs GCB1 et GCB2 sur le LINE ?']);
   });
   test('lien mailto : destinataires « ; », copie, objet et texte encodés', () => {
     const l = lienMailto(mailRelance('SBA501404-THF010', 'AIR', 'fci'));
-    vrai(l.startsWith('mailto:jeremie-sannier%40air-reseaux.com;info_lpc_BL%40sogetrel.fr?cc=Romain.BOUTINEAU%40sogetrel.fr&subject=Relance%20GCBLO%20AIR%20%7C%20SBA501404-THF010&body=Bonjour%20J%C3%A9r%C3%A9mie%2C%0D%0A'));
+    vrai(l.startsWith('mailto:jeremie-sannier%40air-reseaux.com;info_lpc_BL%40sogetrel.fr?cc=Romain.BOUTINEAU%40sogetrel.fr&subject=RE%3A%20GCBLO%20%7C%20SBA501404-THF010&body=Bonjour%20J%C3%A9r%C3%A9mie%2C%0D%0A'));
   });
 });
 
@@ -70,7 +70,7 @@ groupe('R12 — Commandes affect et relance', () => {
     const e = env();
     await e.lancer('affect SBA501404-THF010 num21');
     egal([e.store.parGcblo('SBA501404-THF010').type, e.ouverts.length], ['NUM21', 1]);
-    vrai(e.ouverts[0].includes('Affectation%20GCBLO%20NUM21'));
+    vrai(e.ouverts[0].includes('subject=GCBLO%20%7C%20SBA'));
     egal(e.store.parGcblo('SBA501404-THF010').historique.at(-1).detail, 'Mail d’affectation préparé');
     await e.lancer('cancel'); egal(e.store.tous().length, 0);
   });

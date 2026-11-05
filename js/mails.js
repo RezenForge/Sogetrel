@@ -40,15 +40,23 @@ const TEXTES = {
   }
 };
 
+/**
+ * Un GCBLO = un objet de mail, le même pour toute la vie du dossier : « GCBLO | SBA501404-THF010 ».
+ * L'affectation l'ouvre ; les relances (FCI, DFT) répondent dessus (« RE: … »), comme une réponse :
+ * Outlook range tout dans la même conversation, et une recherche sur le GCBLO dans l'objet retrouve tout.
+ * Le texte du mail dit de quoi il s'agit (affectation, relance FCI, relance DFT).
+ */
+export const objetDossier = gcblo => `GCBLO | ${gcblo}`;
+
 export function mailAffectation(gcblo, type) {
-  const m = enTete(gcblo, type, `Affectation GCBLO ${type} | ${gcblo}`);
+  const m = enTete(gcblo, type, objetDossier(gcblo));
   const mention = m.boite ? `${m.boite.mention} : ` : '';
   return { a: m.a, cc: m.cc, objet: m.objet, corps: TEXTES.affectation[type](gcblo, mention).join('\r\n'), avertissements: m.avertissements };
 }
 
 export function mailRelance(gcblo, type, motif) {
   if (!TEXTES[motif]) throw new Error(`relance inconnue : ${motif} (fci ou dft)`);
-  const m = enTete(gcblo, type, `Relance GCBLO ${motif === 'dft' ? 'DFT ' : ''}${type} | ${gcblo}`);
+  const m = enTete(gcblo, type, `RE: ${objetDossier(gcblo)}`);
   return { a: m.a, cc: m.cc, objet: m.objet, corps: TEXTES[motif][type]().join('\r\n'), avertissements: m.avertissements };
 }
 
