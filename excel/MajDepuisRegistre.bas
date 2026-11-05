@@ -44,6 +44,7 @@ Private Const PREMIERE_LIGNE As Long = 2
 Private Const APPLI As String = "RegistreGCBLO"
 Private Const NOM_CSV_CLASSEUR As String = "classeur-gcblo.csv"
 Private Const TITRE As String = "Mise a jour depuis le registre"
+Private Const GCBLO_OK As String = "GCBLO OK"
 
 Private nbModifs As Long
 Private nbIgnores As Long
@@ -54,8 +55,6 @@ Private faits As Collection          ' ce que la macro a fait, pour la fenetre d
 Private Function Factu() As String
     Factu = "FACTU"
 End Function
-
-Private Const GCBLO_OK As String = "GCBLO OK"
 
 Private Function MentionFci() As String
     MentionFci = "Num" & ChrW(233) & "ro de commande FCI : "
