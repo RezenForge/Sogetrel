@@ -217,10 +217,10 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .jc-conseil { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .jc-voir { font-size: 13px; color: var(--pale); opacity: 0; transition: opacity .15s; }
 .jc-tete:hover .jc-voir { opacity: 1; }
-.jc-corps { display: flex; flex-direction: column; padding: 0 6px 6px; }
+.jc-corps { display: flex; flex-direction: column; padding: 0 6px 6px; height: calc(var(--lignes, 6) * 1.95em + 6px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--trait) transparent; }
+/* Hauteur fixe : 6 lignes, même avec moins de dossiers (les cartes gardent toutes la même taille) */
 /* Au-delà de --lignes dossiers : la liste défile dans la carte (une ligne ≈ 1.95em) ; ombre en bas = il y a une suite */
 .jc-corps.defile {
-  max-height: calc(var(--lignes) * 1.95em + 6px); overflow-y: auto; overscroll-behavior: contain;
   scrollbar-width: thin; scrollbar-color: var(--trait) transparent;
   mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent);
 }
