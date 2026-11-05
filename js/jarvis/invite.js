@@ -89,11 +89,27 @@ export function creerInvite({ racine, contexte }) {
       champ('valorisation', 'valo', d.valorisation !== null && d.valorisation !== undefined ? esc(formaterMontant(d.valorisation)) : '—'),
       champ('date', 'date', d.dateAffectation ? esc(formater(d.dateAffectation)) : '—'),
       champ('relance', 'relance', d.dateRelance ? `<span class="${alerte || ''}">${esc(formater(d.dateRelance))}${alerte === 'retard' ? ' (en retard)' : alerte === 'proche' ? ' (proche)' : ''}</span>` : 'aucune'),
-      champ('commentaire', 'commentaire', esc(d.commentaire || '—').replace(/\n/g, '<br>' + ' '.repeat(14))),
-      `<span class="dim">historique</span>`,
-      ...[...d.historique].reverse().slice(0, 8).map(h => `  <span class="dim">${esc(new Date(h.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }))}</span>  ${esc(h.detail)}`)
+      champ('commentaire', 'commentaire', esc(d.commentaire || '—').replace(/\n/g, '<br>' + ' '.repeat(14)))
     ];
-    return `<pre class="fiche">${lignes.join('\n')}</pre>`;
+    return `<pre class="fiche">${lignes.join('\n')}</pre>${historiqueHtml(d)}`;
+  }
+
+  /**
+   * L'historique d'un dossier, en carte : tout l'historique, du plus récent au plus ancien,
+   * dans une liste qui défile dans la carte. Une étiquette par type (création, modification, mail, attachement).
+   */
+  const ETIQUETTES = { creation: 'création', modification: 'modif', mail: 'mail', attachement: 'attach' };
+  function historiqueHtml(d) {
+    const entrees = [...d.historique].reverse();
+    const lignes = entrees.map(h => {
+      const quand = new Date(h.date);
+      return `<li class="hi hi-${esc(h.action)}"><span class="hi-quand">`
+        + `<span class="hi-date">${esc(quand.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' }))}</span>`
+        + `<span class="hi-heure dim">${esc(quand.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }))}</span></span>`
+        + `<span class="hi-quoi"><span class="hi-tag">${esc(ETIQUETTES[h.action] || h.action)}</span>${esc(h.detail)}</span></li>`;
+    }).join('');
+    return `<section class="histo"><header class="histo-tete">historique <span class="dim">· ${entrees.length}</span></header>`
+      + `<ol class="histo-corps${entrees.length > 6 ? ' defile' : ''}">${lignes || '<li class="dim">rien pour l\'instant</li>'}</ol></section>`;
   }
 
   /** La valeur d'un champ telle qu'on la retape (pour pré-remplir la saisie en place). */

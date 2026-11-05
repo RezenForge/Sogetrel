@@ -273,3 +273,21 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .badge { border-radius: 3px; }
 .badge-fci { color: var(--fond); background: var(--proche); }
 .badge-dft { color: var(--fond); background: var(--statut-EN_VALIDATION); }
+
+/* Historique d'un dossier (fiche « open ») : une carte, liste défilable, du plus récent au plus ancien */
+.histo { margin-top: 10px; border: 1px solid var(--trait); border-left: 3px solid var(--pale); border-radius: 6px; background: var(--fond-menu); white-space: normal; }
+.histo-tete { padding: 7px 12px 6px; font-weight: 700; border-bottom: 1px solid var(--trait); }
+.histo-corps { list-style: none; margin: 0; padding: 2px 6px 4px; }
+.histo-corps.defile { max-height: 19em; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--trait) transparent;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent); }
+.histo-corps.defile.fin { mask-image: none; }
+.hi { display: grid; grid-template-columns: 8.5ch minmax(0, 1fr); gap: 10px; padding: 5px 6px; border-top: 1px solid var(--trait); font-size: 14px; line-height: 1.35; }
+.hi:first-child { border-top: 0; }
+.hi:hover { background: var(--repere-ligne); }
+.hi-quand { display: flex; flex-direction: column; }
+.hi-heure { font-size: 12px; }
+.hi-quoi { min-width: 0; overflow-wrap: anywhere; }
+.hi-tag { display: inline-block; font-size: 11px; padding: 0 6px; margin-right: 6px; border-radius: 3px; border: 1px solid var(--trait); color: var(--pale); vertical-align: 1px; }
+.hi-creation .hi-tag { color: var(--accent); border-color: var(--accent); }
+.hi-mail .hi-tag { color: var(--proche); border-color: var(--proche); }
+.hi-attachement .hi-tag { color: var(--statut-ATTACH); border-color: var(--statut-ATTACH); }
