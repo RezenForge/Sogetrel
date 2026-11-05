@@ -362,6 +362,9 @@ export function resultatLs(criteres, regles, dossiers) {
     const liste = regles.filtrer({ ...criteres, texte: '', masquer: [] }, collee.trouves);
     return { liste: criteres.tri ? regles.trier(liste, criteres.tri) : liste, collee, masques: 0 };
   }
+  // Un dossier ciblé (GCBLO, début de GCBLO ou numéro : « ls SBA501404 », « ls 501404 ») s'affiche
+  // même s'il est Attach ou Annulé : le masquage ne vaut que pour les listes générales
+  if (criteres.texte.split(/\s+/).some(m => /\d{4,}/.test(m))) criteres = { ...criteres, masquer: [] };
   // « ls ecart-affect » : les dossiers dont l'affect diffère de la colonne I du classeur partagé
   if (criteres.ecartAffect) {
     const affects = lireAffectsClasseur();

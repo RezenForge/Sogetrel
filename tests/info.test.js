@@ -82,4 +82,5 @@ groupe('ls — dossiers Attach et Annulé masqués', () => {
   test('ls : ni annulés ni attach', () => egal(ls('ls'), ['SBA']));
   test('ls annule : les annulés', () => egal(ls('ls annule'), ['LRO']));
   test('ls air annule attach : les deux', () => egal(ls('ls air annule attach').sort(), ['LRO', 'POI']));
+  test('un dossier ciblé s\'affiche même Attach ou Annulé', () => egal([ls('ls POI500001-THF010'), ls('ls POI500001'), ls('ls 500767'), ls('ls lro')], [['POI'], ['POI'], ['LRO'], []]));
 });

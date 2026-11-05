@@ -390,6 +390,7 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | `ls`, `list` et `info` vident la console avant d'afficher |
 | 04/11/2026 | `ls`/`info` : la ligne de commande va dans le volet ; sans résultat, tout va dans le volet et la console ne change pas |
 | 04/11/2026 | Commande `sauvegarde` (`js/sauvegarde.js`) : dossier choisi, nom daté, 3 sauvegardes gardées ; dernière sauvegarde dans le tableau de bord |
+| 05/11/2026 | Correction : `ls ‹GCBLO›` (ou début, ou numéro) montre le dossier même s'il est Attach ou Annulé ; le masquage ne vaut que pour les listes générales |
 | 05/11/2026 | `open` vide le volet avant d'afficher la fiche ; la fiche occupe la hauteur restante, champs visibles sans défiler, seul l'historique défile dans sa carte ; libellés courts (statut, valo, note — `edit … note …` = commentaire) |
 | 05/11/2026 | Fiche `open` : l'historique devient une carte, tout l'historique du plus récent au plus ancien, défilable, avec une étiquette par type (création, modif, mail, attach) |
 | 05/11/2026 | Commande `fci ‹dossier› ‹fci›` : met à jour le FCI (raccourci de `edit … fci …`, même contrôle du format, annulable) |
