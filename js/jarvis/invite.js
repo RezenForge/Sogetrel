@@ -525,6 +525,12 @@ export function creerInvite({ racine, contexte }) {
     poserRepere(el && !el.matches(ZONES_REPERE) ? el : null);
   }, true);
 
+  // Cartes « Aujourd'hui » : l'ombre du bas disparaît quand on arrive au bout de la liste
+  racine.addEventListener('scroll', e => {
+    const c = e.target;
+    if (c instanceof Element && c.classList.contains('defile')) c.classList.toggle('fin', c.scrollTop + c.clientHeight >= c.scrollHeight - 2);
+  }, true);
+
   /* ---------------- Sélection multiple : Ctrl+clic (un par un), Maj+clic (une plage) ---------------- */
   // Une barre d'actions apparaît au-dessus de la ligne de saisie ; chaque bouton lance une commande
   // ordinaire sur les dossiers choisis (set, attachement, delete) : un clic = une commande.

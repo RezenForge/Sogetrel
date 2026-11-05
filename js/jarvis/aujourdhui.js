@@ -1,12 +1,12 @@
 /**
  * aujourdhui.js — l'écran « Aujourd'hui » (commande `today`, affiché à l'ouverture) :
  * ce qui demande une action, en cartes. Chaque carte = une commande `ls` (clic sur l'en-tête),
- * avec les premiers dossiers concernés et, pour chacun, l'action utile en un clic.
+ * avec tous les dossiers concernés (liste défilable) et, pour chacun, l'action utile en un clic.
  *
  *   CARTES : définition des cartes, dans l'ordre d'urgence
  *     { commande, libelle, conseil, classe, indice(d, ctx) → texte, actions(d, ctx) → [[libellé, commande]] }
  *   pointDuJour(stats, { ecartsAffect }) → les cartes à afficher avec leur nombre (d'après les statistiques)
- *   carteHtml(carte, dossiers, ctx, esc) → HTML d'une carte
+ *   carteHtml(carte, dossiers, ctx, esc) → HTML d'une carte (tous les dossiers, liste défilable)
  */
 import { typeParCode } from '../config.js';
 import { formater, ecartJours, versJour } from '../dates.js';
@@ -51,11 +51,11 @@ export function pointDuJour(s, opts = {}) {
   return CARTES.map(c => ({ n: c.stat(s, { ecartsAffect: 0, ...opts }) || 0, libelle: c.libelle, commande: c.commande, classe: c.classe, conseil: c.conseil })).filter(l => l.n > 0);
 }
 
-/** Nombre de dossiers montrés par carte ; au-delà, « voir les N ». */
-export const PAR_CARTE = 5;
+/** Hauteur visible d'une carte, en lignes de dossiers ; au-delà, la liste défile dans la carte. */
+export const LIGNES_VISIBLES = 6;
 
 export function carteHtml(carte, dossiers, ctx, esc) {
-  const lignes = dossiers.slice(0, PAR_CARTE).map(d => {
+  const lignes = dossiers.map(d => {
     const actions = carte.actions(d, ctx).map(([lib, cmd, etat]) => `<button type="button" class="jc-action${etat ? ' ' + etat : ''}" data-commande="${esc(cmd)}" title="${esc(cmd)}">${esc(lib)}</button>`).join('');
     return `<div class="jc-ligne">`
       + `<button type="button" class="jc-gcblo lien" data-commande="open ${esc(d.gcblo)}" data-copie="${esc(d.gcblo)}" title="open ${esc(d.gcblo)}">${esc(d.gcblo)}</button>`
@@ -63,11 +63,10 @@ export function carteHtml(carte, dossiers, ctx, esc) {
       + `<span class="jc-indice dim" title="${esc(carte.indice(d, ctx) || '')}">${esc(carte.indice(d, ctx) || '')}</span>`
       + `<span class="jc-actions">${actions}</span></div>`;
   }).join('');
-  const reste = dossiers.length - PAR_CARTE;
   return `<section class="jc" data-niveau="${carte.classe}">`
     + `<button type="button" class="jc-tete" data-commande="${esc(carte.commande)}" title="${esc(carte.commande)}">`
     + `<span class="jc-n">${dossiers.length}</span><span class="jc-titres"><span class="jc-libelle">${esc(carte.libelle)}</span><span class="jc-conseil dim">${esc(carte.conseil)}</span></span><span class="jc-voir">liste →</span></button>`
-    + `<div class="jc-corps">${lignes}</div>`
-    + (reste > 0 ? `<button type="button" class="jc-plus" data-commande="${esc(carte.commande)}">+ ${reste} autre${reste > 1 ? 's' : ''} · voir les ${dossiers.length}</button>` : '')
+    // Tous les dossiers, dans une liste qui défile à l'intérieur de la carte au-delà de LIGNES_VISIBLES
+    + `<div class="jc-corps${dossiers.length > LIGNES_VISIBLES ? ' defile' : ''}" style="--lignes:${LIGNES_VISIBLES}">${lignes}</div>`
     + '</section>';
 }

@@ -211,6 +211,13 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .jc-voir { font-size: 13px; color: var(--pale); opacity: 0; transition: opacity .15s; }
 .jc-tete:hover .jc-voir { opacity: 1; }
 .jc-corps { display: flex; flex-direction: column; padding: 0 6px 6px; }
+/* Au-delà de --lignes dossiers : la liste défile dans la carte (une ligne ≈ 1.95em) ; ombre en bas = il y a une suite */
+.jc-corps.defile {
+  max-height: calc(var(--lignes) * 1.95em + 6px); overflow-y: auto; overscroll-behavior: contain;
+  scrollbar-width: thin; scrollbar-color: var(--trait) transparent;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent);
+}
+.jc-corps.defile.fin { mask-image: none; }
 .jc-ligne {
   display: grid; grid-template-columns: 17ch 7ch minmax(0, 1fr) auto; align-items: center; gap: 10px;
   padding: 4px 6px; border-top: 1px solid var(--trait);
@@ -226,8 +233,6 @@ pre { margin: 0; font: inherit; white-space: pre; }
 }
 .jc-action:hover { border-color: var(--c); color: var(--c); }
 .jc-action.fait { color: var(--pale); border-style: dashed; }
-.jc-plus { font: inherit; font-size: 13px; color: var(--pale); background: none; border: 0; border-top: 1px solid var(--trait); width: 100%; padding: 6px 12px; text-align: left; cursor: pointer; }
-.jc-plus:hover { color: var(--texte); background: var(--repere-ligne); }
 
 /* Tri : chaque titre de colonne est un bouton (même largeur que le texte, aucun décalage) */
 .entete .tri { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; white-space: pre; }

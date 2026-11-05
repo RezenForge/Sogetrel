@@ -97,7 +97,7 @@ groupe('Aujourd\'hui — ce qui demande une action', () => {
   test('rien à faire : liste vide', () => egal(pointDuJour({ parType: {}, parStatut: {} }), []));
 });
 
-import { CARTES, carteHtml, PAR_CARTE } from '../js/jarvis/aujourdhui.js';
+import { CARTES, carteHtml, LIGNES_VISIBLES } from '../js/jarvis/aujourdhui.js';
 import { esc } from '../js/jarvis/actions.js';
 groupe('Aujourd\'hui — cartes', () => {
   const fci = CARTES.find(c => c.commande === 'ls fci-retard');
@@ -108,5 +108,9 @@ groupe('Aujourd\'hui — cartes', () => {
     vrai(html.includes('data-commande="relance SBA501404-THF010 fci"') && html.includes('affecté il y a 3 j') && html.includes('data-commande="ls fci-retard"'));
   });
   test('relance récente : « ✓ relancé », atténué', () => vrai(carteHtml(fci, [D('SBA501404-THF010', [{ date: new Date().toISOString(), action: 'mail', detail: 'Relance FCI préparée' }])], { ...ctx, jour: new Date().toISOString().slice(0, 10) }, esc).includes('jc-action fait')));
-  test(`au-delà de ${PAR_CARTE} : « + N autres »`, () => vrai(carteHtml(fci, Array.from({ length: 8 }, (_, i) => D(`SBA50140${i}-THF010`)), ctx, esc).includes('+ 3 autres')));
+  test(`tous les dossiers ; au-delà de ${LIGNES_VISIBLES}, liste défilable`, () => {
+    const html = carteHtml(fci, Array.from({ length: 8 }, (_, i) => D(`SBA50140${i}-THF010`)), ctx, esc);
+    vrai((html.match(/jc-ligne/g) || []).length === 8 && html.includes('jc-corps defile'));
+    vrai(!carteHtml(fci, [D('SBA501404-THF010')], ctx, esc).includes('defile'));
+  });
 });
