@@ -18,9 +18,11 @@
     const fci = [...new Set((texte.toUpperCase().match(/F\d{11}(?!\d)/g) || []))];
     // Documents : les noms de pièces jointes (liens et textes de la zone principale de la page)
     let gcb1 = false, gcb2 = false;
-    if (/\/document(?:s)?(?:\/|$)/i.test(location.pathname)) {
-      const zone = document.querySelector('main, app-root') || document.body;
-      const noms = [...zone.querySelectorAll('a, td, li, span, div')].filter(e => !e.children.length).map(e => e.textContent).join('\n');
+    if (/\/document/i.test(location.pathname)) {
+      // Tout le texte de la page, plus les attributs où un nom de fichier peut se cacher (lien, titre, téléchargement)
+      const attributs = [...document.querySelectorAll('[href], [title], [download], [aria-label], [data-name], [alt]')]
+        .flatMap(e => ['href', 'title', 'download', 'aria-label', 'data-name', 'alt'].map(a => e.getAttribute(a) || ''));
+      const noms = [document.body.innerText, ...attributs].map(t => { try { return decodeURIComponent(t); } catch { return t; } }).join('\n');
       gcb1 = /GCB\s*[-_]?\s*1(?!\d)/i.test(noms);
       gcb2 = /GCB\s*[-_]?\s*2(?!\d)/i.test(noms);
     }
