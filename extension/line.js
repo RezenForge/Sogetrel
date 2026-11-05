@@ -2,7 +2,7 @@
  * Sur les pages LINE (flashback.orange.fr) : dès que la page d'un dossier affiche un FCI dans ses
  * commentaires (« Num GCBLO : F99496231124 »), on envoie « fci ‹GCBLO› ‹FCI› » au registre GCBLO ouvert.
  * La page étant une application qui se charge petit à petit, on regarde à chaque changement de la page.
- * Onglet « Documents » (…/document) : si une pièce jointe contient « GCB1 » et une autre « GCB2 »,
+ * Onglet « Documents » (…/document) : si une pièce jointe contient « GCB_1 » et une autre « GCB_2 » (GCB1, GCB-1… aussi reconnus),
  * on demande au registre de passer le GCBLO en « Mis à disposition » (seulement depuis un statut ouvert).
  * Chaque envoi n'est fait qu'une fois par onglet. On ne fait que lire la page.
  */
@@ -54,7 +54,7 @@
     const r = lire();
     if (!r) return;
     // GCB1 + GCB2 dans les documents → mis à disposition
-    if (r.mad) envoyer(`set ${r.gcblo} to mis-a-dispo`, { maj: `✓ registre : ${r.gcblo} mis à disposition (GCB1 et GCB2 présents)`, inconnu: `registre : ${r.gcblo} n'est pas dans le registre` });
+    if (r.mad) envoyer(`set ${r.gcblo} to mis-a-dispo`, { maj: `✓ registre : ${r.gcblo} mis à disposition (GCB_1 et GCB_2 présents)`, inconnu: `registre : ${r.gcblo} n'est pas dans le registre` });
     if (!r.fci.length) return;
     const commande = `fci ${r.gcblo} ${r.fci.join(' ')}`;
     // « deja » (FCI déjà connu) : rien à signaler
