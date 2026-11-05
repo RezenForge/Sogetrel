@@ -132,7 +132,11 @@ export const MAILS = Object.freeze({
     Object.freeze({ prefixes: Object.freeze(['SBA', 'LRO', 'POI', 'ANG', 'NIO']), adresse: 'info_lpc_BL@sogetrel.fr', mention: '@info_lpc_BL' }),
     Object.freeze({ prefixes: Object.freeze(['MED', 'BOR', 'EST', 'LIB', 'ARC']), adresse: 'info_aquitaine_BL@sogetrel.fr', mention: '@info_aquitaine_BL' })
   ]),
-  copie: Object.freeze(['Romain.BOUTINEAU@sogetrel.fr'])
+  copie: Object.freeze(['Romain.BOUTINEAU@sogetrel.fr']),
+  // Mail d'attachement : à la boîte BL, en copie la copie fixe et le contact du partenaire
+  attachement: Object.freeze({
+    copiePartenaire: Object.freeze({ NUM21: Object.freeze(['oelmahdaoui@numerus21.fr']), AIR: Object.freeze(['jeremie-sannier@air-reseaux.com']) })
+  })
 });
 
 /** Sauvegarde automatique : toutes les N heures, tant que l'appli est ouverte (dans le dernier dossier choisi). */

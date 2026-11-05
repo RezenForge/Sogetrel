@@ -50,7 +50,7 @@ export const COMMANDES = Object.freeze([
     forme: 'delete ‹dossiers›',
     emplacements: [{ nom: 'cibles', sorte: 'dossier', multiple: true }] },
   { id: 'attachement', verbes: ['attachement'], resume: 'crée les attachements de dossiers',
-    forme: 'attachement ‹dossiers|*|statut|fichier›',
+    forme: 'attachement ‹dossiers|*|statut|fichier|folder›',
     emplacements: [{ nom: 'cibles', sorte: 'attachement', multiple: true }] },
   { id: 'save', verbes: ['save'], resume: 'sauvegarde la base dans un dossier', forme: 'save [folder]',
     emplacements: [{ nom: 'option', sorte: 'option-sauvegarde', optionnel: true }] },
@@ -120,7 +120,7 @@ export const SORTES = Object.freeze({
   'option-sauvegarde': '« folder » pour choisir un autre dossier de sauvegarde',
   champ: 'date, affect, statut, commune, valo, fci, relance, commentaire, gcblo',
   'dossier-ou-fichier': 'un dossier, ou « fichier » pour choisir la référence',
-  attachement: 'des dossiers, * (la liste affichée), un statut (tous ses dossiers), ou « fichier » pour choisir la référence'
+  attachement: 'des dossiers, * (la liste affichée), un statut (tous ses dossiers), « fichier » pour choisir la référence, ou « folder » pour changer le dossier des attachements'
 });
 
 /* ---------------- Aides de lecture ---------------- */

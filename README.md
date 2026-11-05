@@ -20,7 +20,8 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `edit ‹dossier› ‹champ› ‹valeur›` | modifie un champ (affect, statut, commune, valo, fci, affectation, relance, commentaire, gcblo) ; dans une fiche ou une liste, double-cliquer une valeur fait la même chose |
 | `delete ‹dossiers›` | supprime, après confirmation |
 | `attachement fichier` | choisit le classeur d'attachement de référence (gardé dans le navigateur) |
-| `attachement ‹dossiers›` | remplit une copie de la référence (X5 commune, AG5 date, U6 GCBLO, paliers 30/60 en lignes 30-31) et l'enregistre en `‹GCBLO›.xlsx` ; le dossier passe au statut Attach |
+| `attachement ‹dossiers›` | remplit une copie de la référence (X5 commune, AG5 date, U6 GCBLO, paliers 30/60 en lignes 30-31) et l'enregistre en `‹GCBLO›.xlsx` dans le dossier des attachements (choisi une fois, retenu) ; le dossier passe au statut Attach ; le mail au pôle facturation est préparé pour Outlook (voir plus bas) |
+| `attachement folder` | change le dossier des attachements |
 | `save` · `save folder` | la première fois, choisit un dossier ; ensuite, sauvegarde directement dans ce dossier sans rien redemander (`save folder` pour en changer). Écrit une sauvegarde datée ; seules les 10 plus récentes y restent. Ensuite, sauvegarde automatique toutes les heures dans ce dossier, tant que l'appli est ouverte. Écrit aussi `registre-gcblo.csv` pour le classeur partagé (voir plus bas) |
 | `restore` | recharge une sauvegarde : remplace toute la base après confirmation (annulable) |
 | `fci ‹dossier› ‹fci›` | met à jour le FCI d'un dossier (raccourci de `edit ‹dossier› fci ‹fci›`) ; `fci ‹dossier› -` l'efface ; `cancel` revient en arrière |
@@ -93,6 +94,7 @@ js/info.js               retrouve les dossiers d'une liste collée (ls avec une 
 js/sauvegarde.js         nom, contenu et rotation des sauvegardes
 js/export-excel.js       registre-gcblo.csv (vers le classeur) · lecture de classeur-gcblo.csv
 excel/MajDepuisRegistre.bas  macro VBA du classeur IMMO-COORDI-DISSIM.xlsm
+outlook/BrouillonsAttachement.bas  macro Outlook : brouillons des mails d'attachement
 js/mails.js              mails d'affectation et de relance (adresses : config.js)
 js/coffre.js             garde la référence d'attachement dans le navigateur (IndexedDB)
 js/jarvis/grammaire.js   les commandes, sous forme de tableau (vide : en refonte)
@@ -136,6 +138,18 @@ Dans le classeur partagé, un GCBLO (ex. `SBA301460-THF010`) peut avoir d'autres
 - `ls lies` (ceux qui en ont), `tri:lies-` (du plus gros au plus petit), ou un clic sur le titre LIÉS.
 
 La macro doit être à jour (elle envoie maintenant toutes les lignes, pas seulement les GCBLO).
+
+## Mail d'attachement au pôle facturation (Outlook)
+
+Chaque attachement d'un dossier NUM21 ou AIR prépare son mail dans `mails-attachement.csv`, à côté des attachements :
+
+- **À** la boîte BL (LPC ou Aquitaine), **Cc** Romain Boutineau et le partenaire (NUM21 : oelmahdaoui ; AIR : Jérémie Sannier) ;
+- objet `ATTACHEMENT GCBLO | ‹GCBLO› | ‹affect›` ;
+- « Le GCBLO du dossier en objet a été réalisé et déposé sur le LINE. Vous trouverez en pièce jointe l’attachement pour le compte de NUM21. »
+
+La macro Outlook `BrouillonsAttachement` en fait des **brouillons**, avec ta signature et l'attachement en pièce jointe. Rien n'est envoyé : on relit, on clique sur Envoyer. Les mails traités sont retirés du fichier, donc relancer la macro ne crée pas de doublon.
+
+**Installer (une fois)** : dans Outlook classique, Alt+F11, *Fichier › Importer un fichier…*, choisir `outlook/BrouillonsAttachement.bas`, puis *Fichier › Enregistrer*. **Lancer** : Alt+F8 › `BrouillonsAttachement`. La première fois, elle demande le dossier des attachements ; `ChoisirDossierAttachements` permet d'en changer.
 
 ## Classeur partagé IMMO-COORDI-DISSIM.xlsm
 

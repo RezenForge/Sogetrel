@@ -8,6 +8,8 @@
  *   mailAffectation(gcblo, type)      → { a, cc, objet, corps, avertissements }
  *   mailRelance(gcblo, type, motif)   → idem ; motif : 'fci' (numéro de commande) ou 'dft'
  *   lienMailto(mail)                  → 'mailto:…'
+ *   mailAttachement(gcblo, type)      → { a, cc, objet, corps, avertissements } (pôle facturation, avec l'attachement)
+ *   csvMailsAttachement(existant, mails) → texte de mails-attachement.csv (lu par la macro Outlook)
  * type : 'NUM21' ou 'AIR' (pas de mail pour Sogetrel).
  */
 import { MAILS } from './config.js';
@@ -65,4 +67,43 @@ export function mailRelance(gcblo, type, motif) {
 export function lienMailto({ a, cc, objet, corps }) {
   const params = [cc.length && `cc=${encodeURIComponent(cc.join(';'))}`, `subject=${encodeURIComponent(objet)}`, `body=${encodeURIComponent(corps)}`].filter(Boolean);
   return `mailto:${a.map(encodeURIComponent).join(';')}?${params.join('&')}`;
+}
+
+/**
+ * R15 — Mail d'attachement au pôle facturation (la boîte BL), copie fixe + contact du partenaire.
+ * Objet : « ATTACHEMENT GCBLO | SBA300497-THF010 | NUM21 ». L'attachement est joint par la macro Outlook.
+ */
+export function mailAttachement(gcblo, type) {
+  const copiePartenaire = MAILS.attachement.copiePartenaire[type];
+  if (!copiePartenaire) throw new Error(`pas de mail d'attachement pour l'affect ${type || 'vide'}`);
+  const boite = boitePour(gcblo);
+  const compte = /^[AEIOUY]/i.test(type) ? `d’${type}` : `de ${type}`;
+  return {
+    a: boite ? [boite.adresse] : [],
+    cc: [...MAILS.copie, ...copiePartenaire],
+    objet: `ATTACHEMENT ${objetDossier(gcblo, type)}`,
+    corps: ['Bonjour,', '', 'Le GCBLO du dossier en objet a été réalisé et déposé sur le LINE.', '', `Vous trouverez en pièce jointe l’attachement pour le compte ${compte}.`, '', 'Merci d’avance.'].join('\r\n'),
+    avertissements: boite ? [] : [`${gcblo.slice(0, 3)} : ni LPC ni Aquitaine, aucune boîte BL en destinataire`]
+  };
+}
+
+/** Le fichier des mails d'attachement en attente, à côté des attachements ; la macro Outlook en fait des brouillons. */
+export const NOM_CSV_MAILS = 'mails-attachement.csv';
+const ENTETES_MAILS = 'GCBLO;FICHIER;A;CC;OBJET;CORPS';
+const champ = t => String(t).replace(/[;\r\n]+/g, ' ').trim();
+
+/**
+ * Ajoute des mails (un par GCBLO : le plus récent remplace l'ancien) au texte existant de mails-attachement.csv.
+ * mails : [{ gcblo, fichier, a, cc, objet, corps }]. Adresses séparées par un espace, lignes du texte par « \n ».
+ */
+export function csvMailsAttachement(existant, mails) {
+  const lignes = new Map();
+  for (const l of String(existant || '').replace(/^\uFEFF/, '').split(/\r?\n/).slice(1)) {
+    const g = l.split(';')[0].trim();
+    if (g) lignes.set(g, l);
+  }
+  for (const m of mails) {
+    lignes.set(m.gcblo, [m.gcblo, m.fichier, m.a.join(' '), m.cc.join(' '), m.objet, m.corps.split(/\r?\n/).join('\\n')].map(champ).join(';'));
+  }
+  return `\uFEFF${ENTETES_MAILS}\r\n${[...lignes.values()].map(l => `${l}\r\n`).join('')}`;
 }

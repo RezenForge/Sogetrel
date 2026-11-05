@@ -2,7 +2,7 @@
  * mails.test.js — R12 : mails d'affectation et de relance, au mot près.
  */
 import { groupe, test, egal, vrai } from './outil.js';
-import { mailAffectation, mailRelance, lienMailto, boitePour } from '../js/mails.js';
+import { mailAffectation, mailRelance, lienMailto, boitePour, mailAttachement, csvMailsAttachement } from '../js/mails.js';
 import { creerStore, supportMemoire } from '../js/store.js';
 import { creerDossiers } from '../js/dossiers.js';
 import { analyser } from '../js/jarvis/analyse.js';
@@ -106,4 +106,22 @@ groupe('Relances : protection contre les doublons', () => {
   test('chaque motif à part : la DFT d\'il y a 15 jours ne bloque rien', () => egal(relanceRecente(d, 'dft', '2026-11-04'), null));
   test('DFT : protégée 10 jours', () => egal([relanceRecente(d, 'dft', '2026-10-29')?.jours, relanceRecente(d, 'dft', '2026-10-30')], [9, null]));
   test('même jour : 0', () => egal(relanceRecente(d, 'fci', '2026-11-03')?.jours, 0));
+});
+
+groupe('R15 — Mail d\'attachement', () => {
+  test('NUM21 (exemple réel SBA300497-THF010)', () => {
+    const m = mailAttachement('SBA300497-THF010', 'NUM21');
+    egal([m.a, m.cc, m.objet], [['info_lpc_BL@sogetrel.fr'], ['Romain.BOUTINEAU@sogetrel.fr', 'oelmahdaoui@numerus21.fr'], 'ATTACHEMENT GCBLO | SBA300497-THF010 | NUM21']);
+    egal(lignes(m), ['Bonjour,', '', 'Le GCBLO du dossier en objet a été réalisé et déposé sur le LINE.', '', 'Vous trouverez en pièce jointe l’attachement pour le compte de NUM21.', '', 'Merci d’avance.']);
+  });
+  test('AIR : « pour le compte d’AIR », boîte Aquitaine', () => {
+    const m = mailAttachement('MED300497-THF010', 'AIR');
+    egal([m.a, m.cc.at(-1)], [['info_aquitaine_BL@sogetrel.fr'], 'jeremie-sannier@air-reseaux.com']);
+    vrai(m.corps.includes('pour le compte d’AIR.'));
+  });
+  test('pas de mail pour Sogetrel', () => { let e = ''; try { mailAttachement('SBA300497-THF010', 'SOGETREL'); } catch (x) { e = x.message; } vrai(e.length > 0); });
+  test('CSV : texte sur une ligne (\\n), aucun « ; » parasite', () => {
+    const t = csvMailsAttachement(null, [{ gcblo: 'G1', fichier: 'G1.xlsx', a: ['x@y'], cc: ['a@b', 'c@d'], objet: 'o;bjet', corps: 'l1\r\n\r\nl2' }]);
+    egal(t, '\uFEFFGCBLO;FICHIER;A;CC;OBJET;CORPS\r\nG1;G1.xlsx;x@y;a@b c@d;o bjet;l1\\n\\nl2\r\n');
+  });
 });

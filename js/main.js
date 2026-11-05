@@ -249,11 +249,27 @@ const actions = creerActions({
   },
   ouvrirMail: lien => { const a = document.createElement('a'); a.href = lien; a.click(); },
   // Plusieurs fichiers d'un coup (attachements en série) : on choisit un dossier de destination
-  choisirDossier: async id => {
+  // Le dossier est retenu (comme celui des sauvegardes) : choisi une fois, réutilisé sans explorateur ;
+  // { changer: true } (« attachement folder ») en choisit un autre
+  choisirDossier: async (id, { changer = false } = {}) => {
     if (!window.showDirectoryPicker) return 'telechargement';
+    const cle = `dossier-${id}`;
+    if (!changer) {
+      let connu = null;
+      try { connu = await coffre.lire(cle); } catch { /* aucun */ }
+      try {
+        if (connu?.queryPermission && (await connu.queryPermission({ mode: 'readwrite' }) === 'granted' || await connu.requestPermission({ mode: 'readwrite' }) === 'granted')) return connu;
+      } catch { /* refusé, ou dossier disparu : on redemande */ }
+    }
     if (!await avantExplorateur()) return null;
-    try { const d = await window.showDirectoryPicker({ id, mode: 'readwrite' }); invite.focus(); return d; }
-    catch (e) { invite.focus(); if (e.name === 'AbortError') return null; throw e; }
+    try {
+      const d = await window.showDirectoryPicker({ id, mode: 'readwrite' });
+      try { await coffre.ecrire(cle, d); } catch { /* le navigateur refuse de retenir le dossier */ }
+      invite.focus(); return d;
+    } catch (e) { invite.focus(); if (e.name === 'AbortError') return null; throw e; }
+  },
+  lireDansDossier: async (dossier, nom) => {
+    try { return await (await (await dossier.getFileHandle(nom)).getFile()).text(); } catch { return null; }
   },
   ecrireDansDossier: async (dossier, nom, octets) => {
     const fichier = await dossier.getFileHandle(nom, { create: true });

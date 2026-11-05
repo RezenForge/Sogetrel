@@ -125,6 +125,7 @@ export function accepter(sorte, mot, ctx, { multiple = false } = {}) {
     case 'attachement': {
       // « fichier » (la référence), un statut (tous ses dossiers), ou des dossiers (dont * et les groupes)
       if (p === 'fichier') return { ok: true, valeur: { fichier: true } };
+      if (p === 'folder') return { ok: true, valeur: { dossierAttachements: true } };
       if (MOTS_STATUT[p]) {
         const liste = ctx.dossiers.filter(d => d.statutDft === MOTS_STATUT[p]);
         return liste.length ? { ok: true, valeur: liste, groupe: p } : { ok: false, erreur: `aucun dossier au statut « ${mot} »` };
@@ -198,7 +199,7 @@ const MOTS_CONNUS = {
   'motif-relance': ['fci', 'dft'],
   navigateur: ['chrome', 'mozilla', 'firefox'],
   'option-sauvegarde': ['folder'],
-  attachement: ['fichier', ...Object.keys(GROUPES), ...Object.keys(MOTS_STATUT)],
+  attachement: ['fichier', 'folder', ...Object.keys(GROUPES), ...Object.keys(MOTS_STATUT)],
   champ: Object.keys(CHAMPS),
   periode: Object.keys(PERIODES),
   commande: COMMANDES.filter(c => !c.cachee).flatMap(c => c.verbes)

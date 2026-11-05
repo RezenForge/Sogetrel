@@ -79,7 +79,7 @@ groupe('attachement → statut Attach', () => {
     const ecrits = new Map(), destination = { name: 'Attachements' };
     let affichee = [];
     const actions = creerActions({ regles, store, ecran, coffre, enregistrerFichier: async () => enregistrement, confirmer: async () => true, demander: async () => null,
-      choisirDossier: async () => destination, ecrireDansDossier: async (dossier, nom, octets) => { ecrits.set(nom, octets); } });
+      choisirDossier: async () => (enregistrement === 'annule' ? null : destination), ecrireDansDossier: async (dossier, nom, octets) => { ecrits.set(nom, octets); } });
     const lancer = t => actions.executer(analyser(t, t.length, { dossiers: store.tous(), aujourdhui: '2026-11-04', regles, listeAffichee: () => affichee }));
     return { store, regles, d, lancer, lignes, ecrits, afficher: l => { affichee = l; } };
   };
@@ -135,7 +135,7 @@ groupe('« * » et attachements en série', () => {
     const e = await preparerSerie();
     e.afficher(e.regles.filtrer({ statut: 'LITIGE' }));
     await e.lancer('attachement *');
-    egal([...e.ecrits.keys()].sort(), ['SBA501401-THF010.xlsx', 'SBA501402-THF010.xlsx', 'SBA501403-THF010.xlsx']);
+    egal([...e.ecrits.keys()].sort(), ['SBA501401-THF010.xlsx', 'SBA501402-THF010.xlsx', 'SBA501403-THF010.xlsx', 'mails-attachement.csv']);
     egal(e.store.tous().filter(d => d.statutDft === 'ATTACH').length, 3);
     await e.lancer('cancel');
     egal(e.store.tous().filter(d => d.statutDft === 'LITIGE').length, 3);
@@ -143,12 +143,12 @@ groupe('« * » et attachements en série', () => {
   test('attachement litige : tous les dossiers de ce statut, dans le dossier choisi', async () => {
     const e = await preparerSerie();
     await e.lancer('attachement litige');
-    egal(e.ecrits.size, 3);
+    egal(e.ecrits.size, 4);              // 3 attachements + mails-attachement.csv
   });
-  test('un seul dossier dans le statut : « Enregistrer sous » ; valorisation manquante signalée', async () => {
+  test('un seul dossier : dans le dossier des attachements, avec son mail ; valorisation manquante signalée', async () => {
     const e = await preparerSerie();
     await e.lancer('attachement mis-a-dispo');
-    egal([e.ecrits.size, e.store.parGcblo('SBA501404-THF010').statutDft], [0, 'ATTACH']);
+    egal([[...e.ecrits.keys()].sort(), e.store.parGcblo('SBA501404-THF010').statutDft], [['SBA501404-THF010.xlsx', 'mails-attachement.csv'], 'ATTACH']);
     vrai(e.lignes.some(l => l.includes('valorisation vide')));
   });
 });
@@ -159,5 +159,57 @@ groupe('Commande fci', () => {
     const d = { id: 'x', gcblo: 'SBA501404-THF010', fci: [], type: 'AIR', statutDft: 'A_FAIRE', historique: [] };
     const a = analyser('fci SBA501404 F26154200726', 26, { dossiers: [d], aujourdhui: '2026-11-05' });
     egal([a.commande?.id, a.valeurs.cible?.gcblo, a.valeurs.valeur], ['fci', 'SBA501404-THF010', 'F26154200726']);
+  });
+});
+
+groupe('R15 — Mails d\'attachement préparés pour Outlook', () => {
+  const preparer = async (existant = null) => {
+    const { coffreMemoire } = await import('../js/coffre.js');
+    const store = creerStore(supportMemoire());
+    const regles = creerDossiers(store, { horloge: () => new Date(2026, 10, 5, 9) });
+    regles.creer({ type: 'NUM21', gcblo: 'SBA300497-THF010', commune: 'Mérignac', valorisation: 30 });
+    regles.creer({ type: 'AIR', gcblo: 'BOR300498-THF010', commune: 'Pessac', valorisation: 30 });
+    regles.creer({ type: 'SOGETREL', gcblo: 'SBA300499-THF010', commune: 'Eysines', valorisation: 30 });
+    const coffre = coffreMemoire();
+    const octets = new Uint8Array(await (await fetch(new URL('./donnees/attachement-reference.xlsx', import.meta.url))).arrayBuffer());
+    await coffre.ecrire('attachement-reference', { nom: 'ref.xlsx', octets });
+    const ecrits = new Map(), lignes = [], appels = [];
+    if (existant !== null) ecrits.set('mails-attachement.csv', existant);
+    const ecran = { ligne: h => lignes.push(h), tableau() {}, fiche() {}, vider() {} };
+    const actions = creerActions({ regles, store, ecran, coffre, confirmer: async () => true, demander: async () => null, enregistrerFichier: async () => 'enregistre',
+      choisirDossier: async (id, o = {}) => { appels.push([id, o]); return { name: 'Attachements' }; },
+      ecrireDansDossier: async (dossier, nom, o) => { ecrits.set(nom, o); }, lireDansDossier: async (dossier, nom) => ecrits.get(nom) ?? null });
+    const lancer = t => actions.executer(analyser(t, t.length, { dossiers: store.tous(), aujourdhui: '2026-11-05', regles, listeAffichee: () => [] }));
+    return { store, ecrits, lignes, appels, lancer };
+  };
+  const csv = e => e.ecrits.get('mails-attachement.csv').replace(/^\uFEFF/, '').trim().split('\r\n');
+  test('une ligne par dossier NUM21 / AIR, rien pour Sogetrel', async () => {
+    const e = await preparer();
+    await e.lancer('attachement SBA300497 BOR300498 SBA300499');
+    const l = csv(e);
+    egal(l[0], 'GCBLO;FICHIER;A;CC;OBJET;CORPS');
+    egal(l.slice(1).map(x => x.split(';').slice(0, 5)), [
+      ['SBA300497-THF010', 'SBA300497-THF010.xlsx', 'info_lpc_BL@sogetrel.fr', 'Romain.BOUTINEAU@sogetrel.fr oelmahdaoui@numerus21.fr', 'ATTACHEMENT GCBLO | SBA300497-THF010 | NUM21'],
+      ['BOR300498-THF010', 'BOR300498-THF010.xlsx', 'info_aquitaine_BL@sogetrel.fr', 'Romain.BOUTINEAU@sogetrel.fr jeremie-sannier@air-reseaux.com', 'ATTACHEMENT GCBLO | BOR300498-THF010 | AIR']]);
+    vrai(e.lignes.some(h => h.includes('SBA300499-THF010') && h.includes('pas de mail')));
+    vrai(e.lignes.some(h => h.includes('BrouillonsAttachement')));
+  });
+  test('ajoutés aux mails en attente ; un GCBLO refait remplace sa ligne', async () => {
+    const e = await preparer('\uFEFFGCBLO;FICHIER;A;CC;OBJET;CORPS\r\nLRO100000-THF010;LRO100000-THF010.xlsx;a;b;c;d\r\nSBA300497-THF010;vieux;a;b;c;d\r\n');
+    await e.lancer('attachement SBA300497');
+    egal(csv(e).slice(1).map(x => x.split(';')[0]), ['LRO100000-THF010', 'SBA300497-THF010']);
+    egal(csv(e)[2].split(';')[1], 'SBA300497-THF010.xlsx');
+  });
+  test('un seul dossier : pas d\'« Enregistrer sous », le dossier des attachements', async () => {
+    const e = await preparer();
+    await e.lancer('attachement SBA300497');
+    vrai(e.ecrits.has('SBA300497-THF010.xlsx'));
+    egal(e.appels, [['gcblo-attachements', {}]]);
+  });
+  test('attachement folder : change le dossier, ne crée rien', async () => {
+    const e = await preparer();
+    await e.lancer('attachement folder');
+    egal(e.appels, [['gcblo-attachements', { changer: true }]]);
+    egal(e.ecrits.size, 0);
   });
 });

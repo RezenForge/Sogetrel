@@ -98,6 +98,7 @@ export function proposer(analyse, ctx) {
     case 'navigateur': liste = commencePar([{ inserer: 'chrome ', libelle: 'chrome', detail: 'ouvre un onglet', sorte: 'valeur' }, { inserer: 'mozilla ', libelle: 'mozilla', detail: 'copie le lien pour Firefox', sorte: 'valeur' }], mot); break;
     case 'motif-relance': liste = commencePar([{ inserer: 'fci ', libelle: 'fci', detail: 'numéro de commande', sorte: 'valeur' }, { inserer: 'dft ', libelle: 'dft', detail: 'DFT, docs GCB1 et GCB2', sorte: 'valeur' }], mot); break;
     case 'attachement': liste = [...commencePar([{ inserer: 'fichier ', libelle: 'fichier', detail: 'choisir la référence', sorte: 'valeur' },
+      { inserer: 'folder ', libelle: 'folder', detail: 'changer le dossier des attachements', sorte: 'valeur' },
       ...STATUTS.map(st => ({ inserer: motPourCode(MOTS_STATUT, st.code) + ' ', libelle: motPourCode(MOTS_STATUT, st.code), detail: `tous les dossiers ${st.libelle}`, sorte: 'valeur' }))], mot),
       ...dossiers(mot, ctx, ec, analyse)]; break;
     case 'dossier-ou-fichier': liste = [...commencePar([{ inserer: 'fichier ', libelle: 'fichier', detail: 'référence', sorte: 'valeur' }], mot), ...dossiers(mot, ctx, ec, analyse)]; break;
@@ -160,7 +161,8 @@ export function apercu(analyse, ctx) {
     case 'relance': return `→ mail de relance ${v.motif.toUpperCase()} · ${v.cible.gcblo}`;
     case 'attachement': {
       if (v.cibles.some(c => c.fichier)) return '→ choisir la référence';
-      return v.cibles.length === 1 ? `→ ${v.cibles[0].gcblo}.xlsx` : `→ ${v.cibles.length} attachements dans un dossier à choisir (confirmation)`;
+      if (v.cibles.some(c => c.dossierAttachements)) return '→ choisir le dossier des attachements';
+      return v.cibles.length === 1 ? `→ ${v.cibles[0].gcblo}.xlsx + mail d’attachement` : `→ ${v.cibles.length} attachements et leurs mails (confirmation)`;
     }
     case 'edit': return `→ ${v.cible.gcblo} : ${Object.keys(CHAMPS).find(k => CHAMPS[k] === v.champ)} → ${v.valeur}`;
     case 'delete': return `→ suppression de ${v.cibles.length === 1 ? v.cibles[0].gcblo : n(v.cibles)} (confirmation)`;

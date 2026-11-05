@@ -19,8 +19,9 @@
  *   coffre                   fichiers gardés dans le navigateur (la référence d'attachement)
  *   sauvegarderDans(nom, texte, { changer }) → Promise<{ etat: 'enregistre'|'telecharge'|'annule', dossier?, supprimes? }>
  *   choisirSauvegarde()      → Promise<File|null>  (explorateur, ouvert si possible dans le dossier des sauvegardes)
- *   choisirDossier(id)       → Promise<dossier|'telechargement'|null>  (explorateur de dossiers ; null = abandon)
+ *   choisirDossier(id, { changer }) → Promise<dossier|'telechargement'|null>  (dossier retenu, sinon explorateur ; null = abandon)
  *   ecrireDansDossier(dossier, nom, octets) → Promise  (écrit ou remplace un fichier dans ce dossier)
+ *   lireDansDossier(dossier, nom) → Promise<texte|null>  (null : pas de fichier)
  *   ouvrirMail(lien)         ouvre un lien mailto: dans la messagerie
  */
 import { criteresListe, resultatLs, analyser } from './analyse.js';
@@ -29,7 +30,7 @@ import { lireDate } from './analyse.js';
 import { IMPORT_EXCEL } from '../config.js';
 import { lireClasseur, modifierClasseur, contientMacros } from '../xlsx.js';
 import { cellulesAttachement } from '../attachement.js';
-import { mailAffectation, mailRelance, lienMailto, AFFECTS_MAIL } from '../mails.js';
+import { mailAffectation, mailRelance, mailAttachement, csvMailsAttachement, NOM_CSV_MAILS, lienMailto, AFFECTS_MAIL } from '../mails.js';
 import { contenuSauvegarde, nomSauvegarde, lireSauvegarde, GARDER } from '../sauvegarde.js';
 import { lireAffectsClasseur, noterAffectsClasseur, ecartAffect } from '../affects-classeur.js';
 import { typeParCode, statutParCode } from '../config.js';
@@ -61,7 +62,28 @@ export function texteClasseur(c, complet = false) {
   return `classeur partagé${esc(quand)} : ${morceaux.join(' · ')}${exemples ? ` <span class="dim">· ${esc(exemples)}</span>` : ''}`;
 }
 
-export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre, sauvegarderDans, choisirSauvegarde, choisirDossier, ecrireDansDossier, ouvrirMail = () => {}, recharger = () => location.reload(), lancerTournee = async () => false }) {
+export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre, sauvegarderDans, choisirSauvegarde, choisirDossier, ecrireDansDossier, lireDansDossier = async () => null, ouvrirMail = () => {}, recharger = () => location.reload(), lancerTournee = async () => false }) {
+  /**
+   * R15 — Ajoute les mails d'attachement (NUM21, AIR) à mails-attachement.csv, dans le dossier des attachements.
+   * La macro Outlook BrouillonsAttachement en fait des brouillons, l'attachement en pièce jointe.
+   */
+  async function preparerMailsAttachement(dossier, faits) {
+    const mails = [], sans = [];
+    for (const f of faits) {
+      try { mails.push({ gcblo: f.d.gcblo, fichier: f.nom, ...mailAttachement(f.d.gcblo, f.d.type) }); } catch { sans.push(f.d.gcblo); }
+    }
+    if (mails.length) {
+      try {
+        const existant = await lireDansDossier(dossier, NOM_CSV_MAILS);
+        await ecrireDansDossier(dossier, NOM_CSV_MAILS, csvMailsAttachement(existant, mails));
+        mails.forEach(m => regles.noter(store.parGcblo(m.gcblo)?.id, 'mail', 'Mail d’attachement préparé (pôle facturation)'));
+        ecran.ligne(`<span class="dim">✉ ${pluriel(mails.length, 'mail d’attachement prêt', 'mails d’attachement prêts')} · dans Outlook : Alt+F8 › BrouillonsAttachement</span>`, 'info');
+        mails.flatMap(m => m.avertissements).forEach(a => ecran.ligne(`<span class="dim">${esc(a)}</span>`, 'info'));
+      } catch (e) { ecran.ligne(`gcblo: ${esc(NOM_CSV_MAILS)} non écrit : ${esc(e.message)}`, 'err'); }
+    }
+    if (sans.length) ecran.ligne(`<span class="dim">pas de mail d’attachement (affect ni NUM21 ni AIR) : ${esc(sans.join(', '))}</span>`, 'info');
+  }
+
   let annulation = null;       // { libelle, faire() } : de quoi défaire la dernière modification
 
   // Comme les outils Linux : un succès s'écrit simplement, une erreur est préfixée du nom du programme
@@ -242,13 +264,18 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       ok(`${pluriel(r.retires.length, 'dossier supprimé', 'dossiers supprimés')} <span class="dim">·</span> ${LIEN_ANNULE}`);
     },
 
-    /** R11 — « attachement fichier » choisit la référence ; « attachement ‹dossier› » crée l'attachement. */
     /**
      * R11 — « attachement fichier » choisit la référence ; « attachement ‹dossiers› » crée les attachements.
      * Un seul dossier : on choisit où enregistrer le fichier. Plusieurs (*, un statut, une liste) :
      * on choisit un dossier de destination, tous les fichiers y sont écrits. Chaque dossier passe en Attach.
      */
     async attachement(v) {
+      if (v.cibles.some(c => c.dossierAttachements)) {
+        if (v.cibles.length > 1) return erreur('« folder » s\'utilise seul : attachement folder');
+        const d = await choisirDossier('gcblo-attachements', { changer: true });
+        if (d === null) return info('dossier inchangé');
+        return ok(d === 'telechargement' ? 'pas de choix de dossier dans ce navigateur : les attachements sont téléchargés' : `dossier des attachements : ${esc(d.name)}`);
+      }
       if (v.cibles.some(c => c.fichier)) {
         if (v.cibles.length > 1) return erreur('« fichier » s\'utilise seul : attachement fichier');
         const fichier = await choisirFichier('.xlsx,.xlsm');
@@ -275,21 +302,11 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       };
       const finStatut = n => (n ? ` <span class="dim">·</span> statut → <span class="st-ATTACH">Attach</span> <span class="dim">·</span> ${LIEN_ANNULE}` : '');
 
-      // Un seul dossier : « Enregistrer sous »
-      if (dossiers.length === 1) {
-        let f;
-        try { f = await fabriquer(dossiers[0]); } catch (e) { return erreur(esc(e.message)); }
-        f.avertissements.forEach(a => info(`<span class="dim">${esc(a)}</span>`));
-        const r = await enregistrerFichier(f.nom, f.octets);
-        if (r === 'annule') return info('non enregistré');
-        const n = passerEnAttach([f]);
-        return ok(`${esc(f.nom)} ${r === 'telecharge' ? 'téléchargé' : 'enregistré'}${f.palier ? ` <span class="dim">· ${esc(f.palier.nom)}</span>` : ''}${finStatut(n)}`);
-      }
-
-      // Plusieurs dossiers : un dossier de destination pour tous les fichiers
-      if (!(await confirmer(`créer ${dossiers.length} attachements (${dossiers.slice(0, 3).map(d => d.gcblo).join(', ')}${dossiers.length > 3 ? '…' : ''}) ?`))) return info('aucun attachement créé');
+      // R15 — Tous les attachements vont dans le dossier des attachements (choisi une fois, retenu) ;
+      // à côté, mails-attachement.csv : la macro Outlook BrouillonsAttachement en fait des brouillons.
+      if (dossiers.length > 1 && !(await confirmer(`créer ${dossiers.length} attachements (${dossiers.slice(0, 3).map(d => d.gcblo).join(', ')}${dossiers.length > 3 ? '…' : ''}) ?`))) return info('aucun attachement créé');
       const destination = await choisirDossier('gcblo-attachements');
-      if (destination === null) return info('aucun dossier choisi');
+      if (destination === null) return info('aucun dossier choisi · rien n’a été créé');
       const faits = [], echecs = [], sansPalier = [];
       for (const d of dossiers) {
         try {
@@ -297,13 +314,17 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
           if (destination === 'telechargement') await enregistrerFichier(f.nom, f.octets, { telecharger: true });
           else await ecrireDansDossier(destination, f.nom, f.octets);
           if (!f.palier || f.avertissements.length) sansPalier.push(d.gcblo);
+          if (dossiers.length === 1) f.avertissements.forEach(a => info(`<span class="dim">${esc(a)}</span>`));
           faits.push(f);
         } catch (e) { echecs.push(`${d.gcblo} (${e.message})`); }
       }
       const n = passerEnAttach(faits);
-      ok(`${pluriel(faits.length, 'attachement créé', 'attachements créés')}${destination === 'telechargement' ? ' (téléchargés)' : ` <span class="dim">· dans ${esc(destination.name)}</span>`}${finStatut(n)}`);
-      if (sansPalier.length) info(`<span class="dim">à vérifier (commune ou valorisation manquante, ou aucun palier) : ${esc(sansPalier.join(', '))}</span>`);
+      const ou = destination === 'telechargement' ? ' (téléchargé)' : ` <span class="dim">· dans ${esc(destination.name)}</span>`;
+      const quoi = faits.length === 1 ? `${esc(faits[0].nom)}${faits[0].palier ? ` <span class="dim">· ${esc(faits[0].palier.nom)}</span>` : ''}` : pluriel(faits.length, 'attachement créé', 'attachements créés');
+      if (faits.length) ok(`${quoi}${ou}${finStatut(n)}`);
+      if (sansPalier.length && dossiers.length > 1) info(`<span class="dim">à vérifier (commune ou valorisation manquante, ou aucun palier) : ${esc(sansPalier.join(', '))}</span>`);
       if (echecs.length) erreur(`échec : ${esc(echecs.join(', '))}`);
+      if (faits.length && destination !== 'telechargement') await preparerMailsAttachement(destination, faits);
     },
 
     /** Sauvegarde toute la base dans un dossier choisi ; seules les 10 plus récentes y sont gardées. */
