@@ -35,6 +35,7 @@ import { lireAffectsClasseur, noterAffectsClasseur, ecartAffect } from '../affec
 import { typeParCode, statutParCode } from '../config.js';
 import { CARTES, carteHtml } from './aujourdhui.js';
 import { demarrerMorpion } from './morpion.js';
+import { demarrerDame } from './dame.js';
 import { relanceRecente } from '../dossiers.js';
 import { depuisJour } from '../dates.js';
 
@@ -295,6 +296,14 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       const div = ecran.ligne('<div class="morpion"></div>', 'jeu');
       if (!div) return;
       div.arreter = demarrerMorpion(div.querySelector('.morpion'), { finir: () => div.remove() });
+      div.scrollIntoView({ block: 'end' });
+    },
+
+    /** Une partie de dames (commande cachée), même principe que le morpion. */
+    dame() {
+      const div = ecran.ligne('<div class="dame"></div>', 'jeu');
+      if (!div) return;
+      div.arreter = demarrerDame(div.querySelector('.dame'), { finir: () => div.remove() });
       div.scrollIntoView({ block: 'end' });
     },
 

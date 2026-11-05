@@ -307,3 +307,16 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .mp-O { color: var(--erreur); font-weight: 700; }
 .mp-message { font-size: 14px; color: var(--pale); }
 .mp-gagne { color: var(--accent); font-weight: 700; } .mp-perdu { color: var(--erreur); font-weight: 700; }
+
+/* Dames (commande cachée) : damier 10 × 10 dans le volet */
+.dame { display: flex; flex-direction: column; gap: 6px; padding: 8px; margin: 4px 0; border: 1px solid var(--trait); border-radius: 6px; background: var(--fond-menu); width: 100%; max-width: 32ch; }
+.dm-score { display: flex; justify-content: space-between; font-size: 14px; }
+.dm-plateau { display: grid; grid-template-columns: repeat(10, 1fr); border: 1px solid var(--trait); }
+.dm-c { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font: inherit; font-size: clamp(11px, 2.6vmin, 17px); line-height: 1; padding: 0; border: 0; }
+.dm-c.clair { background: var(--fond); }
+.dm-c.fonce { background: #3a3a3a; cursor: pointer; }
+.dm-c.dernier { background: #4a4535; }
+.dm-c.jouable { box-shadow: inset 0 0 0 1px var(--pale); }
+.dm-c.choisie { box-shadow: inset 0 0 0 2px var(--accent); }
+.dm-c.arrivee { background: #3d4a32; box-shadow: inset 0 0 0 1px var(--accent); }
+.dm-b { color: #eeeeec; } .dm-n { color: var(--erreur); }

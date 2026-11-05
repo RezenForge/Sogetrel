@@ -54,6 +54,7 @@ export const COMMANDES = Object.freeze([
   { id: 'today', verbes: ['today'], resume: 'ce qui demande une action aujourd\'hui', forme: 'today', emplacements: [] },
   // Commande cachée : ni dans help, ni dans l'autocomplétion, ni dans l'historique, pas d'écho
   { id: 'morpion', verbes: ['morpion'], resume: 'une partie de morpion', forme: 'morpion', emplacements: [], cachee: true },
+  { id: 'dame', verbes: ['dame'], resume: 'une partie de dames', forme: 'dame', emplacements: [], cachee: true },
   { id: 'refresh', verbes: ['refresh'], resume: 'recharge la page (dernière version)', forme: 'refresh', emplacements: [] },
   { id: 'help', verbes: ['help', '?'], resume: 'aide',
     forme: 'help [commande]',
