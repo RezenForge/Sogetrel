@@ -205,7 +205,7 @@ pre { margin: 0; font: inherit; white-space: pre; }
 /* Une carte : bandeau coloré à gauche selon l'urgence (rouge retard, orange à surveiller…) */
 .jc { --c: var(--pale); border: 1px solid var(--trait); border-left: 3px solid var(--c); border-radius: 6px; background: var(--fond-menu); overflow: hidden; }
 .jc[data-niveau="retard"] { --c: var(--erreur); } .jc[data-niveau="proche"] { --c: var(--proche); }
-.jc[data-niveau="st-LITIGE"] { --c: var(--statut-LITIGE); } .jc[data-niveau="lies"] { --c: #c4a000; } .jc[data-niveau="st-REFUSE"] { --c: var(--statut-REFUSE); }
+.jc[data-niveau="st-LITIGE"] { --c: var(--statut-LITIGE); } .jc[data-niveau="lies"] { --c: #c4a000; } .jc[data-niveau="st-ATTACH"] { --c: var(--statut-ATTACH); } .jc[data-niveau="st-REFUSE"] { --c: var(--statut-REFUSE); }
 .jc-tete {
   display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%;
   font: inherit; color: var(--texte); text-align: left; background: none; border: 0; padding: 10px 12px 8px; cursor: pointer;

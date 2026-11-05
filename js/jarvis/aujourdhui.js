@@ -49,7 +49,14 @@ export const CARTES = Object.freeze([
     actions: d => [['NUM21', `affect ${d.gcblo} num21`], ['AIR', `affect ${d.gcblo} air`]] },
   { commande: 'ls proches', libelle: 'Relances sous 3 jours', conseil: 'à anticiper', classe: 'proche', stat: s => s.proche,
     indice: d => d.dateRelance ? `le ${formater(d.dateRelance).slice(0, 5)}` : '',
-    actions: (d, c) => AFFECTS_MAIL.includes(d.type) ? [relancer(d, 'dft', c.jour)] : [] }
+    actions: (d, c) => AFFECTS_MAIL.includes(d.type) ? [relancer(d, 'dft', c.jour)] : [] },
+  // Pour information (pas compté dans « à traiter ») : les GCBLO déjà attachés
+  { commande: 'ls attach', libelle: 'GCBLO attachés', conseil: 'attachement fait', classe: 'st-ATTACH', stat: () => 0, info: true,
+    indice: (d, c) => {
+      const h = [...(d.historique || [])].reverse().find(x => x.action === 'attachement');
+      return `attaché ${depuis(c.jour, h?.date || d.modifieLe)}${d.valorisation ? ` · ${euros(d.valorisation)}` : ''}`;
+    },
+    actions: d => [['ouvrir', `open ${d.gcblo}`]] }
 ]);
 
 /** Les cartes à afficher (nombre > 0) d'après les statistiques. → [{ n, libelle, commande, classe, conseil }] */
