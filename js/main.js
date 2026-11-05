@@ -323,12 +323,32 @@ store.ecouter(dessinerBord);
  * si on l'avait tapée (écho, historique des modifications, cancel).
  */
 const ORIGINE_LINE = 'https://flashback.orange.fr';
+const COMMANDE_FCI = /^fci ([A-Z]{3}\d{6}-[A-Z]+\d+)((?: F\d{11})+)$/;
+/** Applique « fci ‹GCBLO› ‹FCI…› » venu de LINE → 'maj' | 'deja' (FCI déjà connus) | 'inconnu' (GCBLO absent du registre). */
+function fciDepuisLine(commande) {
+  const m = commande.match(COMMANDE_FCI);
+  if (!m) return null;
+  const d = store.tous().find(x => x.gcblo === m[1]);
+  if (!d) return 'inconnu';
+  const fci = m[2].trim().split(' ');
+  if (fci.every(f => d.fci.includes(f))) return 'deja';
+  invite.lancer(`fci ${d.gcblo} ${[...new Set([...d.fci, ...fci])].join(' ')}`);
+  return 'maj';
+}
 addEventListener('message', e => {
-  if (e.origin !== ORIGINE_LINE) return;
-  const commande = String(e.data?.registreGcblo || '');
-  if (!/^fci [A-Z]{3}\d{6}-[A-Z]+\d+( F\d{11})+$/.test(commande)) return;
-  e.source?.postMessage({ registreGcbloRecu: true }, e.origin);
-  invite.lancer(commande);
+  // 1. Le favori, depuis une page LINE ouverte par le registre
+  if (e.origin === ORIGINE_LINE) {
+    const commande = String(e.data?.registreGcblo || '');
+    if (!COMMANDE_FCI.test(commande)) return;
+    e.source?.postMessage({ registreGcbloRecu: true }, e.origin);
+    fciDepuisLine(commande);
+    return;
+  }
+  // 2. L'extension « FCI depuis LINE » (extension/), relayée par son script dans cette page
+  if (e.source === window && e.origin === location.origin && typeof e.data?.registreGcbloExtension === 'string') {
+    const etat = fciDepuisLine(e.data.registreGcbloExtension);
+    if (etat) postMessage({ registreGcbloEtat: etat, id: e.data.id }, location.origin);
+  }
 });
 // Un clic sur le titre d'une section la replie ou la rouvre (retenu dans ce navigateur)
 tableauBord.addEventListener('click', e => {

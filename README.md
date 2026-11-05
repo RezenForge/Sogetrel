@@ -114,6 +114,10 @@ tests/                   279 tests (classeur d'essai fictif : tests/donnees) : r
 
 Version d'avant la refonte : branche `avant-refonte`.
 
+## Extension « FCI depuis LINE » (sans clic)
+
+Dossier `extension/` (Chrome ou Edge) : dès qu'une page LINE affiche un FCI dans ses commentaires, le registre ouvert est mis à jour tout seul (bulle verte sur la page LINE ; rien si le FCI est déjà connu). Installation : décompresser le dossier, `chrome://extensions` › Mode développeur › « Charger l'extension non empaquetée » › choisir le dossier.
+
 ## Favori « FCI → registre »
 
 Sur la page LINE d'un dossier, un favori lit le FCI dans les commentaires (« Num GCBLO : F99496231124 »). Page ouverte depuis le registre (menu ⋯ › Accès LINE chrome) : le FCI est mis à jour directement dans le registre. Sinon, il copie `fci ‹GCBLO› ‹FCI›` : Ctrl+V puis Entrée dans le registre. Installation : ouvrir **https://rezenforge.github.io/Sogetrel/outils/favori-line.html** et glisser le bouton dans la barre de favoris (Chrome et/ou Firefox). Code lisible : `outils/favori-line.js`.
