@@ -142,10 +142,11 @@ La macro doit être à jour (elle envoie maintenant toutes les lignes, pas seule
 Le registre écrit `registre-gcblo.csv` à chaque sauvegarde, et quelques secondes après chaque changement (dès que l'accès au dossier des sauvegardes est accordé). La macro `MajDepuisRegistre` met le classeur à jour depuis ce fichier, sans rien effacer :
 
 - colonne **J** : `Numéro de commande FCI : ‹fci›`, sauf si le FCI s'y trouve déjà (à n'importe quel endroit) ;
+- colonne **J**, dossiers **Mis à disposition** (et Attach) : ` / GCBLO OK` juste après le numéro, soit `Numéro de commande FCI : F… / GCBLO OK` (sans FCI ni au registre ni dans J : laissé de côté et signalé) ;
 - colonne **E** : `FACTU` pour les dossiers en Attach ;
 - à la fin, une fenêtre « Compte rendu » montre ce qui a été fait (vert = modifié, orange = laissé de côté, lien « voir » vers la cellule). Elle se ferme sans demander d'enregistrer.
 
-La relancer ne change rien de plus : un FCI déjà présent et un `FACTU` déjà posé ne sont pas réécrits.
+La relancer ne change rien de plus : un FCI, un `GCBLO OK` et un `FACTU` déjà posés ne sont pas réécrits.
 
 **Installer la macro (une fois)** : dans le classeur, Alt+F11, *Fichier › Importer un fichier…*, choisir `excel/MajDepuisRegistre.bas`, enregistrer. **Lancer** : Alt+F8 › `MajDepuisRegistre`. La première fois, elle demande où est `registre-gcblo.csv` (le dossier des sauvegardes). `ChoisirCsvRegistre` permet d'en changer.
 

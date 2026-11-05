@@ -13,6 +13,9 @@ Attribute VB_Name = "MajDepuisRegistre"
 '       * sinon : le texte apres "Numéro de commande FCI :" est remplace,
 '         ou la mention est ajoutee a la fin si elle n'existe pas ;
 '         le reste du texte de J est garde
+'   - colonne J : " / GCBLO OK" juste apres le numero FCI pour les dossiers Mis a disposition
+'       (et Attach, qui sont passes par la mise a disposition) ; deja present -> pas touchee ;
+'       pas de FCI dans le registre ni dans J -> laisse de cote et signale
 '   - colonne E : "FACTU" pour les dossiers en Attach dans le registre
 '
 ' Rien n'est efface. Les cas laisses de cote (cellule protegee, formule...) sont signales.
@@ -24,8 +27,8 @@ Attribute VB_Name = "MajDepuisRegistre"
 ' "GCBLO" du classeur ouvert (meme non enregistre). A chaque sauvegarde, le registre le lit
 ' et cree les nouveaux GCBLO (ou complete ce qui manque), comme la commande import.
 '
-' Relancer la macro ne change rien de plus : un FCI deja present et un "FACTU"
-' deja pose ne sont pas reecrits ("Tout est deja a jour").
+' Relancer la macro ne change rien de plus : un FCI deja present, un "GCBLO OK" et un "FACTU"
+' deja poses ne sont pas reecrits ("Tout est deja a jour").
 '
 ' Lancer : Alt+F8 > MajDepuisRegistre. La premiere fois, la macro demande ou se
 ' trouve registre-gcblo.csv ; le chemin est garde sur ce PC (pas dans le classeur).
@@ -51,6 +54,8 @@ Private faits As Collection          ' ce que la macro a fait, pour la fenetre d
 Private Function Factu() As String
     Factu = "FACTU"
 End Function
+
+Private Const GCBLO_OK As String = "GCBLO OK"
 
 Private Function MentionFci() As String
     MentionFci = "Num" & ChrW(233) & "ro de commande FCI : "
@@ -106,12 +111,18 @@ Public Sub MajDepuisRegistre()
                             vus = vus + 1
                             info = registre(cle)          ' (0) = FCI, (1) = code statut
 
-                            ' --- Colonne J : le FCI
-                            If info(0) <> "" Then
-                                ancienJ = CStr(ws.Cells(i, COL_FCI).Value)
-                                nouveauJ = TexteFci(ancienJ, CStr(info(0)))
-                                If nouveauJ <> ancienJ Then Ecrire ws, i, COL_FCI, cle, ancienJ, nouveauJ
+                            ' --- Colonne J : le FCI, puis " / GCBLO OK" si les documents sont mis a disposition
+                            ancienJ = CStr(ws.Cells(i, COL_FCI).Value)
+                            nouveauJ = ancienJ
+                            If info(0) <> "" Then nouveauJ = TexteFci(nouveauJ, CStr(info(0)))
+                            If info(1) = "MAD" Or info(1) = "ATTACH" Then
+                                If Not AjouterGcbloOk(nouveauJ, CStr(info(0))) Then
+                                    Noter ws, i, cle, COL_FCI, ancienJ, ancienJ, _
+                                        "Non modifi" & ChrW(233) & " : mis " & ChrW(224) & " disposition mais aucun FCI (registre ni colonne J) pour y accrocher " & GCBLO_OK
+                                    nbIgnores = nbIgnores + 1
+                                End If
                             End If
+                            If nouveauJ <> ancienJ Then Ecrire ws, i, COL_FCI, cle, ancienJ, nouveauJ
 
                             ' --- Colonne E : FACTU pour les dossiers Attach
                             If info(1) = "ATTACH" And filtre = "GCBLO" Then
@@ -253,6 +264,38 @@ Private Function TexteFci(ByVal ancien As String, ByVal fciRegistre As String) A
 End Function
 
 '------------------------------------------------------------------------------
+' Ajoute " / GCBLO OK" juste apres le numero FCI de J (ex. "Numéro de commande FCI : F12345678901 / GCBLO OK").
+' Deja present : rien. Le FCI est cherche parmi ceux du registre, sinon apres la mention.
+' Renvoie False si aucun FCI ne permet de placer la mention (texte inchange).
+Private Function AjouterGcbloOk(ByRef texte As String, ByVal fciRegistre As String) As Boolean
+    Dim f As Variant, p As Long, re As Object, m As Object
+
+    AjouterGcbloOk = True
+    If InStr(1, texte, GCBLO_OK, vbTextCompare) > 0 Then Exit Function
+
+    For Each f In Split(fciRegistre, " ")
+        If f <> "" Then
+            p = InStr(1, texte, f, vbTextCompare)
+            If p > 0 Then
+                texte = Left$(texte, p + Len(f) - 1) & " / " & GCBLO_OK & Mid$(texte, p + Len(f))
+                Exit Function
+            End If
+        End If
+    Next f
+
+    ' Pas de FCI du registre dans J : on se place apres la mention "Numero de commande FCI : xxx"
+    Set re = CreateObject("VBScript.RegExp")
+    re.IgnoreCase = True
+    re.Pattern = "Num[e" & ChrW(233) & "]ro\s+de\s+commande\s+FCI\s*:\s*[^\s,;/]+"
+    If re.Test(texte) Then
+        Set m = re.Execute(texte)(0)
+        texte = Left$(texte, m.FirstIndex + m.Length) & " / " & GCBLO_OK & Mid$(texte, m.FirstIndex + m.Length + 1)
+        Exit Function
+    End If
+    AjouterGcbloOk = False
+End Function
+
+'------------------------------------------------------------------------------
 Private Sub Ecrire(ws As Worksheet, ligne As Long, colonne As String, gcblo As String, _
                    avant As String, apres As String)
     Dim c As Range
@@ -318,7 +361,13 @@ Private Function CompteRendu(bilan As String, erreur As String) As Boolean
 
     For Each f In faits
         r = r + 1: n = n + 1
-        If f(3) = COL_FCI Then quoi = "J " & ChrW(183) & " FCI" Else quoi = "E " & ChrW(183) & " " & Factu()
+        If f(3) <> COL_FCI Then
+            quoi = "E " & ChrW(183) & " " & Factu()
+        ElseIf InStr(1, f(5), GCBLO_OK, vbTextCompare) > 0 And InStr(1, f(4), GCBLO_OK, vbTextCompare) = 0 Then
+            quoi = "J " & ChrW(183) & " " & GCBLO_OK
+        Else
+            quoi = "J " & ChrW(183) & " FCI"
+        End If
         ws.Cells(r, 1).Value = "'" & f(0)
         ws.Cells(r, 2).Value = f(1)
         ws.Cells(r, 3).Value = f(2)
