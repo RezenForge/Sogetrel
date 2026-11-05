@@ -1,13 +1,18 @@
 /**
  * morpion.js — un petit morpion en ASCII (commande cachée `morpion`), contre une IA forte mais battable :
  * elle joue le meilleur coup (minimax), sauf une fois sur ERREUR_IA où elle joue au hasard.
- * Tu joues X et tu commences ; l'IA joue O. Clic sur une case, ou touche 1 à 9 (ligne de saisie vide).
+ * Tu joues X et tu commences ; l'IA joue O. Clic sur une case, ou touche 1 à 9 comme sur le pavé
+ * numérique (7 en haut à gauche, 3 en bas à droite), ligne de saisie vide.
  * La partie disparaît une fois gagnée, perdue ou nulle, ou dès qu'une commande est lancée.
  *
  *   gagnant(plateau) → 'X' | 'O' | 'nul' | null      plateau : tableau de 9 cases ('X', 'O' ou null)
  *   coupIA(plateau, ia = 'O') → indice 0-8 (le meilleur coup)
  *   demarrerMorpion(el, { finir }) : joue dans l'élément, finir() quand la partie se termine
  */
+/** Disposition du pavé numérique : 7 8 9 en haut, 4 5 6 au milieu, 1 2 3 en bas. Case (0-8, lue de haut en bas) ↔ touche. */
+const touchePourCase = i => (2 - Math.floor(i / 3)) * 3 + (i % 3) + 1;
+const casePourTouche = k => (2 - Math.floor((k - 1) / 3)) * 3 + ((k - 1) % 3);
+
 const LIGNES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
 
 export function gagnant(p) {
@@ -63,7 +68,7 @@ export function demarrerMorpion(el, { finir = () => {} } = {}) {
 
   const case_ = i => p[i]
     ? `<span class="mp-${p[i]}">${p[i]}</span>`
-    : `<button type="button" class="mp-case" data-case="${i}" aria-label="case ${i + 1}">${i + 1}</button>`;
+    : `<button type="button" class="mp-case" data-case="${i}" aria-label="case ${touchePourCase(i)}">${touchePourCase(i)}</button>`;
   const ligne = r => ` ${case_(r * 3)} │ ${case_(r * 3 + 1)} │ ${case_(r * 3 + 2)} `;
   function dessiner() {
     el.innerHTML = `<pre class="mp-plateau">${ligne(0)}\n───┼───┼───\n${ligne(1)}\n───┼───┼───\n${ligne(2)}</pre><div class="mp-message">${message}</div>`;
@@ -90,7 +95,7 @@ export function demarrerMorpion(el, { finir = () => {} } = {}) {
   const touche = e => {
     if (fini || !/^[1-9]$/.test(e.key) || e.ctrlKey || e.altKey || e.metaKey || (champ && champ.value)) return;
     e.preventDefault();
-    jouer(Number(e.key) - 1);
+    jouer(casePourTouche(Number(e.key)));
   };
   function arreter() { el.removeEventListener('click', clic); document.removeEventListener('keydown', touche, true); }
   el.addEventListener('click', clic);
