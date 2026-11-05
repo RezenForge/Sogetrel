@@ -12,6 +12,12 @@ Attribute VB_Name = "RegistreGcbloOutlook"
 ' Rien n'est envoye : les brouillons attendent dans "Brouillons" (3 au plus s'ouvrent
 ' directement). On relit, on clique sur Envoyer.
 ' Les lignes traitees sont retirees du fichier : relancer la macro ne cree pas de doublon.
+' Avant chaque brouillon, la macro cherche si l'attachement a DEJA ETE ENVOYE a une boite BL
+' (info_lpc_BL, info_aquitaine_BL), par vous ou par quelqu'un d'autre : dans la Boite de
+' reception et les Elements envoyes (et leurs sous-dossiers) de toutes les boites ouvertes
+' dans Outlook, dont les boites partagees. Un mail avec une piece jointe au nom du GCBLO,
+' adresse a une boite BL -> pas de brouillon, c'est signale a la fin (date, expediteur).
+' BrouillonsAttachementForcer : meme chose sans cette verification.
 ' Une piece jointe introuvable : la ligne reste, signalee a la fin.
 '
 ' Installer (une fois) : dans Outlook, Alt+F11, Fichier > Importer un fichier...,
@@ -32,6 +38,15 @@ Private Const DOSSIER_BROUILLONS As Long = 16          ' olFolderDrafts
 
 '------------------------------------------------------------------------------
 Public Sub BrouillonsAttachement()
+    Traiter False
+End Sub
+
+Public Sub BrouillonsAttachementForcer()
+    Traiter True
+End Sub
+
+Private Sub Traiter(forcer As Boolean)
+    Dim deja As String, dejaEnvoyes As String
     Dim dossier As String, chemin As String, texte As String, lignes() As String
     Dim champs() As String, piece As String, i As Long
     Dim entete As String, restes As String, problemes As String, faits As Collection
@@ -68,6 +83,12 @@ Public Sub BrouillonsAttachement()
                     problemes = problemes & vbCrLf & "  " & champs(0) & " : " & champs(1) & " introuvable"
                     restes = restes & lignes(i) & vbCrLf
                 Else
+                    deja = ""
+                    If Not forcer Then deja = DejaEnvoye(champs(0))
+                    If deja <> "" Then
+                        dejaEnvoyes = dejaEnvoyes & vbCrLf & "  " & champs(0) & " : " & deja
+                        GoTo Suivante
+                    End If
                     ok = False
                     Set m = CreerBrouillon(champs, piece, ok)
                     If ok Then
@@ -79,6 +100,7 @@ Public Sub BrouillonsAttachement()
                 End If
             End If
         End If
+Suivante:
     Next i
 
     ' Le fichier ne garde que ce qui reste a faire
@@ -103,7 +125,11 @@ Public Sub BrouillonsAttachement()
 
     bilan = faits.Count & " brouillon(s) d'attachement cr" & ChrW(233) & "(s) dans Brouillons." & vbCrLf & _
             "Relisez, puis Envoyer."
-    If problemes <> "" Then
+    If dejaEnvoyes <> "" Then
+        bilan = bilan & vbCrLf & vbCrLf & "D" & ChrW(233) & "j" & ChrW(224) & " envoy" & ChrW(233) & "(s) " & ChrW(224) & " une bo" & ChrW(238) & "te BL, pas de brouillon :" & dejaEnvoyes & _
+                vbCrLf & "(si c'est une erreur : registre > attachement <GCBLO>, puis Alt+F8 > BrouillonsAttachementForcer)"
+    End If
+    If problemes <> "" Or dejaEnvoyes <> "" Then
         bilan = bilan & vbCrLf & vbCrLf & "Laiss" & ChrW(233) & "(s) en attente (" & NOM_CSV & ") :" & problemes
         MsgBox bilan, vbExclamation, TITRE
     ElseIf faits.Count = 0 Then
@@ -118,6 +144,82 @@ Public Sub ChoisirDossierAttachements()
     d = DossierAttachements(True)
     If d <> "" Then MsgBox "Dossier des attachements : " & d, vbInformation, TITRE
 End Sub
+
+'------------------------------------------------------------------------------
+' L'attachement de ce GCBLO a-t-il deja ete envoye a une boite BL ? "" si non,
+' sinon "le 05/11/2026 par NOM (dossier)". Boite de reception et Elements envoyes
+' (avec sous-dossiers) de chaque boite ouverte dans Outlook.
+Private Function DejaEnvoye(gcblo As String) As String
+    Dim boite As Object, dossier As Object, quel As Variant
+    For Each boite In Application.Session.Stores
+        For Each quel In Array(6, 5)                    ' olFolderInbox, olFolderSentMail
+            Set dossier = Nothing
+            On Error Resume Next
+            Set dossier = boite.GetDefaultFolder(quel)
+            On Error GoTo 0
+            If Not dossier Is Nothing Then
+                DejaEnvoye = ChercherDans(dossier, gcblo)
+                If DejaEnvoye <> "" Then Exit Function
+            End If
+        Next quel
+    Next boite
+End Function
+
+Private Function ChercherDans(dossier As Object, gcblo As String) As String
+    Dim trouves As Object, it As Object, sous As Object, filtre As String, prefixe As String, r As String, trouve As Boolean
+
+    On Error Resume Next
+    prefixe = Left$(gcblo, 9)                           ' SBA300497 : dans l'objet ou le texte
+    filtre = "@SQL=(""urn:schemas:httpmail:subject"" LIKE '%" & prefixe & "%' OR " & _
+             """urn:schemas:httpmail:textdescription"" LIKE '%" & prefixe & "%') AND " & _
+             """urn:schemas:httpmail:hasattachment"" = 1"
+    If dossier.DefaultItemType = 0 Then                 ' dossier de mails
+        Set trouves = Nothing
+        Set trouves = dossier.Items.Restrict(filtre)
+        If Not trouves Is Nothing Then
+            For Each it In trouves
+                ' Sous "On Error Resume Next", une erreur dans un If entre dans le Then :
+                ' on calcule donc d'abord, dans une variable qui reste False en cas d'erreur.
+                trouve = False
+                trouve = (it.Class = 43)                ' olMail
+                If trouve Then trouve = PieceDuDossier(it, gcblo)
+                If trouve Then trouve = VersBoiteBL(it)
+                If trouve Then
+                    ChercherDans = "le " & Format(it.SentOn, "dd/mm/yyyy") & " par " & it.SenderName & " (" & dossier.FolderPath & ")"
+                    Exit Function
+                End If
+            Next it
+        End If
+    End If
+    For Each sous In dossier.Folders
+        r = ChercherDans(sous, gcblo)
+        If r <> "" Then ChercherDans = r: Exit Function
+    Next sous
+End Function
+
+' Une piece jointe dont le nom contient le GCBLO (tirets, espaces, _ ignores)
+Private Function PieceDuDossier(m As Object, gcblo As String) As Boolean
+    Dim a As Object, cle As String
+    cle = Normaliser(gcblo)
+    For Each a In m.Attachments
+        If InStr(1, Normaliser(a.FileName), cle, vbBinaryCompare) > 0 Then PieceDuDossier = True: Exit Function
+    Next a
+End Function
+
+' Envoye a info_lpc_BL ou info_aquitaine_BL (A ou Cc)
+Private Function VersBoiteBL(m As Object) As Boolean
+    Dim r As Object, t As String
+    For Each r In m.Recipients
+        t = LCase$(r.Name & " " & r.Address)
+        If InStr(t, "info_lpc_bl") > 0 Or InStr(t, "info_aquitaine_bl") > 0 Then VersBoiteBL = True: Exit Function
+    Next r
+End Function
+
+Private Function Normaliser(ByVal s As String) As String
+    s = UCase$(s)
+    s = Replace(s, "-", ""): s = Replace(s, " ", ""): s = Replace(s, "_", "")
+    Normaliser = s
+End Function
 
 '------------------------------------------------------------------------------
 ' champs : GCBLO;FICHIER;A;CC;OBJET;CORPS (adresses separees par un espace, lignes du texte par \n)
