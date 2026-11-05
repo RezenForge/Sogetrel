@@ -193,10 +193,13 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       if (!l.ok) return erreur(esc(l.erreur));
       const lien = `<a class="lien" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.url)}</a>`;
       if (v.navigateur === 'mozilla') {
-        let copie = false;
-        try { await navigator.clipboard.writeText(l.url); copie = true; } catch { /* refusé */ }
-        return copie ? ok(`lien LINE de ${esc(d.gcblo)} copié · colle-le dans Firefox (Ctrl+V) <span class="dim">· ${lien}</span>`)
-          : info(`lien LINE de ${esc(d.gcblo)} : ${lien}`);
+        // Nouvel onglet dans Firefox via le lien « gcblo-firefox: » (outils/ouvrir-dans-firefox.reg, une fois sur le PC).
+        // Sans ce réglage, rien ne s'ouvre : le lien est aussi copié, prêt à coller.
+        const a = document.createElement('a');
+        a.href = `gcblo-firefox:${l.url}`;
+        a.click();
+        try { await navigator.clipboard.writeText(l.url); } catch { /* refusé */ }
+        return ok(`LINE de ${esc(d.gcblo)} envoyé à Firefox <span class="dim">· lien aussi copié (Ctrl+V si Firefox ne s'ouvre pas) · ${lien}</span>`);
       }
       window.open(l.url, '_blank', 'noopener');
       ok(`LINE de ${esc(d.gcblo)} ouvert dans un nouvel onglet <span class="dim">· ${lien}</span>`);

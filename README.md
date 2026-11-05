@@ -25,7 +25,7 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `restore` | recharge une sauvegarde : remplace toute la base après confirmation (annulable) |
 | `fci ‹dossier› ‹fci›` | met à jour le FCI d'un dossier (raccourci de `edit ‹dossier› fci ‹fci›`) ; `fci ‹dossier› -` l'efface ; `cancel` revient en arrière |
 | *(un GCBLO seul)* | coller ou taper un GCBLO sans commande : un seul dossier reconnu → `open`, sinon → `ls` (plusieurs dossiers, colonne collée) |
-| `line ‹dossier› [chrome\|mozilla]` | dossier LINE (flashback.orange.fr) du GCBLO : chrome ouvre un onglet, mozilla copie le lien à coller dans Firefox. Aussi dans le menu ⋯ (« Accès LINE chrome / mozilla ») |
+| `line ‹dossier› [chrome\|mozilla]` | dossier LINE (flashback.orange.fr) du GCBLO : chrome ouvre un onglet ; mozilla ouvre un onglet dans Firefox (réglage `outils/ouvrir-dans-firefox.reg` à installer une fois) et copie aussi le lien. Aussi dans le menu ⋯ (« Accès LINE chrome / mozilla ») |
 | `refresh` | recharge la page avec la dernière version publiée (comme Ctrl+F5) ; les dossiers restent |
 | `today` | « Aujourd'hui », à l'ouverture : une carte par sujet (FCI en retard, relances, litiges, refusés, écarts d'affect, sans affect) avec tous les dossiers (liste défilable dans la carte) et leur action en un clic ; l'en-tête de la carte ouvre la liste complète |
 | `ls … tri:colonne` | trie la liste (`tri:valo`, `tri:valo-` décroissant ; date, affect, gcblo, commune, fci, statut). Ou un clic sur le titre de la colonne (2e clic : sens inverse) |
