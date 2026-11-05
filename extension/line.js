@@ -35,7 +35,8 @@
       const etat = rep?.etat;
       if (etat === 'maj') bulle(`✓ registre mis à jour : ${commande}`);
       else if (etat === 'inconnu') bulle(`registre : ${r.gcblo} n'est pas dans le registre`, '#fcaf3e');
-      else if (etat === 'absent') { envoyes.delete(commande); bulle('registre GCBLO non ouvert : FCI non transmis', '#fcaf3e'); }
+      else if (etat === 'absent') { envoyes.delete(commande); bulle('registre GCBLO non ouvert dans ce Chrome : FCI non transmis', '#fcaf3e'); }
+      else if (etat === 'ancien') { envoyes.delete(commande); bulle('registre GCBLO à recharger : tape refresh dans le registre, puis recharge cette page', '#fcaf3e'); }
       // « deja » : le registre a déjà ce FCI, rien à signaler
     });
   }

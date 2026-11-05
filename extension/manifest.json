@@ -1,12 +1,35 @@
 {
   "manifest_version": 3,
   "name": "Registre GCBLO · FCI depuis LINE",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Quand une page LINE (flashback.orange.fr) affiche un FCI dans ses commentaires, le registre GCBLO ouvert est mis à jour tout seul.",
-  "background": { "service_worker": "fond.js" },
-  "host_permissions": ["https://rezenforge.github.io/Sogetrel/*"],
+  "background": {
+    "service_worker": "fond.js"
+  },
+  "host_permissions": [
+    "https://rezenforge.github.io/*"
+  ],
   "content_scripts": [
-    { "matches": ["https://flashback.orange.fr/line/*"], "js": ["line.js"], "run_at": "document_idle" },
-    { "matches": ["https://rezenforge.github.io/Sogetrel/*"], "js": ["registre.js"], "run_at": "document_start" }
+    {
+      "matches": [
+        "https://flashback.orange.fr/line/*"
+      ],
+      "js": [
+        "line.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://rezenforge.github.io/*"
+      ],
+      "js": [
+        "registre.js"
+      ],
+      "run_at": "document_start"
+    }
+  ],
+  "permissions": [
+    "scripting"
   ]
 }
