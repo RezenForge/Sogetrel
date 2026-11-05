@@ -16,7 +16,7 @@ import { proposer, apercu } from './completion.js';
 import { esc } from './actions.js';
 import { STATUTS, typeParCode, statutParCode } from '../config.js';
 import { formater } from '../dates.js';
-import { formaterMontant, etatFci, relanceRecente } from '../dossiers.js';
+import { formaterMontant, etatFci, relanceRecente, quandRelance } from '../dossiers.js';
 import { lireLies, liesDe, totalLies, chaleurs, chaleur } from '../dossiers-lies.js';
 import { ressembleAUneListe } from '../collage.js';
 import { plat, MOTS_TYPE, MOTS_STATUT, motPourCode } from './grammaire.js';
@@ -148,7 +148,7 @@ export function creerInvite({ racine, contexte }) {
       // Le FCI est arrivé : la relance FCI n'a plus d'objet, le badge disparaît
       const r = motif === 'fci' && d.fci.length ? null : relanceRecente(d, motif, jour);
       if (!r) return '   ';
-      const quand = `${r.jours === 0 ? "aujourd'hui" : 'hier'} à ${new Date(r.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+      const quand = quandRelance(r);
       return `<span class="badge badge-${motif}" title="relance ${motif.toUpperCase()} préparée ${quand} · une nouvelle relance demandera confirmation">${motif.toUpperCase()}</span>`;
     };
     return `${badge('fci')} ${badge('dft')}  `;

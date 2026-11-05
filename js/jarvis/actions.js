@@ -37,8 +37,9 @@ import { CARTES, carteHtml } from './aujourdhui.js';
 import { demarrerMorpion } from './morpion.js';
 import { demarrerDame } from './dame.js';
 import { lireLies } from '../dossiers-lies.js';
-import { relanceRecente } from '../dossiers.js';
-import { depuisJour } from '../dates.js';
+import { relanceRecente, quandRelance } from '../dossiers.js';
+import { RELANCE_DFT_JOURS } from '../config.js';
+import { depuisJour, ajouterJours, formater } from '../dates.js';
 
 /** Échappe un texte avant de l'insérer dans du HTML. */
 export const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -145,10 +146,16 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       // Protection contre les doublons : même relance préparée aujourd'hui ou hier → on demande
       const recente = relanceRecente(d, v.motif, regles.aujourdhui());
       if (recente) {
-        const quand = `${recente.jours === 0 ? "aujourd'hui" : 'hier'} à ${new Date(recente.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+        const quand = quandRelance(recente);
         if (!(await confirmer(`relance ${v.motif.toUpperCase()} de ${d.gcblo} déjà préparée ${quand} : relancer quand même ?`))) return info(`pas de relance · ${esc(d.gcblo)} relancé ${esc(quand)}`);
       }
       preparerMail(mailRelance(d.gcblo, d.type, v.motif), d, `Relance ${v.motif.toUpperCase()} préparée`);
+      // DFT : tous les 10 jours → prochaine relance prévue à J+10
+      if (v.motif === 'dft') {
+        const prochaine = ajouterJours(regles.aujourdhui(), RELANCE_DFT_JOURS);
+        regles.modifier(d.id, { dateRelance: prochaine });
+        info(`<span class="dim">prochaine relance DFT le ${esc(formater(prochaine))}</span>`);
+      }
     },
 
     /** Retrouve les dossiers d'une liste collée et affiche leurs infos (même liste que ls, éditable). */

@@ -50,6 +50,12 @@ export const FCI_RELANCE_JOURS = 2;
  */
 export const RELANCE_INTERVALLE_JOURS = 2;
 
+/**
+ * Relances DFT : tous les 10 jours. Une relance DFT fixe la prochaine date de relance à J+10
+ * (cartes « relances » de today, tableau de bord) et protège contre une autre relance DFT pendant 10 jours.
+ */
+export const RELANCE_DFT_JOURS = 10;
+
 export const RELANCE = Object.freeze({
   joursProches: 3,      // « relance proche » : aujourd'hui ou dans les 3 jours
   delaiSuivante: 7      // relance suivante proposée à J+7

@@ -104,5 +104,6 @@ groupe('Relances : protection contre les doublons', () => {
   test('relance FCI d\'hier : protégée (1 jour)', () => egal(relanceRecente(d, 'fci', '2026-11-04')?.jours, 1));
   test('relance FCI d\'avant-hier : plus protégée', () => egal(relanceRecente(d, 'fci', '2026-11-05'), null));
   test('chaque motif à part : la DFT d\'il y a 15 jours ne bloque rien', () => egal(relanceRecente(d, 'dft', '2026-11-04'), null));
+  test('DFT : protégée 10 jours', () => egal([relanceRecente(d, 'dft', '2026-10-29')?.jours, relanceRecente(d, 'dft', '2026-10-30')], [9, null]));
   test('même jour : 0', () => egal(relanceRecente(d, 'fci', '2026-11-03')?.jours, 0));
 });
