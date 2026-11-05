@@ -17,6 +17,7 @@ import { esc } from './actions.js';
 import { STATUTS, typeParCode, statutParCode } from '../config.js';
 import { formater } from '../dates.js';
 import { formaterMontant, etatFci, relanceRecente } from '../dossiers.js';
+import { lireLies, liesDe, totalLies, chaleurs, chaleur } from '../dossiers-lies.js';
 import { ressembleAUneListe } from '../collage.js';
 import { plat, MOTS_TYPE, MOTS_STATUT, motPourCode } from './grammaire.js';
 import { optionsDossier } from './menus.js';
@@ -91,7 +92,7 @@ export function creerInvite({ racine, contexte }) {
       champ('relance', 'relance', d.dateRelance ? `<span class="${alerte || ''}">${esc(formater(d.dateRelance))}${alerte === 'retard' ? ' (en retard)' : alerte === 'proche' ? ' (proche)' : ''}</span>` : 'aucune'),
       champ('note', 'commentaire', esc(d.commentaire || '—').replace(/\n/g, '<br>' + ' '.repeat(10)))
     ];
-    return `<pre class="fiche">${lignes.join('\n')}</pre>${historiqueHtml(d)}`;
+    return `<pre class="fiche">${lignes.join('\n')}</pre>${carteLiesHtml(d)}${historiqueHtml(d)}`;
   }
 
   /**
@@ -146,7 +147,39 @@ export function creerInvite({ racine, contexte }) {
     return `${badge('fci')} ${badge('dft')}  `;
   }
 
+  /**
+   * Fiche : la carte des dossiers liés (même affaire dans le classeur partagé), du plus gros au plus
+   * petit, avec une barre proportionnelle à la valo ; affect, statut (colonne E) et commentaire (J).
+   */
+  function carteLiesHtml(d) {
+    const lies = lireLies(), liste = liesDe(d, lies);
+    if (!liste.length) return '';
+    const total = totalLies(d, lies), seuils = chaleurs(contexte().dossiers, lies);
+    const max = Math.max(...liste.map(l => l.valo || 0), 1);
+    const lignes = liste.map(l => `<li class="li">`
+      + `<div class="li-haut"><span class="li-dossier" data-copie="${esc(l.dossier)}" title="clic droit : copier">${esc(l.dossier)}</span>`
+      + `<span class="li-valo">${l.valo !== null ? esc(montantCourt(l.valo)) : '<span class="dim">sans valo</span>'}</span></div>`
+      + `<div class="li-barre"><span style="width:${Math.round(((l.valo || 0) / max) * 100)}%"></span></div>`
+      + `<div class="li-bas dim">${[l.affect, l.statut].filter(Boolean).map(esc).join(' · ') || '—'}${l.commentaire ? ` · <span title="${esc(l.commentaire)}">${esc(l.commentaire)}</span>` : ''}</div></li>`).join('');
+    return `<section class="lies-carte ${chaleur(total, seuils)}"><header class="lies-tete">dossiers liés <span class="dim">· ${liste.length}</span><span class="lies-total">${esc(montantCourt(total))}</span></header><ol class="lies-corps">${lignes}</ol></section>`;
+  }
+
+  /** Montant sans centimes : « 12 400 € » (colonne LIÉS). */
+  const montantCourt = v => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v).replace(/\s/g, ' ');
+
+  /**
+   * Colonne LIÉS : la valo totale des dossiers liés (même affaire dans le classeur partagé), en couleur
+   * selon l'enjeu (top 10 % / top 30 % du registre). Survol : le détail ; clic : la fiche (carte des liés).
+   */
+  function liesHtml(d, lies, seuils) {
+    const total = totalLies(d, lies);
+    if (total === null) return `<span class="dim">${'·'.padStart(11)}</span>`;
+    const detail = liesDe(d, lies).map(l => `${l.dossier} · ${l.valo !== null ? montantCourt(l.valo) : 'sans valo'}${l.statut ? ` · ${l.statut}` : ''}`).join('\n');
+    return `<button type="button" class="lies ${chaleur(total, seuils)}" data-commande="open ${esc(d.gcblo)}" title="${esc(`${liesDe(d, lies).length} dossier(s) lié(s)\n${detail}`)}">${esc(montantCourt(total).padStart(11))}</button>`;
+  }
+
   function tableauHtml(dossiers, tri = '') {
+    const lies = lireLies(), seuils = chaleurs(contexte().dossiers, lies);
     const col = (t, n) => esc(String(t).padEnd(n).slice(0, n));
     const coupe = (t, n) => (t.length > n ? t.slice(0, n - 1) + '…' : t);
     const lignes = dossiers.map(d => {
@@ -159,7 +192,7 @@ export function creerInvite({ racine, contexte }) {
       // (orange pendant 2 jours après une relance FCI)
       const fciRouge = { retard: 'fci-retard', relance: 'fci-relance' }[etatFci(d, contexte().aujourdhui)] || '';
       // Ordre des colonnes : AFFECT GCBLO COMMUNE VALO FCI STATUT DFT
-      const milieu = `${ed('commune', col(coupe(commune, 22) || '—', 22))} ${ed('valo', `<span class="valo">${esc((valo || '—').padStart(11))}</span>`)}  ${ed('fci', copieFci(d, `<span class="dim">${col(fci || '—', 15)}</span>`), fciRouge)} `;
+      const milieu = `${ed('commune', col(coupe(commune, 22) || '—', 22))} ${ed('valo', `<span class="valo">${esc((valo || '—').padStart(11))}</span>`)} ${liesHtml(d, lies, seuils)}  ${ed('fci', copieFci(d, `<span class="dim">${col(fci || '—', 15)}</span>`), fciRouge)} `;
       // Une ligne = un bloc : le statut peut colorer toute la ligne (Attach : vert clair)
       return `<span class="rangee rangee-${d.statutDft}${choisis.has(d.id) ? ' choisie' : ''}" data-id="${esc(d.id)}">`
         // Date (d'affectation) : jour/mois seulement (l'année se voit en ouvrant le champ au double-clic)
@@ -180,7 +213,7 @@ export function creerInvite({ racine, contexte }) {
       return `<button type="button" class="tri${marque ? ' trie' : ''}" data-tri="${col}" title="trier par ${libelle.toLowerCase()}">${esc(texte)}</button>`;
     };
     const entete = `<span class="entete dim">${titre('date', 'DATE', 7)}${titre('affect', 'AFFECT', 7)}${titre('gcblo', 'GCBLO', 17)}`
-      + `${titre('commune', 'COMMUNE', 23)}${titre('valo', 'VALO', 11, true)}  ${titre('fci', 'FCI', 16)}${'RELANCE'.padEnd(9)}${titre('statut', 'STATUT DFT', 10)}</span>`;
+      + `${titre('commune', 'COMMUNE', 23)}${titre('valo', 'VALO', 11, true)} ${titre('lies', 'LIÉS', 11, true)}  ${titre('fci', 'FCI', 16)}${'RELANCE'.padEnd(9)}${titre('statut', 'STATUT DFT', 10)}</span>`;
     return `<pre class="tableau">${entete}${lignes.join('')}</pre>`;
   }
 

@@ -110,7 +110,8 @@ export function proposer(analyse, ctx) {
       { inserer: 'sans-valo ', libelle: 'sans-valo', detail: 'sans valorisation', sorte: 'valeur' },
       { inserer: 'sans-affect ', libelle: 'sans-affect', detail: 'sans affect', sorte: 'valeur' },
       { inserer: 'ecart-affect ', libelle: 'ecart-affect', detail: 'affect différent de la colonne I', sorte: 'valeur' },
-      ...['date', 'affect', 'gcblo', 'commune', 'valo', 'fci', 'statut'].map(c => ({ inserer: `tri:${c} `, libelle: `tri:${c}`, detail: `trier par ${c} (tri:${c}- : décroissant)`, sorte: 'valeur' }))], mot); break;
+      { inserer: 'lies ', libelle: 'lies', detail: 'avec des dossiers liés (valo)', sorte: 'valeur' },
+      ...['date', 'affect', 'gcblo', 'commune', 'valo', 'lies', 'fci', 'statut'].map(c => ({ inserer: `tri:${c} `, libelle: `tri:${c}`, detail: `trier par ${c} (tri:${c}- : décroissant)`, sorte: 'valeur' }))], mot); break;
     case 'date': liste = commencePar(dates(ctx), mot); break;
     case 'ville': {
       // Villes déjà consultées, et la période dès qu'un nom de ville est commencé

@@ -150,12 +150,14 @@ Fin:
 End Sub
 
 '------------------------------------------------------------------------------
-' Ecrit classeur-gcblo.csv a cote de registre-gcblo.csv : les lignes dont E vaut "GCBLO"
-' sur les onglets 33, 16, 17, 79, 86, lues dans le classeur OUVERT (meme non enregistre).
+' Ecrit classeur-gcblo.csv a cote de registre-gcblo.csv : toutes les lignes avec un dossier en D
+' sur les onglets 33, 16, 17, 79, 86 (les GCBLO et leurs dossiers lies), lues dans le classeur
+' OUVERT (meme non enregistre). Le registre ne cree que les GCBLO ; les autres lignes servent aux
+' "dossiers lies" (meme affaire, autre suffixe : affect, valo, statut, commentaire).
 ' Le registre le lit a chaque sauvegarde et y prend les nouveaux GCBLO (comme "import").
 ' Renvoie une phrase pour le bilan.
 Private Function ExporterClasseur(destination As String) As String
-    Dim ws As Worksheet, nomOnglet As Variant, derniere As Long, i As Long, n As Long
+    Dim ws As Worksheet, nomOnglet As Variant, derniere As Long, i As Long, n As Long, nGcblo As Long
     Dim lignes() As String, flux As Object
 
     ReDim lignes(0 To 255)
@@ -168,8 +170,10 @@ Private Function ExporterClasseur(destination As String) As String
         If Not ws Is Nothing Then
             derniere = ws.Cells(ws.Rows.Count, COL_DOSSIER).End(xlUp).Row
             For i = PREMIERE_LIGNE To derniere
-                If UCase$(Trim$(Cellule(ws, i, COL_FILTRE))) = "GCBLO" And Trim$(Cellule(ws, i, COL_DOSSIER)) <> "" Then
+                ' Toutes les lignes avec un dossier : les GCBLO, et leurs dossiers liés (même affaire, autre suffixe)
+                If Trim$(Cellule(ws, i, COL_DOSSIER)) <> "" Then
                     n = n + 1
+                    If UCase$(Trim$(Cellule(ws, i, COL_FILTRE))) = "GCBLO" Then nGcblo = nGcblo + 1
                     If n > UBound(lignes) Then ReDim Preserve lignes(0 To 2 * n)
                     lignes(n) = Trim$(nomOnglet) & ";" & i & ";" & Cellule(ws, i, COL_DOSSIER) & ";" & _
                                 Cellule(ws, i, COL_FILTRE) & ";" & Cellule(ws, i, "I") & ";" & Cellule(ws, i, "G") & ";" & _
@@ -186,7 +190,7 @@ Private Function ExporterClasseur(destination As String) As String
     flux.WriteText Join(lignes, vbCrLf) & vbCrLf
     flux.SaveToFile destination, 2                 ' 2 = remplace le fichier
     flux.Close
-    ExporterClasseur = n & " ligne(s) GCBLO envoy" & ChrW(233) & "e(s) au registre (" & NOM_CSV_CLASSEUR & ")"
+    ExporterClasseur = n & " ligne(s) envoy" & ChrW(233) & "e(s) au registre, dont " & nGcblo & " GCBLO (" & NOM_CSV_CLASSEUR & ")"
     Exit Function
 Echec:
     ExporterClasseur = NOM_CSV_CLASSEUR & " non " & ChrW(233) & "crit : " & Err.Description

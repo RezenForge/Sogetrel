@@ -15,6 +15,7 @@ import { aSupprimer, nomSauvegarde, contenuSauvegarde } from './sauvegarde.js';
 import { csvRegistre, NOM_CSV, NOM_CSV_CLASSEUR, lireCsvClasseur } from './export-excel.js';
 import { extraireDossiers, appliquerImport } from './import-excel.js';
 import { lireAffectsClasseur, noterAffectsClasseur, ecartAffect } from './affects-classeur.js';
+import { extraireLies, noterLies } from './dossiers-lies.js';
 import { SAUVEGARDE_AUTO_HEURES } from './config.js';
 import { aujourdhui } from './dates.js';
 import { convertirV1, lireV1Navigateur } from './reprise-v1.js';
@@ -110,9 +111,12 @@ async function lireClasseurPartage(dossier) {
   const fichier = await poignee.getFile();
   // Pour le tableau de bord (synchro) : quand la macro a écrit ce fichier pour la dernière fois
   try { localStorage.setItem(CLE_CLASSEUR_LE, new Date(fichier.lastModified).toISOString()); } catch { /* facultatif */ }
-  const r = extraireDossiers(lireCsvClasseur(await fichier.text()), store.tous());
+  const classeur = lireCsvClasseur(await fichier.text());
+  const r = extraireDossiers(classeur, store.tous());
   noterAffectsClasseur(r.affects);
   const fait = appliquerImport(regles, r, 'classeur partagé');
+  // Les dossiers liés (même affaire, autre suffixe) : remplacés en entier à chaque lecture
+  noterLies(extraireLies(classeur, store.tous().map(d => d.gcblo)));
   return { lus: r.lus, crees: fait.crees.map(d => d.gcblo), completes: fait.avant.length, refuses: r.refuses.length + fait.refuses.length, le: fichier.lastModified };
 }
 

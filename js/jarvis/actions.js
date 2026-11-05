@@ -36,6 +36,7 @@ import { typeParCode, statutParCode } from '../config.js';
 import { CARTES, carteHtml } from './aujourdhui.js';
 import { demarrerMorpion } from './morpion.js';
 import { demarrerDame } from './dame.js';
+import { lireLies } from '../dossiers-lies.js';
 import { relanceRecente } from '../dossiers.js';
 import { depuisJour } from '../dates.js';
 
@@ -322,12 +323,12 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
           const a = analyser(c.commande, c.commande.length, ctxAnalyse);
           return [c, resultatLs(criteresListe(a.valeurs), regles, dossiers).liste];
         }).filter(([, l]) => l.length);
-        const total = new Set(cartes.flatMap(([, l]) => l.map(d => d.id))).size;
+        const total = new Set(cartes.filter(([c]) => !c.info).flatMap(([, l]) => l.map(d => d.id))).size;
         const tete = `<header class="jour-tete"><div><div class="jour-titre">Aujourd'hui</div><div class="jour-date dim">${esc(titre)}</div></div>`
           + (dossiers.length ? `<div class="jour-bilan ${total ? '' : 'ok'}">${total ? `<b>${total}</b> dossier${total > 1 ? 's' : ''} à traiter` : '✓ rien d\'urgent'}</div>` : '') + '</header>';
         if (!dossiers.length) return `<div class="jour">${tete}<div class="jour-vide">Aucun dossier enregistré · lance la macro du classeur partagé puis <button type="button" class="lien c-verbe" data-commande="save">save</button></div></div>`;
         if (!cartes.length) return `<div class="jour">${tete}<div class="jour-vide ok">Tout est à jour : aucune relance en retard, aucun FCI attendu, aucun écart.</div></div>`;
-        return `<div class="jour">${tete}<div class="jour-cartes">${cartes.map(([c, l]) => carteHtml(c, l, { jour, affects }, esc)).join('')}</div></div>`;
+        return `<div class="jour">${tete}<div class="jour-cartes">${cartes.map(([c, l]) => carteHtml(c, l, { jour, affects, lies: lireLies() }, esc)).join('')}</div></div>`;
       });
     },
 

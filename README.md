@@ -83,6 +83,7 @@ js/collage.js            lit une liste collée (Excel, mail, classeur robot)
 js/xlsx.js               lit un classeur Excel (.xlsx, .xlsm) et en écrit une copie modifiée, sans bibliothèque
 js/import-excel.js       quels dossiers et FCI prendre dans le classeur (commande import)
 js/attachement.js        quelles cellules remplir dans l'attachement d'un dossier
+js/dossiers-lies.js     dossiers liés (même affaire, autre suffixe) : lecture, total, couleur
 js/affects-classeur.js   affect de la colonne I retenu, écarts avec le registre (ls ecart-affect)
 js/jarvis/aujourdhui.js  écran « Aujourd'hui » (commande today)
 js/info.js               retrouve les dossiers d'une liste collée (ls avec une colonne de GCBLO)
@@ -98,7 +99,7 @@ js/jarvis/actions.js     exécute une commande via les règles
 js/jarvis/menus.js       le menu ⋯ d'un dossier : des commandes écrites à l'avance
 js/jarvis/tableau-bord.js le tableau de bord ASCII, toujours visible à droite
 js/jarvis/invite.js      l'écran du terminal et le clavier
-tests/                   267 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
+tests/                   271 tests (classeur d'essai fictif : tests/donnees) : règles, dates, commandes, menu ⋯, collage, relances
 ```
 
 ## Refonte (04/11/2026, à l'essai)
@@ -110,6 +111,17 @@ tests/                   267 tests (classeur d'essai fictif : tests/donnees) : r
 - **Notifications** : les événements automatiques (sauvegarde, classeur) s'affichent en bas et disparaissent seuls ; les erreurs restent.
 
 Version d'avant la refonte : branche `avant-refonte`.
+
+## Dossiers liés
+
+Dans le classeur partagé, un GCBLO (ex. `SBA301460-THF010`) peut avoir d'autres lignes de la même affaire (`SBA301460-ACD010`…), avec leur affect, valo, statut (E) et commentaire (J). À chaque `save`, le registre les lit dans `classeur-gcblo.csv` :
+
+- **colonne LIÉS** des listes : la valo totale des dossiers liés, en couleur selon l'enjeu (rouge = top 10 % du registre, orange = top 30 %) ; survol = détail, clic = la fiche ;
+- **fiche** (`open`) : une carte « dossiers liés », du plus gros au plus petit, avec une barre de valo, l'affect, le statut et le commentaire ;
+- **today** : la carte « Gros enjeux liés » ;
+- `ls lies` (ceux qui en ont), `tri:lies-` (du plus gros au plus petit), ou un clic sur le titre LIÉS.
+
+La macro doit être à jour (elle envoie maintenant toutes les lignes, pas seulement les GCBLO).
 
 ## Classeur partagé IMMO-COORDI-DISSIM.xlsm
 

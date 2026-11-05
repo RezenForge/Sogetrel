@@ -21,6 +21,7 @@ import { FORMATS, typeParCode } from '../config.js';
 import { normaliserGcblo, etatRelance } from '../dossiers.js';
 import { chercherListe } from '../info.js';
 import { lireAffectsClasseur, ecartAffect } from '../affects-classeur.js';
+import { lireLies, totalLies } from '../dossiers-lies.js';
 import { estEmail } from '../reglages.js';
 import { ajouterJours, ecartJours, estJour, versJour } from '../dates.js';
 
@@ -151,8 +152,8 @@ export function accepter(sorte, mot, ctx, { multiple = false } = {}) {
       }
     }
       // Tri : « tri:valo » (croissant), « tri:valo- » (décroissant) ; aussi lancé d'un clic sur l'en-tête de la liste
-      { const t = String(mot).toLowerCase().match(/^tri:(date|affect|gcblo|commune|valo|fci|statut)(-?)$/);
-        if (t) return { ok: true, valeur: { tri: { colonne: t[1], cle: COLONNES_TRI[t[1]], sens: t[2] ? 'desc' : 'asc' } } }; }
+      { const t = String(mot).toLowerCase().match(/^tri:(date|affect|gcblo|commune|valo|lies|liés|fci|statut)(-?)$/);
+        if (t) { const colonne = t[1] === 'liés' ? 'lies' : t[1]; return { ok: true, valeur: { tri: { colonne, cle: COLONNES_TRI[colonne], sens: t[2] ? 'desc' : 'asc' } } }; } }
       if (MOTS_TYPE[p]) return { ok: true, valeur: { type: MOTS_TYPE[p] } };
       if (MOTS_STATUT[p]) return { ok: true, valeur: { statut: MOTS_STATUT[p] } };
       if (MOTS_FILTRE[p]) return { ok: true, valeur: { [MOTS_FILTRE[p]]: true } };
@@ -354,13 +355,20 @@ export function criteresListe(valeurs) {
  *   → { liste, collee: résultat de chercherListe | null, masques }
  */
 /** Colonnes de liste triables (« tri:… ») → champ du dossier. */
-export const COLONNES_TRI = Object.freeze({ date: 'dateAffectation', affect: 'type', gcblo: 'gcblo', commune: 'commune', valo: 'valorisation', fci: 'fci', statut: 'statutDft' });
+export const COLONNES_TRI = Object.freeze({ date: 'dateAffectation', affect: 'type', gcblo: 'gcblo', commune: 'commune', valo: 'valorisation', lies: 'lies', fci: 'fci', statut: 'statutDft' });
+
+/** Tri : la colonne LIÉS n'est pas un champ du dossier (valo totale des dossiers liés). */
+function trierLs(regles, liste, tri) {
+  if (tri?.cle !== 'lies') return regles.trier(liste, tri);
+  const lies = lireLies(), v = d => totalLies(d, lies);
+  return [...liste].sort((a, b) => (v(a) === null) - (v(b) === null) || (tri.sens === 'desc' ? v(b) - v(a) : v(a) - v(b)));
+}
 const MOTIF_DEBUT_GCBLO = /[A-Za-z]{3}\s*[-‐‑‒–—]?\s*\d{6}(?!\d)/g;
 export function resultatLs(criteres, regles, dossiers) {
   if ((criteres.texte.match(MOTIF_DEBUT_GCBLO) || []).length >= 2) {
     const collee = chercherListe(criteres.texte, dossiers);
     const liste = regles.filtrer({ ...criteres, texte: '', masquer: [] }, collee.trouves);
-    return { liste: criteres.tri ? regles.trier(liste, criteres.tri) : liste, collee, masques: 0 };
+    return { liste: criteres.tri ? trierLs(regles, liste, criteres.tri) : liste, collee, masques: 0 };
   }
   // Un dossier ciblé (GCBLO, début de GCBLO ou numéro : « ls SBA501404 », « ls 501404 ») s'affiche
   // même s'il est Attach ou Annulé : le masquage ne vaut que pour les listes générales
@@ -370,7 +378,13 @@ export function resultatLs(criteres, regles, dossiers) {
     const affects = lireAffectsClasseur();
     criteres = { ...criteres, parmi: new Set(dossiers.filter(d => ecartAffect(d, affects)).map(d => d.id)) };
   }
-  const liste = regles.trier(regles.filtrer(criteres), criteres.tri || { cle: 'dateAffectation', sens: 'desc' });
+  // « ls lies » : les dossiers qui ont des dossiers liés (avec une valo)
+  if (criteres.avecLies) {
+    const lies = lireLies();
+    const ids = new Set(dossiers.filter(d => totalLies(d, lies) > 0).map(d => d.id));
+    criteres = { ...criteres, parmi: criteres.parmi ? new Set([...criteres.parmi].filter(i => ids.has(i))) : ids };
+  }
+  const liste = trierLs(regles, regles.filtrer(criteres), criteres.tri || { cle: 'dateAffectation', sens: 'desc' });
   // Combien de dossiers Attach sont masqués par ce filtre (visibles avec « ls attach »)
   const masques = criteres.masquer.length ? regles.filtrer({ ...criteres, masquer: [], statut: criteres.masquer }).length : 0;
   return { liste, collee: null, masques };

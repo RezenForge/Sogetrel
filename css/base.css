@@ -204,7 +204,7 @@ pre { margin: 0; font: inherit; white-space: pre; }
 /* Une carte : bandeau coloré à gauche selon l'urgence (rouge retard, orange à surveiller…) */
 .jc { --c: var(--pale); border: 1px solid var(--trait); border-left: 3px solid var(--c); border-radius: 6px; background: var(--fond-menu); overflow: hidden; }
 .jc[data-niveau="retard"] { --c: var(--erreur); } .jc[data-niveau="proche"] { --c: var(--proche); }
-.jc[data-niveau="st-LITIGE"] { --c: var(--statut-LITIGE); } .jc[data-niveau="st-REFUSE"] { --c: var(--statut-REFUSE); }
+.jc[data-niveau="st-LITIGE"] { --c: var(--statut-LITIGE); } .jc[data-niveau="lies"] { --c: #c4a000; } .jc[data-niveau="st-REFUSE"] { --c: var(--statut-REFUSE); }
 .jc-tete {
   display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%;
   font: inherit; color: var(--texte); text-align: left; background: none; border: 0; padding: 10px 12px 8px; cursor: pointer;
@@ -320,3 +320,22 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .dm-c.choisie { box-shadow: inset 0 0 0 2px var(--accent); }
 .dm-c.arrivee { background: #3d4a32; box-shadow: inset 0 0 0 1px var(--accent); }
 .dm-b { color: #eeeeec; } .dm-n { color: var(--erreur); }
+
+/* Dossiers liés : colonne LIÉS (valo totale, couleur selon l'enjeu) et carte dans la fiche */
+.lies { font: inherit; color: var(--pale); background: none; border: 0; padding: 0; cursor: pointer; white-space: pre; }
+.lies:hover { text-decoration: underline; }
+.lie-faible { --lie: var(--pale); } .lie-moyen { --lie: var(--proche); } .lie-fort { --lie: var(--erreur); }
+.lies.lie-faible { color: var(--texte); } .lies.lie-moyen { color: var(--proche); } .lies.lie-fort { color: var(--erreur); font-weight: 700; }
+.lies-carte { --lie: var(--pale); flex: none; margin-top: 8px; border: 1px solid var(--trait); border-left: 3px solid var(--lie); border-radius: 6px; background: var(--fond-menu); white-space: normal; }
+.lies-tete { display: flex; align-items: baseline; gap: 6px; padding: 7px 12px 6px; font-weight: 700; border-bottom: 1px solid var(--trait); }
+.lies-total { margin-left: auto; color: var(--lie); }
+.lies-corps { list-style: none; margin: 0; padding: 2px 6px 4px; max-height: 11.5em; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--trait) transparent; }
+.li { padding: 5px 6px; border-top: 1px solid var(--trait); font-size: 14px; line-height: 1.3; }
+.li:first-child { border-top: 0; }
+.li:hover { background: var(--repere-ligne); }
+.li-haut { display: flex; justify-content: space-between; gap: 8px; }
+.li-dossier { font-weight: 700; }
+.li-valo { white-space: nowrap; }
+.li-barre { height: 3px; margin: 3px 0 2px; background: var(--trait); border-radius: 2px; overflow: hidden; }
+.li-barre span { display: block; height: 100%; background: var(--lie); }
+.li-bas { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

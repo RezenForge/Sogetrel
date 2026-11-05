@@ -12,6 +12,9 @@ import { typeParCode } from '../config.js';
 import { formater, ecartJours, versJour } from '../dates.js';
 import { lireType } from '../import-excel.js';
 import { relanceRecente } from '../dossiers.js';
+import { liesDe, totalLies } from '../dossiers-lies.js';
+
+const euros = v => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(v);
 
 /** Bouton de relance : « ✓ relancé » (atténué) si la même relance est récente (protection anti-doublon). */
 const relancer = (d, motif, jour) => relanceRecente(d, motif, jour) ? [`✓ relancé ${motif.toUpperCase()}`, `relance ${d.gcblo} ${motif}`, 'fait'] : [`relancer ${motif.toUpperCase()}`, `relance ${d.gcblo} ${motif}`];
@@ -26,6 +29,9 @@ export const CARTES = Object.freeze([
   { commande: 'ls retard', libelle: 'Relances en retard', conseil: 'date de relance dépassée', classe: 'retard', stat: s => s.retard,
     indice: d => d.dateRelance ? `prévue le ${formater(d.dateRelance).slice(0, 5)}` : '',
     actions: (d, c) => AFFECTS_MAIL.includes(d.type) ? [relancer(d, 'dft', c.jour)] : [] },
+  { commande: 'ls lies tri:lies-', libelle: 'Gros enjeux liés', conseil: 'valo des dossiers liés, du plus gros au plus petit', classe: 'lies', stat: () => 0, info: true,
+    indice: (d, c) => { const n = liesDe(d, c.lies || {}).length; return `${euros(totalLies(d, c.lies || {}))} · ${n} lié${n > 1 ? 's' : ''}`; },
+    actions: d => [['ouvrir', `open ${d.gcblo}`]] },
   { commande: 'ls litige', libelle: 'En litige', conseil: 'à suivre', classe: 'st-LITIGE', stat: s => s.parStatut?.LITIGE,
     indice: (d, c) => `depuis ${depuis(c.jour, d.modifieLe)}`.replace('depuis il y a', 'depuis'),
     actions: d => [['ouvrir', `open ${d.gcblo}`]] },
