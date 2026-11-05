@@ -592,9 +592,11 @@ export function creerInvite({ racine, contexte }) {
     if (e.button !== 0 && e.button !== 2) return;
     const t = e.target instanceof Element ? e.target : e.target.parentElement;
     if (!t?.closest(ZONES_REPERE) || t.closest('.edition')) return;
+    // Titre d'une carte repliable (fiche) : on l'ouvre ou la ferme, pas de repère sur toute la fiche
+    if (t.closest('summary')) return;
     const el = t.closest(PRECIS)
       || (t.matches('span, b, i, button') && !t.closest('.cadre') ? t : null)
-      || t.closest('.rangee, .l, .bl');
+      || t.closest('.rangee, .l:not(.vue), .bl, .li, .hi');
     poserRepere(el && !el.matches(ZONES_REPERE) ? el : null);
   }, true);
 
