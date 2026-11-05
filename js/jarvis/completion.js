@@ -156,7 +156,6 @@ export function apercu(analyse, ctx) {
     case 'open': return `→ fiche de ${v.cible.gcblo}`;
     case 'affect': return `→ ${v.cible.gcblo}${v.cible.dossier ? '' : ' (nouveau)'} : affect → ${typeParCode(v.affect).libelle}${v.affect === 'SOGETREL' ? '' : ' · mail d’affectation'}`;
     case 'relance': return `→ mail de relance ${v.motif.toUpperCase()} · ${v.cible.gcblo}`;
-    case 'import': return `→ onglets ${IMPORT_EXCEL.onglets.join(', ')}`;
     case 'attachement': {
       if (v.cibles.some(c => c.fichier)) return '→ choisir la référence';
       return v.cibles.length === 1 ? `→ ${v.cibles[0].gcblo}.xlsx` : `→ ${v.cibles.length} attachements dans un dossier à choisir (confirmation)`;

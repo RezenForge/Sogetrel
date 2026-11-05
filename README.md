@@ -19,7 +19,6 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `ls ‹GCBLO collés…›` | tapez `ls ` puis collez une colonne de GCBLO (Excel, mail…), complets ou seulement leur début (`SBA501023`) : affiche ceux qui sont dans la base, dans l'ordre collé (Attach compris), et liste les introuvables. Se combine avec un filtre : `ls air` + colonne |
 | `edit ‹dossier› ‹champ› ‹valeur›` | modifie un champ (affect, statut, commune, valo, fci, affectation, relance, commentaire, gcblo) ; dans une fiche ou une liste, double-cliquer une valeur fait la même chose |
 | `delete ‹dossiers›` | supprime, après confirmation |
-| `import` | lit un classeur Excel : onglets 33, 16, 17, 79, 86, lignes `GCBLO` en colonne E, dossier en D, commune en G, valorisation en H, affect en I, FCI en J |
 | `attachement fichier` | choisit le classeur d'attachement de référence (gardé dans le navigateur) |
 | `attachement ‹dossiers›` | remplit une copie de la référence (X5 commune, AG5 date, U6 GCBLO, paliers 30/60 en lignes 30-31) et l'enregistre en `‹GCBLO›.xlsx` ; le dossier passe au statut Attach |
 | `save` · `save folder` | la première fois, choisit un dossier ; ensuite, sauvegarde directement dans ce dossier sans rien redemander (`save folder` pour en changer). Écrit une sauvegarde datée ; seules les 10 plus récentes y restent. Ensuite, sauvegarde automatique toutes les heures dans ce dossier, tant que l'appli est ouverte. Écrit aussi `registre-gcblo.csv` pour le classeur partagé (voir plus bas) |
@@ -125,4 +124,4 @@ La relancer ne change rien de plus : un FCI déjà présent et un `FACTU` déjà
 
 **Écarts d'affect** : l'affect d'un dossier déjà au registre n'est jamais changé par un import ; `ls ecart-affect` (ou « ≠ colonne I » au tableau de bord) liste les dossiers dont l'affect diffère de la colonne I, avec les deux valeurs. On corrige à la main.
 
-**Dans l'autre sens**, la macro écrit aussi `classeur-gcblo.csv` dans le même dossier : les lignes « GCBLO » du classeur ouvert, même non enregistrées. À chaque sauvegarde (manuelle ou toutes les heures), le registre lit ce fichier et crée les nouveaux GCBLO, ou complète ce qui manque, comme `import`. Rien n'est remplacé. La commande `import` reste possible.
+**Dans l'autre sens**, la macro écrit aussi `classeur-gcblo.csv` dans le même dossier : les lignes « GCBLO » du classeur ouvert, même non enregistrées. À chaque sauvegarde (manuelle ou toutes les heures), le registre lit ce fichier et crée les nouveaux GCBLO, ou complète ce qui manque. Rien n'est remplacé.

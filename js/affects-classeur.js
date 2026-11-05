@@ -3,7 +3,7 @@
  * avec le registre. Rien n'est corrigé automatiquement : `ls ecart-affect` montre les écarts,
  * on corrige à la main (double-clic sur la case affect).
  *
- * À chaque import (commande `import`, ou classeur-gcblo.csv à la sauvegarde), on retient pour
+ * À chaque lecture de classeur-gcblo.csv (à la sauvegarde), on retient pour
  * chaque GCBLO le texte de la colonne I (plusieurs lignes : toutes les valeurs différentes).
  * Gardé dans ce navigateur (localStorage), à part des dossiers : pas d'historique, pas de sauvegarde.
  *

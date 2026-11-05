@@ -31,7 +31,6 @@ import { lireClasseur, modifierClasseur, contientMacros } from '../xlsx.js';
 import { cellulesAttachement } from '../attachement.js';
 import { mailAffectation, mailRelance, lienMailto, AFFECTS_MAIL } from '../mails.js';
 import { contenuSauvegarde, nomSauvegarde, lireSauvegarde, GARDER } from '../sauvegarde.js';
-import { extraireDossiers, appliquerImport } from '../import-excel.js';
 import { lireAffectsClasseur, noterAffectsClasseur, ecartAffect } from '../affects-classeur.js';
 import { typeParCode, statutParCode } from '../config.js';
 import { CARTES, carteHtml } from './aujourdhui.js';
@@ -186,39 +185,6 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       ok(`${pluriel(r.retires.length, 'dossier supprimé', 'dossiers supprimés')} <span class="dim">·</span> ${LIEN_ANNULE}`);
     },
 
-    /** R10 — importe les dossiers d'un classeur Excel (onglets et colonnes : IMPORT_EXCEL). */
-    async import() {
-      const fichier = await choisirFichier('.xlsx,.xlsm');
-      if (!fichier) return info('aucun fichier choisi');
-      let classeur;
-      try { classeur = await lireClasseur(await fichier.arrayBuffer(), { onglets: IMPORT_EXCEL.onglets }); } catch (e) { return erreur(esc(e.message)); }
-      const r = extraireDossiers(classeur, store.tous());
-      noterAffectsClasseur(r.affects);
-      if (r.ongletsAbsents.length === IMPORT_EXCEL.onglets.length) return erreur(`aucun onglet ${IMPORT_EXCEL.onglets.join(', ')} dans ${esc(fichier.name)}`);
-
-      const bilan = [pluriel(r.lus, 'ligne GCBLO', 'lignes GCBLO'), r.nouveaux.length && pluriel(r.nouveaux.length, 'nouveau', 'nouveaux'),
-        r.completes.length && `${r.completes.length} à compléter`, r.deja && `${r.deja} déjà à jour`].filter(Boolean);
-      info(`${esc(fichier.name)} : ${bilan.join(' · ')}`);
-      if (r.ongletsAbsents.length) info(`<span class="dim">onglets absents : ${esc(r.ongletsAbsents.join(', '))}</span>`);
-      r.refuses.slice(0, 10).forEach(x => erreur(`onglet ${esc(x.onglet)}, ligne ${x.ligne} : ${esc(x.valeur)} : ${esc(x.motif)}`));
-      if (r.refuses.length > 10) erreur(`… et ${r.refuses.length - 10} autres lignes refusées`);
-      if (!r.nouveaux.length && !r.completes.length) return info('rien à importer');
-
-      // Affect lu en colonne I ; s'il manque ou n'est pas reconnu, le dossier est créé sans affect (commande « affect » ensuite)
-      const sansType = r.nouveaux.filter(n => !n.type);
-      if (sansType.length) {
-        const exemples = [...new Set(sansType.map(n => n.typeLu).filter(Boolean))].slice(0, 3);
-        info(`<span class="dim">${pluriel(sansType.length, 'dossier créé', 'dossiers créés')} sans affect${exemples.length ? ` (non reconnu : ${esc(exemples.join(', '))})` : ''} · ls sans-affect</span>`);
-      }
-      const creation = appliquerImport(regles, r, 'import Excel'), avant = creation.avant;
-      if (creation.crees.length || avant.length) {
-        const ids = creation.crees.map(d => d.id);
-        annulation = { libelle: 'import', faire: () => { if (ids.length) regles.supprimer(...ids); if (avant.length) regles.restaurer(avant); } };
-      }
-      creation.refuses.forEach(x => erreur(`${esc(x.saisie.gcblo)} : ${esc(x.erreur)}`));
-      ok(`${pluriel(creation.crees.length, 'dossier créé', 'dossiers créés')}${avant.length ? ` · ${pluriel(avant.length, 'complété', 'complétés')}` : ''} <span class="dim">·</span> ${LIEN_ANNULE}`);
-    },
-
     /** R11 — « attachement fichier » choisit la référence ; « attachement ‹dossier› » crée l'attachement. */
     /**
      * R11 — « attachement fichier » choisit la référence ; « attachement ‹dossiers› » crée les attachements.
@@ -341,7 +307,7 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
         const total = new Set(cartes.flatMap(([, l]) => l.map(d => d.id))).size;
         const tete = `<header class="jour-tete"><div><div class="jour-titre">Aujourd'hui</div><div class="jour-date dim">${esc(titre)}</div></div>`
           + (dossiers.length ? `<div class="jour-bilan ${total ? '' : 'ok'}">${total ? `<b>${total}</b> dossier${total > 1 ? 's' : ''} à traiter` : '✓ rien d\'urgent'}</div>` : '') + '</header>';
-        if (!dossiers.length) return `<div class="jour">${tete}<div class="jour-vide">Aucun dossier enregistré · <button type="button" class="lien c-verbe" data-commande="import">import</button> pour commencer</div></div>`;
+        if (!dossiers.length) return `<div class="jour">${tete}<div class="jour-vide">Aucun dossier enregistré · lance la macro du classeur partagé puis <button type="button" class="lien c-verbe" data-commande="save">save</button></div></div>`;
         if (!cartes.length) return `<div class="jour">${tete}<div class="jour-vide ok">Tout est à jour : aucune relance en retard, aucun FCI attendu, aucun écart.</div></div>`;
         return `<div class="jour">${tete}<div class="jour-cartes">${cartes.map(([c, l]) => carteHtml(c, l, { jour, affects }, esc)).join('')}</div></div>`;
       });
