@@ -99,6 +99,13 @@ export function creerInvite({ racine, contexte }) {
    * L'historique d'un dossier, en carte : tout l'historique, du plus récent au plus ancien,
    * dans une liste qui défile dans la carte. Une étiquette par type (création, modification, mail, attachement).
    */
+  // Cartes de la fiche (dossiers liés, historique) : fermées à chaque « open », ouvertes d'un clic ;
+  // l'état est gardé quand la fiche se redessine (modification du dossier)
+  const cartesOuvertes = new Set();
+  racine.addEventListener('toggle', e => {
+    const c = e.target?.dataset?.carte;
+    if (c) e.target.open ? cartesOuvertes.add(c) : cartesOuvertes.delete(c);
+  }, true);
   const ETIQUETTES = { creation: 'création', modification: 'modif', mail: 'mail', attachement: 'attach' };
   function historiqueHtml(d) {
     const entrees = [...d.historique].reverse();
@@ -109,8 +116,8 @@ export function creerInvite({ racine, contexte }) {
         + `<span class="hi-heure dim">${esc(quand.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }))}</span></span>`
         + `<span class="hi-quoi"><span class="hi-tag">${esc(ETIQUETTES[h.action] || h.action)}</span>${esc(h.detail)}</span></li>`;
     }).join('');
-    return `<section class="histo"><header class="histo-tete">historique <span class="dim">· ${entrees.length}</span></header>`
-      + `<ol class="histo-corps${entrees.length > 6 ? ' defile' : ''}">${lignes || '<li class="dim">rien pour l\'instant</li>'}</ol></section>`;
+    return `<details class="histo" data-carte="histo"${cartesOuvertes.has('histo') ? ' open' : ''}><summary class="histo-tete">historique <span class="dim">· ${entrees.length}</span></summary>`
+      + `<ol class="histo-corps${entrees.length > 6 ? ' defile' : ''}">${lignes || '<li class="dim">rien pour l\'instant</li>'}</ol></details>`;
   }
 
   /** La valeur d'un champ telle qu'on la retape (pour pré-remplir la saisie en place). */
@@ -161,7 +168,7 @@ export function creerInvite({ racine, contexte }) {
       + `<span class="li-valo">${l.valo !== null ? esc(montantCourt(l.valo)) : '<span class="dim">sans valo</span>'}</span></div>`
       + `<div class="li-barre"><span style="width:${Math.round(((l.valo || 0) / max) * 100)}%"></span></div>`
       + `<div class="li-bas dim">${[l.affect, l.statut].filter(Boolean).map(esc).join(' · ') || '—'}${l.commentaire ? ` · <span title="${esc(l.commentaire)}">${esc(l.commentaire)}</span>` : ''}</div></li>`).join('');
-    return `<section class="lies-carte ${chaleur(total, seuils)}"><header class="lies-tete">dossiers liés <span class="dim">· ${liste.length}</span><span class="lies-total">${esc(montantCourt(total))}</span></header><ol class="lies-corps">${lignes}</ol></section>`;
+    return `<details class="lies-carte ${chaleur(total, seuils)}" data-carte="lies"${cartesOuvertes.has('lies') ? ' open' : ''}><summary class="lies-tete">dossiers liés <span class="dim">· ${liste.length}</span><span class="lies-total">${esc(montantCourt(total))}</span></summary><ol class="lies-corps">${lignes}</ol></details>`;
   }
 
   /** Montant sans centimes : « 12 400 € » (colonne LIÉS). */
@@ -237,6 +244,7 @@ export function creerInvite({ racine, contexte }) {
       Object.assign(sortie.lastElementChild.dataset, { liste: dossiers.map(d => d.id).join(','), ls: commandeEnCours, triActuel: tri.toLowerCase() });
     },
     fiche(d) {
+      cartesOuvertes.clear();
       ecran.ligne(ficheHtml(d), 'vue vue-fiche');
       const el = sortie.lastElementChild;
       el.dataset.fiche = d.id;

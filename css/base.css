@@ -41,8 +41,9 @@ body {
 /* Fiche (open) : elle occupe la hauteur restante du volet ; seul l'historique défile, dans sa carte */
 .volet { display: flex; flex-direction: column; }
 .volet > .l { flex: none; }
-.volet > .vue-fiche { flex: 1 1 auto; min-height: 12em; display: flex; flex-direction: column; }
-.volet > .vue-fiche .histo { flex: 1 1 auto; min-height: 7em; display: flex; flex-direction: column; margin-top: 8px; }
+.volet > .vue-fiche { flex: 1 1 auto; display: flex; flex-direction: column; overflow: visible; }
+.volet > .vue-fiche .histo { flex: none; margin-top: 8px; }
+.volet > .vue-fiche .histo[open] { flex: 1 1 auto; min-height: 7em; display: flex; flex-direction: column; }
 .volet > .vue-fiche .histo-corps { flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto; }
 /* Dessin : chaque morceau dans une case de largeur fixe, les traits remplissent le reste (cadre toujours droit) */
 /* --ch : largeur d'un caractère, figée une fois pour toutes (le gras ou une autre police ne la change pas) */
@@ -340,3 +341,11 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .li-barre span { display: block; height: 100%; background: var(--lie); }
 .li-bas { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tableau-bord .lie-total { color: #c4a000; font-weight: 700; }
+
+/* Cartes repliables de la fiche (dossiers liés, historique) : fermées par défaut, ▸ / ▾ */
+.histo > summary, .lies-carte > summary { list-style: none; cursor: pointer; user-select: none; }
+.histo > summary::-webkit-details-marker, .lies-carte > summary::-webkit-details-marker { display: none; }
+.histo > summary::before, .lies-carte > summary::before { content: '▸'; color: var(--pale); margin-right: 6px; font-weight: 400; }
+.histo[open] > summary::before, .lies-carte[open] > summary::before { content: '▾'; }
+.histo:not([open]) > summary, .lies-carte:not([open]) > summary { border-bottom: 0; }
+.histo > summary:hover, .lies-carte > summary:hover { background: var(--repere-ligne); }
