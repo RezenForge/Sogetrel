@@ -390,6 +390,7 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | `ls`, `list` et `info` vident la console avant d'afficher |
 | 04/11/2026 | `ls`/`info` : la ligne de commande va dans le volet ; sans résultat, tout va dans le volet et la console ne change pas |
 | 04/11/2026 | Commande `sauvegarde` (`js/sauvegarde.js`) : dossier choisi, nom daté, 3 sauvegardes gardées ; dernière sauvegarde dans le tableau de bord |
+| 05/11/2026 | Commande `fci ‹dossier› ‹fci›` : met à jour le FCI (raccourci de `edit … fci …`, même contrôle du format, annulable) |
 | 05/11/2026 | Cartes « Aujourd'hui » : tous les dossiers de la carte, dans une liste qui défile au-delà de 6 lignes (plus de « + N autres ») |
 | 04/11/2026 | Commande `sauvegarde` renommée `save` (`save folder` pour changer de dossier) : toutes les commandes sont en anglais |
 | 04/11/2026 | Écran « Aujourd'hui » refait en cartes : une carte par sujet (FCI en retard, relances, litiges, refusés, écarts d'affect, sans affect), les 5 premiers dossiers avec leur action en un clic (relancer, affecter NUM21/AIR, corriger l'affect, ouvrir), « ✓ relancé » si déjà fait ; la vue se met à jour seule |

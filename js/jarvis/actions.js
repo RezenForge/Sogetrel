@@ -173,6 +173,9 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       ok(`${esc(r.dossier.gcblo)} : ${esc(r.dossier.historique.at(-1).detail)} <span class="dim">·</span> ${LIEN_ANNULE}`);
     },
 
+    /** Raccourci de « edit ‹dossier› fci ‹fci› » : met à jour le FCI (« - » pour l'effacer). */
+    fci(v) { return commandes.edit({ ...v, champ: 'fci' }); },
+
     async delete(v) {
       const noms = v.cibles.map(d => d.gcblo);
       const question = v.cibles.length === 1 ? `supprimer ${noms[0]} ?` : `supprimer ${v.cibles.length} dossiers (${noms.slice(0, 3).join(', ')}${noms.length > 3 ? '…' : ''}) ?`;

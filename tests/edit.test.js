@@ -152,3 +152,12 @@ groupe('« * » et attachements en série', () => {
     vrai(e.lignes.some(l => l.includes('valorisation vide')));
   });
 });
+
+groupe('Commande fci', () => {
+  test('« fci ‹dossier› ‹fci› » est compris', async () => {
+    const { analyser } = await import('../js/jarvis/analyse.js');
+    const d = { id: 'x', gcblo: 'SBA501404-THF010', fci: [], type: 'AIR', statutDft: 'A_FAIRE', historique: [] };
+    const a = analyser('fci SBA501404 F26154200726', 26, { dossiers: [d], aujourdhui: '2026-11-05' });
+    egal([a.commande?.id, a.valeurs.cible?.gcblo, a.valeurs.valeur], ['fci', 'SBA501404-THF010', 'F26154200726']);
+  });
+});
