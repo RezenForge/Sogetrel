@@ -455,3 +455,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 05/11/2026 | Macro Outlook : module renommé `RegistreGcbloOutlook` (même nom que la macro → « Sub ou Function non définie » à Alt+F8) |
 | 05/11/2026 | Macro Outlook : vérifie avant chaque brouillon que l'attachement n'a pas déjà été envoyé à une boîte BL (réception, envoyés, boîtes partagées) ; `BrouillonsAttachementForcer` pour passer outre |
 | 05/11/2026 | R16 : extension 1.4 — le FCI du registre est écrit en commentaire sur LINE (« Num GCBLO : F… », Valider) quand aucun commentaire n'en contient ; tracé dans l'historique |
+| 05/11/2026 | Commandes venues de LINE en file : hors historique des commandes, en attente pendant une question o/n (auparavant ignorées) — le registre reste utilisable pendant un `sync` |

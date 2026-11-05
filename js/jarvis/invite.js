@@ -815,6 +815,8 @@ export function creerInvite({ racine, contexte }) {
     },
     /** Lance une commande comme si elle avait été tapée (utilisé par les clics). */
     lancer,
+    /** Une question attend sa réponse (o/n, choix) : une commande lancée maintenant serait ignorée. */
+    occupe: () => attente !== null,
     focus: () => champ.focus()
   };
 }

@@ -389,6 +389,24 @@ function afficherTournee(p) {
   barreTournee.insertAdjacentHTML('beforeend', `<span class="tournee-barre"><span style="width:${pourcent}%"></span></span>`);
   if (p.fini) barreTournee.minuteur = setTimeout(() => { barreTournee?.remove(); barreTournee = null; }, 8000);
 }
+/*
+ * Les commandes venues de LINE (extension, tournée) passent par la file : on peut continuer à se servir
+ * du registre pendant un sync. Elles ne vont pas dans l'historique des commandes (flèche du haut), et
+ * attendent qu'une question en cours (o/n, choix) ait sa réponse au lieu d'être perdues.
+ */
+const fileLine = [];
+let fileLineActive = false;
+async function lancerDepuisLine(commande) {
+  fileLine.push(commande);
+  if (fileLineActive) return;
+  fileLineActive = true;
+  try {
+    while (fileLine.length) {
+      while (invite.occupe()) await new Promise(r => setTimeout(r, 500));
+      await invite.lancer(fileLine.shift(), { historique: false });
+    }
+  } finally { fileLineActive = false; }
+}
 const COMMANDE_FCI = /^fci ([A-Z]{3}\d{6}-[A-Z]+\d+)((?: F\d{11})+)$/;
 const COMMANDE_MAD = /^set ([A-Z]{3}\d{6}-[A-Z]+\d+) to mis-a-dispo$/;
 // R16 — l'extension demande les FCI connus d'un GCBLO (pour les écrire en commentaire sur LINE s'ils y manquent),
@@ -425,7 +443,7 @@ function fciDepuisLine(commande) {
     const d = store.tous().find(x => x.gcblo === mad[1]);
     if (!d) return 'inconnu';
     if (statutParCode(d.statutDft)?.clos) return 'deja';
-    invite.lancer(`set ${d.gcblo} to mis-a-dispo`);
+    lancerDepuisLine(`set ${d.gcblo} to mis-a-dispo`);
     return 'maj';
   }
   const m = commande.match(COMMANDE_FCI);
@@ -434,7 +452,7 @@ function fciDepuisLine(commande) {
   if (!d) return 'inconnu';
   const fci = m[2].trim().split(' ');
   if (fci.every(f => d.fci.includes(f))) return 'deja';
-  invite.lancer(`fci ${d.gcblo} ${[...new Set([...d.fci, ...fci])].join(' ')}`);
+  lancerDepuisLine(`fci ${d.gcblo} ${[...new Set([...d.fci, ...fci])].join(' ')}`);
   return 'maj';
 }
 addEventListener('message', e => {

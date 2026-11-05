@@ -121,7 +121,7 @@ Version d'avant la refonte : branche `avant-refonte`.
 
 Dossier `extension/` (Chrome ou Edge) : dès qu'une page LINE affiche un FCI dans ses commentaires, le registre ouvert est mis à jour tout seul (bulle verte sur la page LINE ; rien si le FCI est déjà connu). Sur l'onglet Documents, une pièce jointe « GCB_1 » et une « GCB_2 » passent le GCBLO en Mis à disposition (seulement depuis un statut ouvert). **Dans l'autre sens (1.4)** : si aucun commentaire LINE ne contient de FCI et que le registre en a un, l'extension écrit « Num GCBLO : F… » et clique sur Valider (une fois par onglet, page calme, jamais par-dessus un texte en cours de saisie) ; l'historique du dossier le note. Installation : décompresser le dossier, `chrome://extensions` › Mode développeur › « Charger l'extension non empaquetée » › choisir le dossier.
 
-**Tournée LINE** (`sync`) : l'extension ouvre elle-même les pages LINE des dossiers, deux à la fois, en arrière-plan, et les referme ; une barre en bas du registre suit l'avancement.
+**Tournée LINE** (`sync`) : l'extension ouvre elle-même les pages LINE des dossiers, deux à la fois, en arrière-plan, et les referme ; une barre en bas du registre suit l'avancement. On peut continuer à se servir du registre pendant la tournée : les mises à jour venues de LINE s'affichent dans le volet, n'entrent pas dans l'historique des commandes, et attendent la réponse à une question en cours (o/n) au lieu d'être perdues. Ne pas fermer ni recharger l'onglet du registre (`refresh`) pendant la tournée.
 
 ## Favori « FCI → registre »
 
