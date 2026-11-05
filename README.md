@@ -114,6 +114,10 @@ tests/                   279 tests (classeur d'essai fictif : tests/donnees) : r
 
 Version d'avant la refonte : branche `avant-refonte`.
 
+## Favori « FCI → registre »
+
+Sur la page LINE d'un dossier, un favori lit le FCI dans les commentaires (« Num GCBLO : F99496231124 ») et copie la commande `fci ‹GCBLO› ‹FCI›` ; Ctrl+V puis Entrée dans le registre. Installation : ouvrir **https://rezenforge.github.io/Sogetrel/outils/favori-line.html** et glisser le bouton dans la barre de favoris (Chrome et/ou Firefox). Code lisible : `outils/favori-line.js`.
+
 ## Dossiers liés
 
 Dans le classeur partagé, un GCBLO (ex. `SBA301460-THF010`) peut avoir d'autres lignes de la même affaire (`SBA301460-ACD010`…), avec leur affect, valo, statut (E) et commentaire (J). À chaque `save`, le registre les lit dans `classeur-gcblo.csv` :

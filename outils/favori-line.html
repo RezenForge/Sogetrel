@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Favori FCI → registre</title>
+<style>
+  :root { --fond: #1f1f1f; --carte: #2a2a2a; --texte: #eeeeec; --pale: #9a9a96; --trait: #3c3c3c; --accent: #8ae234; color-scheme: dark; }
+  body { margin: 0; background: var(--fond); color: var(--texte); font: 15px/1.6 "Ubuntu Mono", "DejaVu Sans Mono", Consolas, monospace; }
+  main { max-width: 74ch; margin: 0 auto; padding-block: 40px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  h1 { font-size: 24px; margin: 0 0 6px; text-wrap: balance; }
+  .dim { color: var(--pale); }
+  .favori { display: inline-block; margin: 22px 0 18px; padding: 10px 20px; border: 1px dashed var(--accent); border-radius: 6px; color: var(--accent); background: var(--carte); font-weight: 700; text-decoration: none; cursor: grab; }
+  ol { padding-left: 24px; } li { margin: 8px 0; }
+  code { background: var(--carte); padding: 1px 6px; border-radius: 3px; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<main>
+<h1>Favori « FCI → registre »</h1>
+<p class="dim">Sur la page LINE d'un dossier, il lit le FCI dans les commentaires et prépare la commande pour le registre.</p>
+<a class="favori" href="javascript:(() => { const m = location.pathname.match(/consult\/(\d{6})\/([A-Za-z]{3})\/[%5E/]+\/([A-Za-z]+\d*)-(\d)/); if (!m) { alert('Registre GCBLO : ouvre d\'abord la page LINE d\'un dossier.'); return; } const gcblo = `${m[2]}${m[1]}-${m[3]}${m[4]}`.toUpperCase(); const blocs = [...document.querySelectorAll('[name=%22comment-text-container%22]')]; const texte = blocs.length ? blocs.map(e => e.innerText).join('\n') : document.body.innerText; const fci = [...new Set((texte.toUpperCase().match(/F\d{11}(?!\d)/g) || []))]; if (!fci.length) { alert(`Registre GCBLO : aucun FCI (F + 11 chiffres) dans les commentaires de ${gcblo}.`); return; } const commande = `fci ${gcblo} ${fci.join(' ')}`; const bulle = () => { const d = document.createElement('div'); d.textContent = `%E2%9C%93 copi%C3%A9 : ${commande} %E2%80%94 Ctrl+V puis Entr%C3%A9e dans le registre`; d.style.cssText = 'position:fixed;z-index:2147483647;top:16px;right:16px;padding:10px 14px;background:%232e3436;color:%238ae234;font:14px/1.4 monospace;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.4)'; document.body.appendChild(d); setTimeout(() => d.remove(), 4500); }; navigator.clipboard.writeText(commande).then(bulle, () => prompt('Copie cette commande pour le registre (Ctrl+C) :', commande)); })();" title="Glisse-moi dans ta barre de favoris">FCI → registre</a>
+<ol>
+  <li>Affiche la barre de favoris (Ctrl+Maj+B), puis <b>glisse le bouton vert ci-dessus</b> dedans. À faire une fois, dans Chrome et/ou dans Firefox.</li>
+  <li>Ouvre la page LINE d'un dossier (menu ⋯ du registre › Accès LINE).</li>
+  <li>Clique sur le favori <b>FCI → registre</b> : il copie <code>fci NIO301548-THF010 F99496231124</code>.</li>
+  <li>Dans le registre : <b>Ctrl+V</b> puis <b>Entrée</b>. Le FCI est à jour (annulable avec <code>cancel</code>).</li>
+</ol>
+<p class="dim">Le favori ne lit que la page que tu as ouverte, et n'envoie rien nulle part.</p>
+</main>
+</body>
+</html>
