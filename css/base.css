@@ -297,3 +297,13 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .hi-creation .hi-tag { color: var(--accent); border-color: var(--accent); }
 .hi-mail .hi-tag { color: var(--proche); border-color: var(--proche); }
 .hi-attachement .hi-tag { color: var(--statut-ATTACH); border-color: var(--statut-ATTACH); }
+
+/* Morpion (commande morpion) */
+.morpion { display: inline-flex; flex-direction: column; gap: 6px; padding: 10px 16px; margin: 6px 0; border: 1px solid var(--trait); border-radius: 6px; background: var(--fond-menu); }
+.mp-plateau { margin: 0; font-size: 22px; line-height: 1.3; color: var(--pale); }
+.mp-case { font: inherit; color: var(--trait); background: none; border: 0; padding: 0; width: 1ch; cursor: pointer; }
+.mp-case:hover { color: var(--texte); }
+.mp-X { color: var(--accent); font-weight: 700; }
+.mp-O { color: var(--erreur); font-weight: 700; }
+.mp-message { font-size: 14px; color: var(--pale); }
+.mp-gagne { color: var(--accent); font-weight: 700; } .mp-perdu { color: var(--erreur); font-weight: 700; }

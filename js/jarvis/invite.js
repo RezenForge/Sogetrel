@@ -191,6 +191,7 @@ export function creerInvite({ racine, contexte }) {
       div.innerHTML = html;
       sortie.appendChild(div);
       defiler();
+      return div;
     },
     /**
      * Liste de dossiers, alignée (police à chasse fixe).
@@ -354,6 +355,8 @@ export function creerInvite({ racine, contexte }) {
   async function lancer(texte, { historique: noter = true } = {}) {
     if (attente) return;
     fermerMenu();
+    // Une commande lancée : un jeu en cours (morpion) disparaît
+    racine.querySelectorAll('.l.jeu').forEach(j => { j.arreter?.(); j.remove(); });
     const analyse = analyser(texte, texte.length, contexte());
     const id = analyse.commande?.id;
     let echoDansLeVolet = false;

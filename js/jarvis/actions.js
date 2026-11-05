@@ -34,6 +34,7 @@ import { contenuSauvegarde, nomSauvegarde, lireSauvegarde, GARDER } from '../sau
 import { lireAffectsClasseur, noterAffectsClasseur, ecartAffect } from '../affects-classeur.js';
 import { typeParCode, statutParCode } from '../config.js';
 import { CARTES, carteHtml } from './aujourdhui.js';
+import { demarrerMorpion } from './morpion.js';
 import { relanceRecente } from '../dossiers.js';
 import { depuisJour } from '../dates.js';
 
@@ -288,6 +289,13 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
     },
 
     clear() { ecran.vider(); },
+
+    /** Une partie de morpion contre une IA imbattable ; disparaît à la fin ou à la commande suivante. */
+    morpion() {
+      const div = ecran.ligne('<div class="morpion"></div>', 'jeu');
+      if (!div) return;
+      div.arreter = demarrerMorpion(div.querySelector('.morpion'), { finir: () => div.remove() });
+    },
 
     /**
      * « Aujourd'hui » : ce qui demande une action, en cartes (une par sujet). L'en-tête d'une carte lance

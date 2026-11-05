@@ -52,6 +52,7 @@ export const COMMANDES = Object.freeze([
   { id: 'cancel', verbes: ['cancel', 'undo'], resume: 'annule la dernière action', forme: 'cancel', emplacements: [] },
   { id: 'clear', verbes: ['clear', 'cls'], resume: 'vide l\'écran', forme: 'clear', emplacements: [] },
   { id: 'today', verbes: ['today'], resume: 'ce qui demande une action aujourd\'hui', forme: 'today', emplacements: [] },
+  { id: 'morpion', verbes: ['morpion'], resume: 'une partie de morpion contre l\'IA', forme: 'morpion', emplacements: [] },
   { id: 'refresh', verbes: ['refresh'], resume: 'recharge la page (dernière version)', forme: 'refresh', emplacements: [] },
   { id: 'help', verbes: ['help', '?'], resume: 'aide',
     forme: 'help [commande]',
