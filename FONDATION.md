@@ -91,7 +91,7 @@ Un dossier **clos** n'a plus d'alerte de relance.
     - `relance ‹dossier› fci` : mail de relance pour le numéro de commande, **seulement si le dossier n'a pas de FCI**. `relance ‹dossier› dft` : mail de relance DFT (docs GCB1 et GCB2 sur le LINE).
     - **Destinataires** : NUM21 → oelmahdaoui, azaamoun, lsettar (@numerus21.fr) ; AIR → jeremie-sannier@air-reseaux.com ; **plus la boîte BL** selon les 3 premières lettres du GCBLO : SBA, LRO, POI, ANG, NIO → info_lpc_BL@sogetrel.fr (mention `@info_lpc_BL`) ; MED, BOR, EST, LIB, ARC → info_aquitaine_BL@sogetrel.fr (mention `@info_aquitaine_BL`) ; autre début : pas de boîte BL, c'est signalé. **Copie** : Romain.BOUTINEAU@sogetrel.fr.
     - **Objets** : `Affectation GCBLO ‹affect› | ‹GCBLO›`, `Relance GCBLO ‹affect› | ‹GCBLO›`, `Relance GCBLO DFT ‹affect› | ‹GCBLO›`. Les textes sont dans `js/mails.js` (vouvoiement pour NUM21, tutoiement « Jérémie » pour AIR).
-    - **Colonne RELANCE** (listes) : un badge **FCI** (orange) et/ou **DFT** (cyan) tant que la relance correspondante est protégée (le badge FCI disparaît dès que le dossier a un FCI) ; il disparaît quand une nouvelle relance redevient possible sans confirmation.
+    - **Colonne RELANCE** (listes) : un badge **FCI** (orange) et/ou **DFT** (cyan) tant que la relance correspondante est protégée (le badge FCI disparaît dès que le dossier a un FCI ; aucun badge sur un dossier clos) ; il disparaît quand une nouvelle relance redevient possible sans confirmation.
     - **Pas de doublon** : si la même relance (FCI ou DFT) a déjà été préparée aujourd'hui ou hier (`RELANCE_INTERVALLE_JOURS` = 2), le registre demande « déjà préparée … : relancer quand même ? [o/n] ». Non → rien n'est envoyé. Chaque motif est compté à part (une relance FCI ne bloque pas une DFT).
     - Le volet résume le mail (lien pour le rouvrir, destinataires, copie) ; l'historique du dossier note « Mail d'affectation préparé » ou « Relance FCI/DFT préparée ». L'envoi reste fait à la main dans la messagerie.
 
@@ -390,6 +390,7 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 04/11/2026 | `ls`, `list` et `info` vident la console avant d'afficher |
 | 04/11/2026 | `ls`/`info` : la ligne de commande va dans le volet ; sans résultat, tout va dans le volet et la console ne change pas |
 | 04/11/2026 | Commande `sauvegarde` (`js/sauvegarde.js`) : dossier choisi, nom daté, 3 sauvegardes gardées ; dernière sauvegarde dans le tableau de bord |
+| 05/11/2026 | Colonne RELANCE : pas de badge FCI/DFT sur un dossier clos (mis à disposition, attach, annulé) |
 | 05/11/2026 | Correction : `ls ‹GCBLO›` (ou début, ou numéro) montre le dossier même s'il est Attach ou Annulé ; le masquage ne vaut que pour les listes générales |
 | 05/11/2026 | `open` vide le volet avant d'afficher la fiche ; la fiche occupe la hauteur restante, champs visibles sans défiler, seul l'historique défile dans sa carte ; libellés courts (statut, valo, note — `edit … note …` = commentaire) |
 | 05/11/2026 | Fiche `open` : l'historique devient une carte, tout l'historique du plus récent au plus ancien, défilable, avec une étiquette par type (création, modif, mail, attach) |

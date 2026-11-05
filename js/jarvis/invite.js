@@ -133,6 +133,8 @@ export function creerInvite({ racine, contexte }) {
    * Largeur fixe (8 caractères) pour garder l'alignement.
    */
   function relanceHtml(d) {
+    // Dossier clos (mis à disposition, attach, annulé) : plus de relance à suivre, pas de badge
+    if (statutParCode(d.statutDft)?.clos) return ' '.repeat(9);
     const jour = contexte().aujourdhui;
     const badge = motif => {
       // Le FCI est arrivé : la relance FCI n'a plus d'objet, le badge disparaît
