@@ -18,7 +18,6 @@
  *   enregistrerFichier(nom, octets) → Promise<'enregistre'|'telecharge'|'annule'>  (explorateur « Enregistrer sous »)
  *   coffre                   fichiers gardés dans le navigateur (la référence d'attachement)
  *   sauvegarderDans(nom, texte, { changer }) → Promise<{ etat: 'enregistre'|'telecharge'|'annule', dossier?, supprimes? }>
- *   choisirTelechargement()  → Promise<File|null>  (explorateur ouvert sur Téléchargements : Excel ou sauvegarde)
  *   choisirSauvegarde()      → Promise<File|null>  (explorateur, ouvert si possible dans le dossier des sauvegardes)
  *   choisirDossier(id)       → Promise<dossier|'telechargement'|null>  (explorateur de dossiers ; null = abandon)
  *   ecrireDansDossier(dossier, nom, octets) → Promise  (écrit ou remplace un fichier dans ce dossier)
@@ -58,7 +57,7 @@ export function texteClasseur(c, complet = false) {
   return `classeur partagé${esc(quand)} : ${morceaux.join(' · ')}${exemples ? ` <span class="dim">· ${esc(exemples)}</span>` : ''}`;
 }
 
-export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre, sauvegarderDans, choisirSauvegarde, choisirDossier, ecrireDansDossier, ouvrirMail = () => {}, recharger = () => location.reload(), choisirTelechargement = () => choisirFichier('.xlsx,.xlsm,.json') }) {
+export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre, sauvegarderDans, choisirSauvegarde, choisirDossier, ecrireDansDossier, ouvrirMail = () => {}, recharger = () => location.reload() }) {
   let annulation = null;       // { libelle, faire() } : de quoi défaire la dernière modification
 
   // Comme les outils Linux : un succès s'écrit simplement, une erreur est préfixée du nom du programme
@@ -188,8 +187,8 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
     },
 
     /** R10 — importe les dossiers d'un classeur Excel (onglets et colonnes : IMPORT_EXCEL). */
-    async import(v = {}, donne = null) {
-      const fichier = donne || await choisirFichier('.xlsx,.xlsm');
+    async import() {
+      const fichier = await choisirFichier('.xlsx,.xlsm');
       if (!fichier) return info('aucun fichier choisi');
       let classeur;
       try { classeur = await lireClasseur(await fichier.arrayBuffer(), { onglets: IMPORT_EXCEL.onglets }); } catch (e) { return erreur(esc(e.message)); }
@@ -300,8 +299,8 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
     },
 
     /** Recharge une sauvegarde : remplace toute la base, après confirmation ; annulable. */
-    async restore(v = {}, donne = null) {
-      const fichier = donne || await (choisirSauvegarde || (() => choisirFichier('.json')))();
+    async restore() {
+      const fichier = await (choisirSauvegarde || (() => choisirFichier('.json')))();
       if (!fichier) return info('aucun fichier choisi');
       let r;
       try { r = lireSauvegarde(await fichier.text()); } catch (e) { return erreur(esc(e.message)); }
@@ -313,18 +312,6 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       store.remplacerTout(r.dossiers);
       annulation = { libelle: 'la restauration', faire: () => store.remplacerTout(avant) };
       ok(`${pluriel(r.dossiers.length, 'dossier restauré', 'dossiers restaurés')}${quand}${r.ignores ? ` <span class="dim">· ${r.ignores} ignoré${r.ignores > 1 ? 's' : ''} (illisibles ou en double)</span>` : ''} <span class="dim">·</span> ${LIEN_ANNULE}`);
-    },
-
-    /**
-     * L'explorateur ouvert sur Téléchargements ; le fichier choisi est traité selon son type :
-     * un classeur Excel → import des GCBLO, une sauvegarde .json → restore (avec confirmation).
-     */
-    async download() {
-      const fichier = await choisirTelechargement();
-      if (!fichier) return info('aucun fichier choisi');
-      if (/\.xls[xm]$/i.test(fichier.name)) return commandes.import({}, fichier);
-      if (/\.json$/i.test(fichier.name)) return commandes.restore({}, fichier);
-      erreur(`${esc(fichier.name)} : type non pris en charge (Excel .xlsx/.xlsm pour import, sauvegarde .json pour restore)`);
     },
 
     cancel() {

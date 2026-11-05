@@ -25,7 +25,6 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `save` · `save folder` | la première fois, choisit un dossier ; ensuite, sauvegarde directement dans ce dossier sans rien redemander (`save folder` pour en changer). Écrit une sauvegarde datée ; seules les 10 plus récentes y restent. Ensuite, sauvegarde automatique toutes les heures dans ce dossier, tant que l'appli est ouverte. Écrit aussi `registre-gcblo.csv` pour le classeur partagé (voir plus bas) |
 | `restore` | recharge une sauvegarde : remplace toute la base après confirmation (annulable) |
 | `fci ‹dossier› ‹fci›` | met à jour le FCI d'un dossier (raccourci de `edit ‹dossier› fci ‹fci›`) ; `fci ‹dossier› -` l'efface ; `cancel` revient en arrière |
-| `download` | ouvre l'explorateur directement sur Téléchargements ; le fichier choisi est traité selon son type : un Excel (.xlsx/.xlsm) → `import`, une sauvegarde (.json) → `restore` (avec confirmation) |
 | `refresh` | recharge la page avec la dernière version publiée (comme Ctrl+F5) ; les dossiers restent |
 | `today` | « Aujourd'hui », à l'ouverture : une carte par sujet (FCI en retard, relances, litiges, refusés, écarts d'affect, sans affect) avec tous les dossiers (liste défilable dans la carte) et leur action en un clic ; l'en-tête de la carte ouvre la liste complète |
 | `ls … tri:colonne` | trie la liste (`tri:valo`, `tri:valo-` décroissant ; date, affect, gcblo, commune, fci, statut). Ou un clic sur le titre de la colonne (2e clic : sens inverse) |
