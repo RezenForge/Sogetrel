@@ -201,7 +201,8 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
         try { await navigator.clipboard.writeText(l.url); } catch { /* refusé */ }
         return ok(`LINE de ${esc(d.gcblo)} envoyé à Firefox <span class="dim">· lien aussi copié (Ctrl+V si Firefox ne s'ouvre pas) · ${lien}</span>`);
       }
-      window.open(l.url, '_blank', 'noopener');
+      // Sans « noopener » : la page LINE garde le lien vers le registre, le favori « FCI → registre » peut lui envoyer le FCI
+      window.open(l.url, '_blank');
       ok(`LINE de ${esc(d.gcblo)} ouvert dans un nouvel onglet <span class="dim">· ${lien}</span>`);
     },
 

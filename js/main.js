@@ -316,6 +316,20 @@ function valoDesLies() { const l = lireLies(); return Math.round(store.tous().fi
 function nbEcartsAffect() { const a = lireAffectsClasseur(); return store.tous().filter(d => ecartAffect(d, a)).length; }
 function dessinerBord() { tableauBord.innerHTML = `<div class="dessin">${dessinerTableauBord(regles.statistiques(), regles.aujourdhui(), { derniereSauvegarde: derniereSauvegarde(), maintenant: new Date(), ecartsAffect: nbEcartsAffect(), valoLies: valoDesLies(), classeur: lireLocal(CLE_CLASSEUR_LE, null), replies: lireLocal(CLE_REPLIES, []) }).html}</div>`; }
 store.ecouter(dessinerBord);
+/*
+ * Favori « FCI → registre » (outils/favori-line.js) : depuis une page LINE ouverte par le registre
+ * (menu ⋯ › Accès LINE chrome), il envoie directement « fci ‹GCBLO› ‹FCI› ». On n'accepte que ce
+ * message-là, et seulement venant de flashback.orange.fr ; la commande passe par la console comme
+ * si on l'avait tapée (écho, historique des modifications, cancel).
+ */
+const ORIGINE_LINE = 'https://flashback.orange.fr';
+addEventListener('message', e => {
+  if (e.origin !== ORIGINE_LINE) return;
+  const commande = String(e.data?.registreGcblo || '');
+  if (!/^fci [A-Z]{3}\d{6}-[A-Z]+\d+( F\d{11})+$/.test(commande)) return;
+  e.source?.postMessage({ registreGcbloRecu: true }, e.origin);
+  invite.lancer(commande);
+});
 // Un clic sur le titre d'une section la replie ou la rouvre (retenu dans ce navigateur)
 tableauBord.addEventListener('click', e => {
   const t = e.target.closest('[data-repli]');

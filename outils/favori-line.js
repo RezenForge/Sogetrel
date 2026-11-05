@@ -2,8 +2,9 @@
  * Favori « FCI → registre » (bookmarklet), à utiliser sur la page LINE d'un dossier
  * (flashback.orange.fr/line/dossier/travaux/modif/… ou /consult/…).
  * Il lit le GCBLO dans l'adresse de la page, cherche les FCI (F + 11 chiffres) dans les commentaires
- * (« Num GCBLO : F99496231124 ») et copie la commande « fci ‹GCBLO› ‹FCI› » à coller dans le registre.
- * Rien n'est envoyé ailleurs : tout se passe dans la page ouverte.
+ * (« Num GCBLO : F99496231124 »). Si la page a été ouverte depuis le registre (Accès LINE chrome), il lui
+ * envoie directement « fci ‹GCBLO› ‹FCI› » ; sinon il copie la commande, à coller dans le registre.
+ * Rien n'est envoyé ailleurs : seulement au registre qui a ouvert la page.
  * La page outils/favori-line.html le transforme en lien à glisser dans la barre de favoris.
  */
 (() => {
@@ -17,12 +18,20 @@
   const fci = [...new Set((texte.toUpperCase().match(/F\d{11}(?!\d)/g) || []))];
   if (!fci.length) { alert(`Registre GCBLO : aucun FCI (F + 11 chiffres) dans les commentaires de ${gcblo}.`); return; }
   const commande = `fci ${gcblo} ${fci.join(' ')}`;
-  const bulle = () => {
+  const bulle = texteBulle => {
     const d = document.createElement('div');
-    d.textContent = `✓ copié : ${commande} — Ctrl+V puis Entrée dans le registre`;
+    d.textContent = texteBulle;
     d.style.cssText = 'position:fixed;z-index:2147483647;top:16px;right:16px;padding:10px 14px;background:#2e3436;color:#8ae234;font:14px/1.4 monospace;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.4)';
     document.body.appendChild(d);
     setTimeout(() => d.remove(), 4500);
   };
-  navigator.clipboard.writeText(commande).then(bulle, () => prompt('Copie cette commande pour le registre (Ctrl+C) :', commande));
+  const copier = () => navigator.clipboard.writeText(commande).then(() => bulle(`✓ copié : ${commande} — Ctrl+V puis Entrée dans le registre`), () => prompt('Copie cette commande pour le registre (Ctrl+C) :', commande));
+  // Page ouverte depuis le registre (Accès LINE chrome) : on lui envoie directement la commande ;
+  // sans réponse du registre (page ouverte autrement, ou registre fermé) : copie pour Ctrl+V
+  if (!window.opener) return copier();
+  let recu = false;
+  const reponse = e => { if (e.data && e.data.registreGcbloRecu) { recu = true; bulle(`✓ mis à jour dans le registre : ${commande}`); } };
+  addEventListener('message', reponse);
+  try { window.opener.postMessage({ registreGcblo: commande }, '*'); } catch (e) { /* plus de registre */ }
+  setTimeout(() => { removeEventListener('message', reponse); if (!recu) copier(); }, 700);
 })();

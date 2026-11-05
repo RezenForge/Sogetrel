@@ -116,7 +116,7 @@ Version d'avant la refonte : branche `avant-refonte`.
 
 ## Favori « FCI → registre »
 
-Sur la page LINE d'un dossier, un favori lit le FCI dans les commentaires (« Num GCBLO : F99496231124 ») et copie la commande `fci ‹GCBLO› ‹FCI›` ; Ctrl+V puis Entrée dans le registre. Installation : ouvrir **https://rezenforge.github.io/Sogetrel/outils/favori-line.html** et glisser le bouton dans la barre de favoris (Chrome et/ou Firefox). Code lisible : `outils/favori-line.js`.
+Sur la page LINE d'un dossier, un favori lit le FCI dans les commentaires (« Num GCBLO : F99496231124 »). Page ouverte depuis le registre (menu ⋯ › Accès LINE chrome) : le FCI est mis à jour directement dans le registre. Sinon, il copie `fci ‹GCBLO› ‹FCI›` : Ctrl+V puis Entrée dans le registre. Installation : ouvrir **https://rezenforge.github.io/Sogetrel/outils/favori-line.html** et glisser le bouton dans la barre de favoris (Chrome et/ou Firefox). Code lisible : `outils/favori-line.js`.
 
 ## Dossiers liés
 
