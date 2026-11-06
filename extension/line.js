@@ -144,7 +144,81 @@
   }
 
   let attente = null, derniereMutation = Date.now();
-  new MutationObserver(() => { derniereMutation = Date.now(); clearTimeout(attente); attente = setTimeout(verifier, 600); })
+  /* ---------- Barre « aller au dossier » dans le bandeau noir de LINE ----------
+   * Un champ (ARC500894, ou un GCBLO complet collé), une liste de fins (-THF010 par défaut, plus celles
+   * du registre et des dossiers liés de l'affaire), et GO : ouvre le dossier LINE (Ctrl+clic : nouvel onglet).
+   */
+  const REGIONS = { 'Limousin Poitou Charentes': ['SBA', 'LRO', 'POI', 'ANG', 'NIO'], 'Aquitaine': ['MED', 'BOR', 'EST', 'LIB', 'ARC'] };
+  const lienDossier = gcblo => {
+    const m = String(gcblo).toUpperCase().match(/^([A-Z]{3})(\d{6})-([A-Z]+\d*)(\d)$/);
+    if (!m) return null;
+    const region = Object.keys(REGIONS).find(r => REGIONS[r].includes(m[1]));
+    return region ? `https://flashback.orange.fr/line/dossier/travaux/consult/${m[2]}/${m[1]}/${encodeURIComponent(region)}/${m[3]}-${m[4]}/info-gene` : null;
+  };
+  function poserBarre() {
+    if (document.getElementById('registre-gcblo-aller')) return;
+    const hote = document.querySelector('app-bandeau-orange #collapsing-navbar') || document.querySelector('app-bandeau-orange nav .container');
+    if (!hote) return;
+    const barre = document.createElement('form');
+    barre.id = 'registre-gcblo-aller';
+    barre.setAttribute('autocomplete', 'off');
+    barre.title = 'Registre GCBLO : aller au dossier LINE';
+    barre.style.cssText = 'display:flex;align-items:center;gap:0;margin:0 auto;height:32px;font:14px/1 "Helvetica Neue",Arial,sans-serif;border:1px solid #555;border-radius:4px;overflow:hidden;background:#1a1a1a';
+    const champ = 'background:transparent;color:#fff;border:0;outline:0;height:100%;padding:0 8px;font:inherit';
+    barre.innerHTML = `<input name="affaire" placeholder="ARC500894" spellcheck="false" maxlength="40" style="${champ};width:120px;text-transform:uppercase;letter-spacing:.04em">`
+      + `<select name="fin" style="${champ};border-left:1px solid #555;cursor:pointer;max-width:260px"><option value="THF010" style="background:#1a1a1a">-THF010</option></select>`
+      + `<button type="submit" style="height:100%;border:0;padding:0 14px;background:#ff7900;color:#000;font-weight:bold;font-size:14px;cursor:pointer">GO</button>`;
+    const [entree, liste] = [barre.querySelector('input'), barre.querySelector('select')];
+    let affaire = '', voulue = '';
+    const remplir = items => {
+      const choix = [{ fin: 'THF010', detail: '' }];
+      for (const x of items) {
+        const fin = x.gcblo.split('-')[1];
+        const deja = choix.find(c => c.fin === fin);
+        if (deja) deja.detail = x.detail; else choix.push({ fin, detail: x.detail });
+      }
+      liste.innerHTML = choix.map(c => option(c.fin, c.detail)).join('');
+      choisir();
+    };
+    const option = (fin, detail) => `<option value="${fin}" style="background:#1a1a1a">-${fin}${detail ? `  ·  ${detail}` : ''}</option>`;
+    // Un GCBLO complet collé (ARC500894-ACF010) : sa fin est choisie, ajoutée si le registre ne la connaît pas
+    const choisir = () => {
+      if (!voulue) return;
+      if (![...liste.options].some(o => o.value === voulue)) liste.insertAdjacentHTML('beforeend', option(voulue, ''));
+      liste.value = voulue;
+    };
+    let delai = null;
+    entree.addEventListener('input', () => {
+      const brut = entree.value.toUpperCase().replace(/\s/g, '');
+      const m = brut.match(/^([A-Z]{3})-?(\d{6})(?:-?([A-Z]+\d+))?$/);
+      voulue = m?.[3] || '';
+      const p = m ? m[1] + m[2] : '';
+      if (p === affaire) return choisir();
+      affaire = p;
+      clearTimeout(delai);
+      if (!p) return remplir([]);
+      delai = setTimeout(() => chrome.runtime.sendMessage({ type: 'registre-gcblo-fci', commande: `lies ${p}` }, rep => {
+        if (affaire !== p) return;
+        remplir(rep?.liste || []);
+      }), 250);
+    });
+    barre.addEventListener('submit', e => {
+      e.preventDefault();
+      const m = entree.value.toUpperCase().replace(/\s/g, '').match(/^([A-Z]{3})-?(\d{6})/);
+      const url = m && lienDossier(`${m[1]}${m[2]}-${liste.value}`);
+      if (!url) { entree.style.color = '#ff4f4f'; setTimeout(() => { entree.style.color = '#fff'; }, 1200); return; }
+      if (e.submitter?.dataset.nouvel === '1') window.open(url, '_blank'); else location.href = url;
+    });
+    const go = barre.querySelector('button');
+    go.addEventListener('click', e => { go.dataset.nouvel = (e.ctrlKey || e.metaKey) ? '1' : ''; });
+    go.addEventListener('auxclick', e => { if (e.button === 1) { go.dataset.nouvel = '1'; barre.requestSubmit(go); } });
+    // Entre les deux groupes du bandeau (accueil à gauche, utilisateur à droite)
+    const groupes = hote.querySelectorAll(':scope > ul');
+    if (groupes.length >= 2) hote.insertBefore(barre, groupes[1]); else hote.appendChild(barre);
+  }
+  poserBarre();
+
+  new MutationObserver(() => { derniereMutation = Date.now(); poserBarre(); clearTimeout(attente); attente = setTimeout(verifier, 600); })
     .observe(document.documentElement, { childList: true, subtree: true, characterData: true });
   verifier();
 

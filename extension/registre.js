@@ -16,7 +16,7 @@ if (!window.__registreGcbloExtension) {
       if (e.source !== window || e.data?.registreGcbloEtat === undefined || e.data.id !== id) return;
       fini = true;
       removeEventListener('message', ecoute);
-      repondre({ etat: e.data.registreGcbloEtat, fci: e.data.fci });
+      repondre({ etat: e.data.registreGcbloEtat, fci: e.data.fci, liste: e.data.liste });
     };
     addEventListener('message', ecoute);
     window.postMessage({ registreGcbloExtension: message.commande, id }, location.origin);

@@ -451,6 +451,8 @@ const COMMANDE_MAD = /^set ([A-Z]{3}\d{6}-[A-Z]+\d+) to mis-a-dispo$/;
 // R16 — l'extension demande les FCI connus d'un GCBLO (pour les écrire en commentaire sur LINE s'ils y manquent),
 // puis signale le commentaire ajouté (une ligne dans l'historique du dossier)
 const COMMANDE_ASK = /^ask ([A-Z]{3}\d{6}-[A-Z]+\d+)$/;
+// R19 — la barre « aller au dossier » de LINE demande les dossiers d'une affaire : ceux du registre et les liés
+const COMMANDE_LIES = /^lies ([A-Z]{3}\d{6})$/;
 const COMMANDE_COMMENTE = /^line-commentaire ([A-Z]{3}\d{6}-[A-Z]+\d+)((?: F\d{11})+)$/;
 /** Réponse à l'extension : { etat, fci? } (etat : 'maj' | 'deja' | 'inconnu' | 'connu'), ou null si la commande est inconnue. */
 function reponseLine(commande) {
@@ -458,6 +460,16 @@ function reponseLine(commande) {
   if (ask) {
     const d = store.tous().find(x => x.gcblo === ask[1]);
     return d ? { etat: 'connu', fci: [...d.fci] } : { etat: 'inconnu' };
+  }
+  const l = commande.match(COMMANDE_LIES);
+  if (l) {
+    const p = l[1];
+    const liste = store.tous().filter(d => d.gcblo.startsWith(`${p}-`))
+      .map(d => ({ gcblo: d.gcblo, detail: [d.type, statutParCode(d.statutDft)?.libelle].filter(Boolean).join(' · '), registre: true }));
+    for (const x of lireLies()[p] || []) {
+      if (!liste.some(y => y.gcblo === x.dossier)) liste.push({ gcblo: x.dossier, detail: ['lié', x.affect, x.valo != null && x.valo !== '' ? `${Math.round(Number(x.valo) || 0).toLocaleString('fr-FR')} €` : ''].filter(Boolean).join(' · ') });
+    }
+    return { etat: 'connu', liste };
   }
   const c = commande.match(COMMANDE_COMMENTE);
   if (c) {
@@ -508,7 +520,7 @@ addEventListener('message', e => {
   // 2. L'extension « FCI depuis LINE » (extension/), relayée par son script dans cette page
   if (e.source === window && e.origin === location.origin && typeof e.data?.registreGcbloExtension === 'string') {
     const r = reponseLine(e.data.registreGcbloExtension);
-    if (r) postMessage({ registreGcbloEtat: r.etat, fci: r.fci, id: e.data.id }, location.origin);
+    if (r) postMessage({ registreGcbloEtat: r.etat, fci: r.fci, liste: r.liste, id: e.data.id }, location.origin);
   }
 });
 // Un clic sur le titre d'une section la replie ou la rouvre (retenu dans ce navigateur)
