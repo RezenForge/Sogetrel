@@ -376,3 +376,4 @@ pre { margin: 0; font: inherit; white-space: pre; }
 .rc-mad { color: var(--accent); }
 .rc-com { color: var(--invite-chemin); }
 .rc-echec { color: var(--erreur); }
+.rc-doe { color: var(--question); }

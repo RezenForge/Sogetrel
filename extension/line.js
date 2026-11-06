@@ -25,7 +25,7 @@
     const gcblo = (m ? `${m[2]}${m[1]}-${m[3]}${m[4]}` : `${t[1]}${t[2]}-${t[3]}${t[4]}`).toUpperCase();
     const fci = fciDesCommentaires();
     // Documents : les noms de pièces jointes (liens et textes de la zone principale de la page)
-    let gcb1 = false, gcb2 = false;
+    let gcb1 = false, gcb2 = false, doe = false;
     if (/\/document/i.test(location.pathname)) {
       // Chaque nom de fichier possible, un par un : les lignes du texte de la page, et les attributs
       // où un nom de fichier peut se cacher (lien, titre, téléchargement). Les deux mots doivent être DANS LE MÊME nom.
@@ -38,8 +38,10 @@
       const autorise = new RegExp(`${affaire}${sep}DFT${sep}AUTORIS[EÉ]`, 'i');
       gcb1 = noms.some(n => /GCB\s*[-_]?\s*1(?!\d)/i.test(n) && dft.test(n));
       gcb2 = noms.some(n => /GCB\s*[-_]?\s*2(?!\d)/i.test(n) && autorise.test(n));
+      // Retour DOE : un fichier « SBA301460-DOE » (tirets, espaces, _ ; une fin de dossier possible : SBA301460-THF010-DOE)
+      doe = noms.some(n => new RegExp(`${affaire}${sep}(?:[A-Z]+\\d*${sep})?DOE(?![A-Z])`, 'i').test(n));
     }
-    return { gcblo, fci, mad: gcb1 && gcb2 };
+    return { gcblo, fci, mad: gcb1 && gcb2, doe };
   }
 
   const fciDesCommentaires = () => {
@@ -139,6 +141,7 @@
     if (document.querySelector('app-add-comment')) essayerCommentaire();
     // GCB1 + GCB2 dans les documents → mis à disposition
     if (r.mad) envoyer(`set ${r.gcblo} to mis-a-dispo`, { maj: `✓ registre : ${r.gcblo} mis à disposition (GCB_1 DFT et GCB_2 DFT_AUTORISE présents)`, inconnu: `registre : ${r.gcblo} n'est pas dans le registre` });
+    if (r.doe) envoyer(`doe ${r.gcblo}`, { maj: `✓ registre : DOE disponible pour ${r.gcblo}`, inconnu: `DOE trouvé, mais ${r.gcblo} n'est pas dans le registre` });
     if (!r.fci.length) return;
     const commande = `fci ${r.gcblo} ${r.fci.join(' ')}`;
     // « deja » (FCI déjà connu) : rien à signaler

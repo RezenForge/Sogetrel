@@ -421,12 +421,12 @@ let barreTournee = null;
  */
 let recap = null;           // { debut, fin, items: Map gcblo → { fci: [], mad, commentaire: [], ok } }
 function commencerRecap(items) {
-  recap = { debut: new Date(), fin: null, items: new Map(items.map(i => [i.gcblo, { fci: [], mad: false, commentaire: [], ok: null }])) };
+  recap = { debut: new Date(), fin: null, items: new Map(items.map(i => [i.gcblo, { fci: [], mad: false, doe: false, commentaire: [], ok: null }])) };
 }
 function noterRecap(gcblo, quoi, valeur) {
   const r = recap && !recap.fin && recap.items.get(gcblo);
   if (!r) return;
-  if (quoi === 'mad') r.mad = true;
+  if (quoi === 'mad' || quoi === 'doe') r[quoi] = true;
   else r[quoi] = [...new Set([...r[quoi], ...valeur])];
 }
 let fenetreRecap = null;
@@ -438,6 +438,7 @@ function afficherRecap() {
     const faits = [
       ...(r.fci.length ? [`<span class="rc-badge rc-fci">FCI ajouté · ${esc(r.fci.join(' '))}</span>`] : []),
       ...(r.mad ? ['<span class="rc-badge rc-mad">Mis à disposition</span>'] : []),
+      ...(r.doe ? ['<span class="rc-badge rc-doe">DOE disponible</span>'] : []),
       ...(r.commentaire.length ? [`<span class="rc-badge rc-com">commentaire LINE · ${esc(r.commentaire.join(' '))}</span>`] : [])
     ];
     const etat = r.ok === false ? '<span class="rc-badge rc-echec">sans réponse</span>' : faits.length ? faits.join('') : '<span class="dim">rien de nouveau</span>';
@@ -450,7 +451,7 @@ function afficherRecap() {
   fenetreRecap.className = 'recap-fond';
   fenetreRecap.innerHTML = `<div class="recap" role="dialog" aria-label="Récapitulatif de la tournée LINE">
     <div class="recap-tete"><span class="titre">tournée LINE · récapitulatif</span><span class="dim">${recap.debut.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}${duree ? ` · ${duree} min` : ''}</span><button type="button" class="lien recap-fermer" title="fermer (Échap)">✕</button></div>
-    <div class="recap-totaux">${compte(t.length, 'dossier vérifié', 'dossiers vérifiés')}${compte(t.filter(r => r.fci.length).length, 'FCI ajouté', 'FCI ajoutés')}${compte(t.filter(r => r.mad).length, 'mis à disposition', 'mis à disposition')}${compte(t.filter(r => r.commentaire.length).length, 'commentaire LINE', 'commentaires LINE')}${t.some(r => r.ok === false) ? compte(t.filter(r => r.ok === false).length, 'sans réponse', 'sans réponse') : ''}</div>
+    <div class="recap-totaux">${compte(t.length, 'dossier vérifié', 'dossiers vérifiés')}${compte(t.filter(r => r.fci.length).length, 'FCI ajouté', 'FCI ajoutés')}${compte(t.filter(r => r.mad).length, 'mis à disposition', 'mis à disposition')}${t.some(r => r.doe) ? compte(t.filter(r => r.doe).length, 'DOE disponible', 'DOE disponibles') : ''}${compte(t.filter(r => r.commentaire.length).length, 'commentaire LINE', 'commentaires LINE')}${t.some(r => r.ok === false) ? compte(t.filter(r => r.ok === false).length, 'sans réponse', 'sans réponse') : ''}</div>
     <div class="recap-corps"><table>${lignes.map(l => l.html).join('')}</table></div>
   </div>`;
   fenetreRecap.addEventListener('click', e => {
@@ -513,6 +514,9 @@ const COMMANDE_MAD = /^set ([A-Z]{3}\d{6}-[A-Z]+\d+) to mis-a-dispo$/;
 // R16 — l'extension demande les FCI connus d'un GCBLO (pour les écrire en commentaire sur LINE s'ils y manquent),
 // puis signale le commentaire ajouté (une ligne dans l'historique du dossier)
 const COMMANDE_ASK = /^ask ([A-Z]{3}\d{6}-[A-Z]+\d+)$/;
+// R21 — un retour DOE trouvé dans les Documents LINE (fichier « SBA301460-DOE ») : prévenir, une seule fois par dossier
+const COMMANDE_DOE = /^doe ([A-Z]{3}\d{6}-[A-Z]+\d+)$/;
+const CLE_DOE_VUS = 'gcblo.v2.doeVus';
 const COMMANDE_COMMENTE = /^line-commentaire ([A-Z]{3}\d{6}-[A-Z]+\d+)((?: F\d{11})+)$/;
 /** Réponse à l'extension : { etat, fci? } (etat : 'maj' | 'deja' | 'inconnu' | 'connu'), ou null si la commande est inconnue. */
 function reponseLine(commande) {
@@ -520,6 +524,19 @@ function reponseLine(commande) {
   if (ask) {
     const d = store.tous().find(x => x.gcblo === ask[1]);
     return d ? { etat: 'connu', fci: [...d.fci] } : { etat: 'inconnu' };
+  }
+  const doe = commande.match(COMMANDE_DOE);
+  if (doe) {
+    const d = store.tous().find(x => x.gcblo === doe[1]);
+    if (!d) return { etat: 'inconnu' };
+    const vus = new Set(lireLocal(CLE_DOE_VUS, []));
+    if (vus.has(d.gcblo)) return { etat: 'deja' };
+    vus.add(d.gcblo);
+    try { localStorage.setItem(CLE_DOE_VUS, JSON.stringify([...vus])); } catch { /* facultatif */ }
+    regles.noter(d.id, 'line', 'DOE disponible sur LINE (Documents)');
+    noterRecap(d.gcblo, 'doe');
+    invite.ecran.journal(`📄 DOE disponible sur LINE · <button type="button" class="lien c-dossier" data-commande="open ${esc(d.gcblo)}">${esc(d.gcblo)}</button>`, 'ok');
+    return { etat: 'maj' };
   }
   const c = commande.match(COMMANDE_COMMENTE);
   if (c) {
