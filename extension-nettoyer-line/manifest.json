@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LINE · vider le cache",
-  "version": "1.0.0",
-  "description": "Un bouton dans la barre de Chrome : ferme les onglets LINE, efface les données du site flashback.orange.fr (cache, stockage, cookies), puis rouvre LINE.",
+  "version": "1.1.0",
+  "description": "Un bouton dans la barre de Chrome : ferme les onglets LINE, efface les données de flashback.orange.fr et de la connexion Orange (cache, stockage, cookies), puis rouvre l'accueil de Flashback.",
   "permissions": ["browsingData", "tabs"],
   "action": { "default_title": "LINE · vider le cache de flashback.orange.fr" },
   "background": { "service_worker": "nettoyer.js" }
