@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "LINE · aller au dossier",
+  "version": "1.0.0",
+  "description": "Un champ par-dessus le bandeau de LINE : taper un GCBLO (ARC500894-ACF010) puis Entrée ouvre son dossier. Rien d'autre.",
+  "content_scripts": [
+    {
+      "matches": ["https://flashback.orange.fr/line/*"],
+      "js": ["aller.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

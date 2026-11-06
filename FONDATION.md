@@ -135,6 +135,7 @@ Un dossier **clos** n'a plus d'alerte de relance.
     - Limite connue : un autre numéro au format FCI collé dans la réponse (ex. un DEG) serait pris pour un FCI ; il ne remplace jamais un FCI existant.
 
 19. **Aller à un dossier depuis LINE** (extension 1.6.1) : un champ seul, **posé par-dessus** le bandeau noir (ajouté hors de l'application LINE, en position absolue, en haut au centre) — **la page de LINE n'est jamais modifiée** (la 1.6, qui insérait une barre dans le bandeau, provoquait une page « incident » d'Orange). On tape ou colle un GCBLO complet (`ARC500894-ACF010`, minuscules et espaces acceptés), **Entrée** → le lien LINE du dossier (même construction que `lienLine`). Illisible ou région inconnue : bordure rouge, rien ne s'ouvre. Rien d'autre (pas de liste, pas de question au registre).
+    - Aussi en **extension séparée** `extension-aller-line/` (« LINE · aller au dossier », MV3, aucune permission, un seul script sur `flashback.orange.fr/line/*`) pour qui ne veut que ce champ. Les deux installées : un seul champ (même `id`).
 
 Toutes ces règles vivent dans **un seul fichier** (`js/dossiers.js`), et chacune a un test.
 
@@ -475,3 +476,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 06/11/2026 | Extension 1.5.1 : pas de commentaire FCI sur LINE quand le registre a plusieurs FCI pour le GCBLO |
 | 06/11/2026 | R19 : extension 1.6 — barre « aller au dossier » dans le bandeau noir de LINE (affaire, fins du registre et des dossiers liés, GO) |
 | 06/11/2026 | Extension 1.6.1 : la barre dans le bandeau provoquait une page incident Orange → remplacée par un seul champ posé par-dessus (page LINE intacte) ; GCBLO + Entrée |
+| 06/11/2026 | Extension séparée « LINE · aller au dossier » (`extension-aller-line/`) : seulement le champ GCBLO + Entrée |
