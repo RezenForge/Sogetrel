@@ -118,7 +118,7 @@ Un dossier **clos** n'a plus d'alerte de relance.
     - attend que la page soit calme (2 s sans changement, 20 s au plus), redemande, revérifie ;
     - ouvre le champ (« Ajouter un commentaire ») s'il est fermé, écrit `Num GCBLO : ‹FCI…›` (le format déjà utilisé sur LINE), puis clique sur **Valider** ;
     - vérifie que le commentaire apparaît, bulle verte, et le signale au registre (`line-commentaire ‹GCBLO› ‹FCI…›`) qui ajoute « FCI écrit en commentaire sur LINE » à l'historique (étiquette LINE).
-    - Jamais : si LINE a déjà un FCI (même différent : c'est alors LINE qui complète le registre, règle de l'extension), si un texte est déjà en cours de saisie, ou une deuxième fois pour le même GCBLO dans le même onglet (même après rechargement). Bouton ou champ introuvable : bulle orange, rien d'écrit.
+    - Jamais : si le registre a **plusieurs FCI** pour ce GCBLO (lequel serait le bon ? bulle orange, rien d'écrit), si LINE a déjà un FCI (même différent : c'est alors LINE qui complète le registre, règle de l'extension), si un texte est déjà en cours de saisie, ou une deuxième fois pour le même GCBLO dans le même onglet (même après rechargement). Bouton ou champ introuvable : bulle orange, rien d'écrit.
     - La tournée (`sync`) attend la fin du commentaire avant de passer aux documents.
     - Repères tirés de la page réelle enregistrée : `app-add-comment` (bouton « Ajouter un commentaire », `textarea[name=newCommentaire]` limité à 255 caractères, bouton `submit` « Valider »), commentaires dans `app-comment [name=comment-text-container]`.
 
@@ -470,3 +470,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 05/11/2026 | Commandes venues de LINE en file : hors historique des commandes, en attente pendant une question o/n (auparavant ignorées) — le registre reste utilisable pendant un `sync` |
 | 05/11/2026 | R17 : extension 1.5 — Mis à disposition seulement si GCB_1 + ‹affaire›_DFT et GCB_2 + ‹affaire›_DFT_AUTORISE (dans le même nom de fichier) ; tournée : page muette rechargée une fois après 12 s |
 | 05/11/2026 | R18 : FCI reçus par mail — macro Outlook `LireFciMails` → `mails-gcblo.csv`, lu chaque minute par le registre ; dossier sans FCI complété |
+| 06/11/2026 | Extension 1.5.1 : pas de commentaire FCI sur LINE quand le registre a plusieurs FCI pour le GCBLO |

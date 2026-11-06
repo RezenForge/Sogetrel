@@ -11,7 +11,8 @@
  * Commentaire FCI (onglet « Informations », la page qui a le bloc « Commentaire(s) ») : si AUCUN commentaire ne
  * contient de FCI et que le registre en connaît un pour ce GCBLO, on écrit « Num GCBLO : F… » et on clique sur
  * « Valider » (bouton « Ajouter un commentaire » d'abord si le champ est fermé). Une seule fois par GCBLO et par
- * onglet, seulement quand la page est calme (2 s sans changement) ; jamais par-dessus un texte déjà saisi.
+ * onglet, seulement quand la page est calme (2 s sans changement) ; jamais par-dessus un texte déjà saisi ;
+ * jamais si le registre a PLUSIEURS FCI pour ce GCBLO (bulle orange, rien d'écrit).
  * Le commentaire vu sur la page, le registre l'inscrit dans l'historique du dossier.
  */
 (() => {
@@ -84,9 +85,11 @@
     if (!document.querySelector('app-add-comment') || fciDesCommentaires().length || dejaTente(gcblo)) return;
     const rep = await demander(`ask ${gcblo}`);
     if (rep?.etat !== 'connu' || !rep.fci?.length) return;
+    // Plusieurs FCI au registre : on ne sait pas lequel est le bon pour LINE, on n'écrit rien
+    if (rep.fci.length > 1) return bulle(`LINE : ${rep.fci.length} FCI au registre (${rep.fci.join(', ')}) · commentaire non écrit`, '#fcaf3e');
     if (fciDesCommentaires().length || dejaTente(gcblo)) return;      // la page a pu changer pendant la question
     noterTente(gcblo);
-    const texte = `Num GCBLO : ${rep.fci.join(' ')}`;
+    const texte = `Num GCBLO : ${rep.fci[0]}`;
     let zone = document.querySelector('app-add-comment textarea');
     if (!zone) {
       const ouvrir = boutonDuFormulaire(/ajouter un commentaire/i);
