@@ -36,7 +36,7 @@ async function versRegistre(message) {
 }
 
 /* ---------------- Tournée ---------------- */
-const tournee = { file: [], actifs: new Map(), enCreation: 0, registre: null, total: 0, fait: 0, echecs: 0 };
+const tournee = { file: [], actifs: new Map(), enCreation: 0, registre: null, total: 0, fait: 0, echecs: 0, resultats: [] };
 
 const versDocuments = url => url.replace(/\/[^/]*$/, '/document');
 // Une page qui ne s'est pas manifestée (« tournee-qui ») au bout de RECHARGE_MS est rechargée, une fois :
@@ -51,7 +51,7 @@ function surveillerChargement(id, a, url) {
 function progres(encours = '') {
   if (tournee.registre === null) return;
   const fini = !tournee.file.length && !tournee.actifs.size && !tournee.enCreation;
-  chrome.tabs.sendMessage(tournee.registre, { type: 'tournee-progres', progres: { total: tournee.total, fait: tournee.fait, echecs: tournee.echecs, encours, fini } }).catch(() => {});
+  chrome.tabs.sendMessage(tournee.registre, { type: 'tournee-progres', progres: { total: tournee.total, fait: tournee.fait, echecs: tournee.echecs, encours, fini, resultats: fini ? tournee.resultats : undefined } }).catch(() => {});
   if (fini) tournee.registre = null;
 }
 
@@ -79,6 +79,7 @@ function terminer(id, ok) {
   tournee.actifs.delete(id);
   tournee.fait++;
   if (!ok) tournee.echecs++;
+  tournee.resultats.push({ gcblo: a.item.gcblo, ok: !!ok });
   chrome.tabs.remove(id).catch(() => {});
   progres(a.item.gcblo);
   suivants();
@@ -118,7 +119,7 @@ chrome.runtime.onMessage.addListener((message, expediteur, repondre) => {
       arreter();
       tournee.registre = expediteur.tab?.id ?? null;
       tournee.file = (message.items || []).filter(x => /^https:\/\/flashback\.orange\.fr\//.test(x.url));
-      tournee.total = tournee.file.length; tournee.fait = 0; tournee.echecs = 0;
+      tournee.total = tournee.file.length; tournee.fait = 0; tournee.echecs = 0; tournee.resultats = [];
       suivants();
       repondre({ ok: true });
       return;

@@ -137,6 +137,8 @@ Un dossier **clos** n'a plus d'alerte de relance.
 19. **Aller à un dossier depuis LINE** (extension 1.6.1) : un champ seul, **posé par-dessus** le bandeau noir (ajouté hors de l'application LINE, en position absolue, en haut au centre) — **la page de LINE n'est jamais modifiée** (la 1.6, qui insérait une barre dans le bandeau, provoquait une page « incident » d'Orange). On tape ou colle un GCBLO complet (`ARC500894-ACF010`, minuscules et espaces acceptés), **Entrée** → le lien LINE du dossier (même construction que `lienLine`). Illisible ou région inconnue : bordure rouge, rien ne s'ouvre. Rien d'autre (pas de liste, pas de question au registre).
     - Aussi en **extension séparée** `extension-aller-line/` (« LINE · aller au dossier », MV3, aucune permission, un seul script sur `flashback.orange.fr/line/*`) pour qui ne veut que ce champ. Les deux installées : un seul champ (même `id`).
 
+20. **Récapitulatif de la tournée LINE** (`sync`, extension 1.7) : pendant la tournée, le registre note pour chaque dossier de la tournée les mises à jour venues de LINE : **FCI ajouté** (seulement les nouveaux), **Mis à disposition**, **commentaire FCI écrit sur LINE**. À la fin (l'extension envoie le résultat de chaque dossier : vérifié ou sans réponse), une **fenêtre** par-dessus l'application : heure de début et durée, totaux (vérifiés, FCI ajoutés, mis à disposition, commentaires LINE, sans réponse), puis une ligne par dossier — sans réponse d'abord, puis ceux qui ont changé, puis « rien de nouveau ». Clic sur un GCBLO : la fenêtre se ferme et sa fiche s'ouvre ; Échap, ✕ ou clic à côté : fermer. Le bouton « voir le récap » de la barre de fin (affichée 20 s) la rouvre. Gardé en mémoire jusqu'au prochain `sync` ou au rechargement de la page. Tournée arrêtée (`sync stop`) : pas de récapitulatif.
+
 Toutes ces règles vivent dans **un seul fichier** (`js/dossiers.js`), et chacune a un test.
 
 ---
@@ -477,3 +479,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 06/11/2026 | R19 : extension 1.6 — barre « aller au dossier » dans le bandeau noir de LINE (affaire, fins du registre et des dossiers liés, GO) |
 | 06/11/2026 | Extension 1.6.1 : la barre dans le bandeau provoquait une page incident Orange → remplacée par un seul champ posé par-dessus (page LINE intacte) ; GCBLO + Entrée |
 | 06/11/2026 | Extension séparée « LINE · aller au dossier » (`extension-aller-line/`) : seulement le champ GCBLO + Entrée |
+| 06/11/2026 | R20 : fenêtre de récapitulatif à la fin de la tournée LINE (extension 1.7 : résultat par dossier) |
