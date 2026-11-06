@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Registre GCBLO · FCI depuis LINE",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "Sur les pages LINE (flashback.orange.fr) : met à jour le registre GCBLO ouvert (FCI des commentaires ; Mis à disposition si GCB_1 (‹affaire›_DFT) et GCB_2 (‹affaire›_DFT_AUTORISE) sont dans les documents) ; écrit le FCI du registre en commentaire LINE s'il y manque. Tournée LINE : vérifie une liste de dossiers en arrière-plan.",
   "background": {
     "service_worker": "fond.js"

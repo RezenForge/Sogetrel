@@ -77,17 +77,19 @@
     const i = setInterval(() => { const v = test(); if (v || Date.now() - debut > max) { clearInterval(i); resoudre(v || null); } }, 200);
   });
   const boutonDuFormulaire = motif => [...document.querySelectorAll('app-add-comment button')].find(b => motif.test(b.textContent || ''));
-  const dejaTente = gcblo => { try { return sessionStorage.getItem(`registre-gcblo-commente-${gcblo}`) === '1'; } catch { return false; } };
-  const noterTente = gcblo => { try { sessionStorage.setItem(`registre-gcblo-commente-${gcblo}`, '1'); } catch { /* facultatif */ } };
+  // « Déjà tenté pour ce GCBLO » est gardé par l'extension elle-même (fond.js), JAMAIS dans le stockage de la page
+  // LINE : rien de l'extension ne doit rester dans les données du site d'Orange
+  const dejaTente = gcblo => new Promise(r => chrome.runtime.sendMessage({ type: 'commentaire-tente', gcblo }, rep => r(!!rep?.tente)));
+  const noterTente = gcblo => chrome.runtime.sendMessage({ type: 'commentaire-tente', gcblo, noter: true }, () => void chrome.runtime.lastError);
   let commentaire = null;          // la promesse en cours (la tournée l'attend avant de passer aux documents)
 
   async function commenterFci(gcblo) {
-    if (!document.querySelector('app-add-comment') || fciDesCommentaires().length || dejaTente(gcblo)) return;
+    if (!document.querySelector('app-add-comment') || fciDesCommentaires().length || await dejaTente(gcblo)) return;
     const rep = await demander(`ask ${gcblo}`);
     if (rep?.etat !== 'connu' || !rep.fci?.length) return;
     // Plusieurs FCI au registre : on ne sait pas lequel est le bon pour LINE, on n'écrit rien
     if (rep.fci.length > 1) return bulle(`LINE : ${rep.fci.length} FCI au registre (${rep.fci.join(', ')}) · commentaire non écrit`, '#fcaf3e');
-    if (fciDesCommentaires().length || dejaTente(gcblo)) return;      // la page a pu changer pendant la question
+    if (fciDesCommentaires().length || await dejaTente(gcblo)) return;      // la page a pu changer pendant la question
     noterTente(gcblo);
     const texte = `Num GCBLO : ${rep.fci[0]}`;
     let zone = document.querySelector('app-add-comment textarea');

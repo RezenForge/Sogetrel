@@ -118,7 +118,7 @@ Un dossier **clos** n'a plus d'alerte de relance.
     - attend que la page soit calme (2 s sans changement, 20 s au plus), redemande, revérifie ;
     - ouvre le champ (« Ajouter un commentaire ») s'il est fermé, écrit `Num GCBLO : ‹FCI…›` (le format déjà utilisé sur LINE), puis clique sur **Valider** ;
     - vérifie que le commentaire apparaît, bulle verte, et le signale au registre (`line-commentaire ‹GCBLO› ‹FCI…›`) qui ajoute « FCI écrit en commentaire sur LINE » à l'historique (étiquette LINE).
-    - Jamais : si le registre a **plusieurs FCI** pour ce GCBLO (lequel serait le bon ? bulle orange, rien d'écrit), si LINE a déjà un FCI (même différent : c'est alors LINE qui complète le registre, règle de l'extension), si un texte est déjà en cours de saisie, ou une deuxième fois pour le même GCBLO dans le même onglet (même après rechargement). Bouton ou champ introuvable : bulle orange, rien d'écrit.
+    - Jamais : si le registre a **plusieurs FCI** pour ce GCBLO (lequel serait le bon ? bulle orange, rien d'écrit), si LINE a déjà un FCI (même différent : c'est alors LINE qui complète le registre, règle de l'extension), si un texte est déjà en cours de saisie, ou une deuxième fois pour le même GCBLO tant que Chrome reste ouvert (mémoire gardée par l'extension, `fond.js` — **jamais dans le stockage de la page LINE** : depuis la 1.7.1, l'extension n'écrit plus rien dans les données du site d'Orange, soupçonnées de provoquer la page « incident technique »). Bouton ou champ introuvable : bulle orange, rien d'écrit.
     - La tournée (`sync`) attend la fin du commentaire avant de passer aux documents.
     - Repères tirés de la page réelle enregistrée : `app-add-comment` (bouton « Ajouter un commentaire », `textarea[name=newCommentaire]` limité à 255 caractères, bouton `submit` « Valider »), commentaires dans `app-comment [name=comment-text-container]`.
 
@@ -480,3 +480,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 06/11/2026 | Extension 1.6.1 : la barre dans le bandeau provoquait une page incident Orange → remplacée par un seul champ posé par-dessus (page LINE intacte) ; GCBLO + Entrée |
 | 06/11/2026 | Extension séparée « LINE · aller au dossier » (`extension-aller-line/`) : seulement le champ GCBLO + Entrée |
 | 06/11/2026 | R20 : fenêtre de récapitulatif à la fin de la tournée LINE (extension 1.7 : résultat par dossier) |
+| 06/11/2026 | Extension 1.7.1 : plus rien d'écrit dans le sessionStorage de LINE (la mémoire « commentaire déjà tenté » passe dans l'extension) — piste de la page « incident technique » qui revenait jusqu'au vidage des données du site |

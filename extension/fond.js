@@ -36,6 +36,7 @@ async function versRegistre(message) {
 }
 
 /* ---------------- Tournée ---------------- */
+const commentairesTentes = new Set();
 const tournee = { file: [], actifs: new Map(), enCreation: 0, registre: null, total: 0, fait: 0, echecs: 0, resultats: [] };
 
 const versDocuments = url => url.replace(/\/[^/]*$/, '/document');
@@ -126,6 +127,11 @@ chrome.runtime.onMessage.addListener((message, expediteur, repondre) => {
     case 'tournee-stop':
       arreter();
       repondre({ ok: true });
+      return;
+    case 'commentaire-tente':
+      // Une seule tentative de commentaire FCI par GCBLO tant que Chrome reste ouvert
+      if (message.noter) commentairesTentes.add(message.gcblo);
+      repondre({ tente: commentairesTentes.has(message.gcblo) });
       return;
     case 'tournee-qui': {
       const a = tournee.actifs.get(expediteur.tab?.id);
