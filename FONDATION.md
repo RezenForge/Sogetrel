@@ -481,3 +481,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 06/11/2026 | Extension séparée « LINE · aller au dossier » (`extension-aller-line/`) : seulement le champ GCBLO + Entrée |
 | 06/11/2026 | R20 : fenêtre de récapitulatif à la fin de la tournée LINE (extension 1.7 : résultat par dossier) |
 | 06/11/2026 | Extension 1.7.1 : plus rien d'écrit dans le sessionStorage de LINE (la mémoire « commentaire déjà tenté » passe dans l'extension) — piste de la page « incident technique » qui revenait jusqu'au vidage des données du site |
+| 06/11/2026 | Extension séparée « LINE · vider le cache » (`extension-nettoyer-line/`, permissions browsingData + tabs) : un bouton ferme les onglets LINE, efface les données de flashback.orange.fr (cookies : tout orange.fr, règle de Chrome) et rouvre LINE — le vidage par site est bloqué sur le poste de Dylan |
