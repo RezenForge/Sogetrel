@@ -134,11 +134,7 @@ Un dossier **clos** n'a plus d'alerte de relance.
     - Le registre lit ce fichier **chaque minute** (si l'accès au dossier des sauvegardes est déjà accordé, sans rien demander) et à chaque sauvegarde. Dossier **sans FCI** → `fci ‹GCBLO› ‹FCI›` (dans le volet, annulable) et historique « FCI reçu par mail de ‹expéditeur› le ‹date› : ‹FCI› ». FCI déjà connu → rien. **Autre FCI** déjà au registre → notification « à vérifier », rien de changé. GCBLO absent → notification. Chaque signalement une seule fois (`gcblo.v2.mailsSignales`).
     - Limite connue : un autre numéro au format FCI collé dans la réponse (ex. un DEG) serait pris pour un FCI ; il ne remplace jamais un FCI existant.
 
-19. **Barre « aller au dossier » sur LINE** (extension 1.6) : dans le bandeau noir (`app-bandeau-orange`, entre l'accueil et l'utilisateur), un formulaire compact :
-    - un champ : le début d'affaire (`ARC500894`, minuscules et espaces acceptés) ou un GCBLO complet collé (`ARC500894-ACF010` : sa fin est présélectionnée, ajoutée à la liste si besoin) ;
-    - une liste des fins : `-THF010` toujours, puis celles que le registre connaît pour l'affaire (question `lies ‹affaire›` → `{ etat: 'connu', liste: [{ gcblo, detail }] }` : ses dossiers avec affect et statut, puis les dossiers liés du classeur avec « lié », affect et valo) ;
-    - **GO** (ou Entrée) : ouvre le lien LINE du dossier (même construction que `lienLine`, `/consult/`), dans l'onglet ; Ctrl+clic ou clic molette : nouvel onglet. Région inconnue ou saisie illisible : le champ passe en rouge, rien ne s'ouvre.
-    - Registre fermé : la liste n'a que `-THF010` (et la fin collée), GO marche quand même. Remise en place si LINE redessine son bandeau.
+19. **Aller à un dossier depuis LINE** (extension 1.6.1) : un champ seul, **posé par-dessus** le bandeau noir (ajouté hors de l'application LINE, en position absolue, en haut au centre) — **la page de LINE n'est jamais modifiée** (la 1.6, qui insérait une barre dans le bandeau, provoquait une page « incident » d'Orange). On tape ou colle un GCBLO complet (`ARC500894-ACF010`, minuscules et espaces acceptés), **Entrée** → le lien LINE du dossier (même construction que `lienLine`). Illisible ou région inconnue : bordure rouge, rien ne s'ouvre. Rien d'autre (pas de liste, pas de question au registre).
 
 Toutes ces règles vivent dans **un seul fichier** (`js/dossiers.js`), et chacune a un test.
 
@@ -478,3 +474,4 @@ Chaque étape se termine par une version utilisable, des tests qui passent et un
 | 05/11/2026 | R18 : FCI reçus par mail — macro Outlook `LireFciMails` → `mails-gcblo.csv`, lu chaque minute par le registre ; dossier sans FCI complété |
 | 06/11/2026 | Extension 1.5.1 : pas de commentaire FCI sur LINE quand le registre a plusieurs FCI pour le GCBLO |
 | 06/11/2026 | R19 : extension 1.6 — barre « aller au dossier » dans le bandeau noir de LINE (affaire, fins du registre et des dossiers liés, GO) |
+| 06/11/2026 | Extension 1.6.1 : la barre dans le bandeau provoquait une page incident Orange → remplacée par un seul champ posé par-dessus (page LINE intacte) ; GCBLO + Entrée |
