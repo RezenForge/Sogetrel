@@ -235,6 +235,7 @@ textarea.inp{font-family:var(--body);resize:vertical;min-height:100px;font-size:
 .tile.busy::after,.mini.busy::after{content:"";position:absolute;z-index:4;top:50%;left:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;
   border:3px solid rgba(255,255,255,.35);border-top-color:#fff;animation:spin .8s linear infinite;pointer-events:none}
 .tile.busy::after{top:38%}
+.ghost.tog.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .mapwrap{flex:1;min-height:0;position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:var(--card)}
 #map{position:absolute;inset:0}
 .legend{position:absolute;z-index:500;top:10px;left:10px;display:flex;gap:10px;background:var(--card);color:var(--fg);border-radius:10px;padding:7px 10px;font:600 13px var(--body);box-shadow:0 2px 8px rgba(0,0,0,.2)}
@@ -584,13 +585,20 @@ async function renderMap(){
     ${navigator.onLine?"":`<div class="mapnote off">Hors ligne : seules les zones déjà consultées s'affichent</div>`}
     ${noGps?`<div class="mapnote">${noGps} relevé${noGps>1?"s":""} sans position GPS</div>`:""}
     <div class="mapmsg" id="mapMsg">Chargement de la carte…</div></div>`;
-  setDock(`<button class="ghost" id="meBtn" style="flex:1">${I.gps}<span>Ma position</span></button>`);
+  setDock(`<button class="ghost" id="meBtn" style="flex:1">${I.gps}<span>Ma position</span></button>
+    <button class="ghost tog ${S.cadastre?"on":""}" id="cadBtn" style="flex:1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3 4h18v16H3z"/><path d="M3 11h7l2 9M10 11l4-7M14 13h7"/></svg><span>Cadastre</span></button>`);
   if(mapObj){mapObj.remove();mapObj=null;pathLine=null}
   try{await loadLeaflet()}catch(e){$("#mapMsg").textContent="Carte indisponible : ouvre-la une première fois avec du réseau pour l'utiliser ensuite hors ligne.";return}
   if(route.v!=="map")return;
   $("#mapMsg").hidden=true;
   const m=mapObj=L.map("map",{zoomControl:false,attributionControl:true}).setView([44.84,-0.58],11);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:20,maxNativeZoom:19,crossOrigin:true,attribution:"© OpenStreetMap"}).addTo(m);
+  let base=L.tileLayer(LEAF_URL.ign,{maxZoom:20,maxNativeZoom:19,crossOrigin:true,attribution:"© IGN – Plan IGN"}).addTo(m),okB=0,errB=0;
+  base.on("tileload",()=>okB++);
+  base.on("tileerror",()=>{if(++errB>=6&&!okB&&base._sogeo!=="osm"){base.remove();base=L.tileLayer(LEAF_URL.osm,{maxZoom:20,maxNativeZoom:19,crossOrigin:true,attribution:"© OpenStreetMap"}).addTo(m);base._sogeo="osm";base.bringToBack()}});
+  const cad=L.tileLayer(LEAF_URL.cad,{maxZoom:20,maxNativeZoom:19,minZoom:15,crossOrigin:true,opacity:.9,attribution:"Cadastre © IGN"});
+  if(S.cadastre)cad.addTo(m);
+  $("#cadBtn").onclick=()=>{S.cadastre=!S.cadastre;save();$("#cadBtn").classList.toggle("on",S.cadastre);
+    if(S.cadastre){cad.addTo(m);if(m.getZoom()<15)toast("Zoome pour voir les parcelles")}else cad.remove()};
   L.control.zoom({position:"bottomright"}).addTo(m);
   const pts=[];
   for(const p of withGps){const st=pointStatus(p),col=st.miss?"#c0782b":"#2f7a52";
@@ -623,6 +631,14 @@ async function routeOSRM(ll){ // ll : [[lat,lon],...] -> {coords,dist,legs}
 const fmtDist=m=>m<1000?`${Math.round(m)} m`:`${(m/1000).toFixed(m<10000?2:1).replace(".",",")} km`;
 function straightDist(ll){let d=0;for(let i=1;i<ll.length;i++){const [a1,o1]=ll[i-1],[a2,o2]=ll[i],R=6371000,r=Math.PI/180;
   const x=(o2-o1)*r*Math.cos((a1+a2)/2*r),y=(a2-a1)*r;d+=Math.hypot(x,y)*R}return d}
+/* ---------- Fonds de carte : Plan IGN (défaut), cadastre IGN en option, OpenStreetMap en secours ---------- */
+const WMTS="https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0";
+const TILE_URL={
+  ign:(z,x,y)=>`${WMTS}&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2&STYLE=normal&FORMAT=image/png&TILEMATRIXSET=PM&TILEMATRIX=${z}&TILEROW=${y}&TILECOL=${x}`,
+  cad:(z,x,y)=>`${WMTS}&LAYER=CADASTRALPARCELS.PARCELLAIRE_EXPRESS&STYLE=PCI%20vecteur&FORMAT=image/png&TILEMATRIXSET=PM_0_19&TILEMATRIX=${z}&TILEROW=${y}&TILECOL=${x}`,
+  osm:(z,x,y)=>`https://${"abc"[Math.abs(x+y)%3]}.tile.openstreetmap.org/${z}/${x}/${y}.png`};
+const LEAF_URL={ign:TILE_URL.ign("{z}","{x}","{y}"),cad:TILE_URL.cad("{z}","{x}","{y}"),osm:"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"};
+
 /* ---------- Plan et synoptique du DOE (images ajoutées au ZIP) ---------- */
 function hav(a,b){const R=6371000,r=Math.PI/180,x=(b[1]-a[1])*r*Math.cos((a[0]+b[0])/2*r),y=(b[0]-a[0])*r;return Math.hypot(x,y)*R}
 // Cheminement pour l'export : routes si possible (mémorisé), sinon vol d'oiseau
@@ -639,9 +655,8 @@ async function routeForExport(c){
 
 const mx=(lon,z)=>(lon+180)/360*256*2**z;
 const my=(lat,z)=>{const s=Math.sin(lat*Math.PI/180);return(.5-Math.log((1+s)/(1-s))/(4*Math.PI))*256*2**z};
-function loadTile(z,x,y){const n=2**z;if(y<0||y>=n)return Promise.resolve(null);x=((x%n)+n)%n;
-  const sub="abc"[Math.abs(x+y)%3];
-  return Promise.race([fetch(`https://${sub}.tile.openstreetmap.org/${z}/${x}/${y}.png`,{mode:"cors"}).then(r=>r.ok?r.blob():null).then(b=>b?createImageBitmap(b):null).catch(()=>null),
+function loadTile(z,x,y,kind="ign"){const n=2**z;if(y<0||y>=n)return Promise.resolve(null);x=((x%n)+n)%n;
+  return Promise.race([fetch(TILE_URL[kind](z,x,y),{mode:"cors"}).then(r=>r.ok?r.blob():null).then(b=>b?createImageBitmap(b):null).catch(()=>null),
     new Promise(r=>setTimeout(()=>r(null),8000))])}
 function rrect(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
 function fitText(g,t,max){if(g.measureText(t).width<=max)return t;while(t.length>1&&g.measureText(t+"…").width>max)t=t.slice(0,-1);return t+"…"}
@@ -664,9 +679,12 @@ async function makePlan(c,R,onStep){
   // Fond de carte
   if(onStep)onStep("Fond de carte…");
   const jobs=[];for(let tx=Math.floor(ox/256);tx<=Math.floor((ox+MW)/256);tx++)for(let ty=Math.floor(oy/256);ty<=Math.floor((oy+MH)/256);ty++)jobs.push([tx,ty]);
-  let okT=0;const q=jobs.slice();
-  await Promise.all(Array.from({length:6},async()=>{while(q.length){const [tx,ty]=q.shift();const im=await loadTile(z,tx,ty);if(im){okT++;g.drawImage(im,tx*256-ox,ty*256-oy);im.close&&im.close()}}}));
-  if(okT){g.fillStyle="rgba(255,255,255,.28)";g.fillRect(0,0,MW,MH)}
+  let okT=0,src=new Set();const q=jobs.slice();const withCad=!!S.cadastre&&z>=15;let okC=0;
+  await Promise.all(Array.from({length:6},async()=>{while(q.length){const [tx,ty]=q.shift();
+    let im=await loadTile(z,tx,ty,"ign"),k="ign";if(!im){im=await loadTile(z,tx,ty,"osm");k="osm"}
+    if(im){okT++;src.add(k);g.drawImage(im,tx*256-ox,ty*256-oy);im.close&&im.close()}
+    if(withCad){const cd=await loadTile(z,tx,ty,"cad");if(cd){okC++;g.drawImage(cd,tx*256-ox,ty*256-oy);cd.close&&cd.close()}}}}));
+  if(okT){g.fillStyle="rgba(255,255,255,.12)";g.fillRect(0,0,MW,MH)}
   else{g.strokeStyle="#dde1e6";g.lineWidth=1;for(let x=0;x<MW;x+=100){g.beginPath();g.moveTo(x,0);g.lineTo(x,MH);g.stroke()}for(let y=0;y<MH;y+=100){g.beginPath();g.moveTo(0,y);g.lineTo(MW,y);g.stroke()}}
   // Tracé du câble
   if(all.length>1){const path=()=>{g.beginPath();all.forEach((a,i)=>{const [x,y]=P(a);i?g.lineTo(x,y):g.moveTo(x,y)})};
@@ -695,7 +713,7 @@ async function makePlan(c,R,onStep){
   g.save();g.translate(40,MH-40);rrect(g,-14,-62,sw+28+150,80,12);g.fillStyle="rgba(255,255,255,.92)";g.fill();
   g.fillStyle=COL.ink;g.fillRect(0,-14,sw,12);g.fillStyle="#fff";g.fillRect(sw/2,-12,sw/2-2,8);
   g.font=`600 24px ${FB}`;g.textAlign="left";g.fillStyle=COL.ink;g.fillText("0",-2,-30);g.textAlign="center";g.fillText(fmtDist(nice),sw,-30);g.restore();
-  g.font=`500 18px ${FB}`;g.textAlign="right";g.fillStyle="rgba(31,34,39,.75)";g.fillText(okT?"Fond © contributeurs OpenStreetMap":"Fond de carte indisponible (hors ligne)",MW-16,MH-14);
+  g.font=`500 18px ${FB}`;g.textAlign="right";g.fillStyle="rgba(31,34,39,.75)";g.fillText(okT?[src.has("ign")?"Fond © IGN – Plan IGN":"",src.has("osm")?"© contributeurs OpenStreetMap":"",okC?"Cadastre © IGN – Parcellaire Express":""].filter(Boolean).join(" · "):"Fond de carte indisponible (hors ligne)",MW-16,MH-14);
   // Cartouche
   const y0=MH;g.fillStyle=COL.ink;g.fillRect(0,y0,W,CH);
   g.fillStyle="#fff";g.textAlign="left";g.textBaseline="alphabetic";

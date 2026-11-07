@@ -1,9 +1,9 @@
 /* Sogeo : fonctionnement hors ligne.
    - L'appli (index.html…) est servie depuis le cache, puis mise à jour en arrière-plan quand il y a du réseau.
    - La bibliothèque de carte est gardée en cache.
-   - Les fonds de carte déjà consultés sont gardés (jusqu'à 3000 tuiles) pour être revus sans réseau.
+   - Les fonds de carte déjà consultés (Plan IGN, cadastre, OpenStreetMap) sont gardés (jusqu'à 3000 tuiles) pour être revus sans réseau.
    Pour forcer une mise à jour chez tous les techs : changer VERSION. */
-const VERSION = "sogeo-v3";
+const VERSION = "sogeo-v4";
 const TILES = "sogeo-tuiles";
 const MAX_TILES = 3000;
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];
@@ -64,6 +64,6 @@ self.addEventListener("fetch", e => {
   const url = new URL(req.url);
   if (url.origin === location.origin) return e.respondWith(staleWhileRevalidate(req));
   if (url.hostname === "cdnjs.cloudflare.com") return e.respondWith(cacheFirst(req, VERSION));
-  if (url.hostname.endsWith("tile.openstreetmap.org")) return e.respondWith(cacheFirst(req, TILES));
+  if (url.hostname.endsWith("tile.openstreetmap.org") || (url.hostname === "data.geopf.fr" && url.pathname === "/wmts")) return e.respondWith(cacheFirst(req, TILES));
   // Adresses et itinéraires : toujours en direct (rattrapés par l'appli au retour du réseau)
 });
