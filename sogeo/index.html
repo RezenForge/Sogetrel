@@ -61,7 +61,8 @@ button{cursor:pointer}
 .bar.hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,#c8ccd2,#6b727c 60%,transparent)}
 .bar.hero .t{display:none}
 .brand{flex:1;min-width:0;display:flex;align-items:center;gap:14px;padding:0 10px}
-.brand .mark{--markbg:#1f2227;flex:none;width:clamp(58px,17vw,76px);aspect-ratio:1;max-width:100%;border-radius:22%;background:#f4f5f6;color:var(--markbg);
+.demo{font:700 12px/1 var(--body);letter-spacing:.08em;text-transform:uppercase;padding:4px 7px;border-radius:6px;background:var(--fg);color:var(--bg);vertical-align:middle}
+.brand .mark{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation;--markbg:#1f2227;flex:none;width:clamp(58px,17vw,76px);aspect-ratio:1;max-width:100%;border-radius:22%;background:#f4f5f6;color:var(--markbg);
   display:grid;place-items:center;box-shadow:0 6px 18px rgba(0,0,0,.35),inset 0 -3px 0 rgba(0,0,0,.08)}
 .brand .mark svg{width:64%;height:64%}
 .brand .bt{min-width:0;display:flex;flex-direction:column;gap:4px}
@@ -1077,6 +1078,52 @@ function renderProfil(first){
   if(first)setTimeout(()=>P.focus(),80);
 }
 
+/* ---------- Chantier de démonstration (Eysines) : appui long sur le logo Sogeo ---------- */
+const DEMO_NAME="EYS000123";
+async function demoPhoto(title,sub,hue){
+  const W=1280,H=960,cv=document.createElement("canvas");cv.width=W;cv.height=H;const g=cv.getContext("2d");
+  const gr=g.createLinearGradient(0,0,W,H);gr.addColorStop(0,`hsl(${hue} 22% 46%)`);gr.addColorStop(1,`hsl(${hue+25} 26% 24%)`);g.fillStyle=gr;g.fillRect(0,0,W,H);
+  g.strokeStyle="rgba(255,255,255,.08)";g.lineWidth=2;for(let i=-H;i<W;i+=60){g.beginPath();g.moveTo(i,0);g.lineTo(i+H,H);g.stroke()}
+  g.fillStyle="rgba(0,0,0,.35)";g.fillRect(0,H-210,W,210);
+  g.fillStyle="#fff";g.font='700 96px "Barlow Condensed","Arial Narrow",sans-serif';g.fillText(title,60,H-110);
+  g.font='600 40px Barlow,system-ui,sans-serif';g.fillStyle="rgba(255,255,255,.85)";g.fillText(sub,60,H-50);
+  g.font='700 34px Barlow,system-ui,sans-serif';g.fillStyle="rgba(255,255,255,.9)";g.fillText("PHOTO DE DÉMONSTRATION · SOGEO",60,80);
+  const blob=await new Promise(r=>cv.toBlob(r,"image/jpeg",.8)),thumb=await drawTo(cv,480,.7);
+  const id=uid();await phSet(id,{blob,thumb,type:"image/jpeg",ts:Date.now()});return id}
+async function loadDemo(){
+  const old=Object.values(S.chantiers).find(c=>c.demo);
+  if(old){const ov=sheet(`<h2>Chantier de démo</h2><p>Le chantier ${DEMO_NAME} (Eysines) est déjà chargé.</p>
+      <div class="duo"><button class="ghost btn-danger" data-del style="color:#fff;border:0">Supprimer la démo</button><button class="primary" data-open><span>Ouvrir</span></button></div>`);
+    ov.querySelector("[data-open]").onclick=()=>{ov.remove();S.current=old.id;save();renderHome()};
+    ov.querySelector("[data-del]").onclick=async()=>{ov.remove();for(const p of old.points)for(const l of Object.values(p.photos))for(const id of l)await phDel(id);
+      delete S.chantiers[old.id];if(S.current===old.id)S.current=null;save();renderAccueil();toast("Démo supprimée")};return}
+  if(!await ask("Charger la démo ?",`Un chantier d'exemple ${DEMO_NAME} à Eysines sera créé avec des photos de démonstration. Il se supprime ensuite par le même appui long.`,"Charger"))return;
+  const w=sheet(`<h2>Préparation de la démo…</h2><div class="progress"><i id="dbar"></i></div>`);
+  try{await fontsReady();
+    const by=techLabel(S.tech),t0=Date.now()-3*3600e3;
+    const c={id:uid(),name:DEMO_NAME,city:"Eysines",created:t0,points:[],demo:true};
+    // ordre de passage, positions dans Eysines (adresses retrouvées automatiquement avec du réseau)
+    const plan=[
+      {type:"chambre",name:"L2T-EYS-01",ll:[44.88375,-0.65040],full:true,na:["masque_d"],extra:0},
+      {type:"chambre",name:"L1T-EYS-02",ll:[44.88515,-0.65215],skip:["implantation"],note:"Tampon cassé\nChambre encombrée"},
+      {type:"poteau",name:"PT-EYS-03",ll:[44.88610,-0.65410],full:true},
+      {type:"poteau",name:"PT-EYS-04",ll:[44.88700,-0.65600],full:true,extra:1,note:"Élagage nécessaire"},
+      {type:"chambre",name:"L1T-EYS-05",ll:[44.88790,-0.65780],full:true},
+      {type:"chambre",name:"L2T-EYS-06",ll:[44.88660,-0.65980],only:["masque_a","masque_b"]}];
+    const total=plan.reduce((n,d)=>n+SLOTS[d.type].filter(s=>!s.extra&&(d.only?d.only.includes(s.k):!(d.na||[]).includes(s.k)&&!(d.skip||[]).includes(s.k))).length+(d.extra||0),0);let done=0;
+    for(const [i,d] of plan.entries()){
+      const p={id:uid(),type:d.type,name:d.name,autoName:d.name,address:"",gps:{lat:d.ll[0],lon:d.ll[1],acc:4},photos:{},by,at:t0+i*25*60e3,note:d.note||""};
+      if(d.na){p.na={};d.na.forEach(k=>p.na[k]=true)}
+      for(const s of SLOTS[d.type]){
+        if(s.extra)continue;if(d.only&&!d.only.includes(s.k))continue;if((d.na||[]).includes(s.k)||(d.skip||[]).includes(s.k))continue;
+        if(!d.only&&!s.req&&!d.full)continue;
+        p.photos[s.k]=[await demoPhoto(s.label,`${d.name} · Eysines`,d.type==="chambre"?200:28)];
+        done++;const b=w.querySelector("#dbar");if(b)b.style.width=Math.round(done/total*100)+"%"}
+      for(let e=0;e<(d.extra||0);e++){(p.photos.autres=p.photos.autres||[]).push(await demoPhoto("Autre photo",`${d.name} · détail`,140));done++}
+      c.points.push(p)}
+    S.chantiers[c.id]=c;S.current=c.id;await save();w.remove();renderHome();toast("Chantier de démo chargé");catchUp()
+  }catch(e){w.remove();toast("La démo n'a pas pu être créée : "+e.message)}}
+
 function renderAccueil(){
   if(!S.tech)return renderProfil(true);
   route={v:"accueil"};view.className="";setBar("","Sogeo",false,false);
@@ -1086,7 +1133,7 @@ function renderAccueil(){
     <div class="section-t">Chantiers</div><div class="list">${list.map(c=>{
       const inc=c.points.filter(p=>pointStatus(p).miss).length;
       return `<button class="pt" data-go="${c.id}"><span class="ic">${I.folder}</span><span class="tx">
-        <span class="n">${esc(c.name)}</span><span class="a">${c.city?esc(c.city)+" · ":""}${c.points.length} relevé${c.points.length>1?"s":""} · ${new Date(c.created).toLocaleDateString("fr-FR")}</span></span>
+        <span class="n">${esc(c.name)}${c.demo?` <span class="demo">Démo</span>`:""}</span><span class="a">${c.city?esc(c.city)+" · ":""}${c.points.length} relevé${c.points.length>1?"s":""} · ${new Date(c.created).toLocaleDateString("fr-FR")}</span></span>
         ${!c.points.length?"":inc?`<span class="chip warn">${inc} à finir</span>`:`<span class="chip ok">Complet</span>`}</button>`}).join("")}</div>`
     :`<div class="empty"><div>Crée un chantier pour photographier les chambres et les poteaux, puis exporter le ZIP du DOE.</div></div>`;
   view.insertAdjacentHTML("beforeend",`<button class="techrow" id="techBtn"><span class="av">${esc((S.tech.prenom[0]||"")+(S.tech.nom[0]||""))}</span>
@@ -1129,6 +1176,11 @@ async function catchUp(){if(catching||!navigator.onLine)return;catching=true;let
   }finally{catching=false}}
 addEventListener("online",()=>{updateOnline();toast("Réseau retrouvé");catchUp()});
 addEventListener("offline",()=>{updateOnline();toast("Hors ligne : tout continue de fonctionner")});
+
+(()=>{const mk=document.querySelector(".brand .mark");let t=null;
+  mk.addEventListener("pointerdown",()=>{t=setTimeout(()=>{t=null;vibrate();loadDemo()},900)});
+  ["pointerup","pointerleave","pointercancel"].forEach(e=>mk.addEventListener(e,()=>{if(t)clearTimeout(t)}));
+  mk.addEventListener("contextmenu",e=>e.preventDefault())})();
 
 /* ---------- Démarrage ---------- */
 (async()=>{
