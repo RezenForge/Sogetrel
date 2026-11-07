@@ -590,7 +590,7 @@ async function renderMap(){
   if(route.v!=="map")return;
   $("#mapMsg").hidden=true;
   const m=mapObj=L.map("map",{zoomControl:false,attributionControl:true}).setView([44.84,-0.58],11);
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:20,maxNativeZoom:19,attribution:"© OpenStreetMap"}).addTo(m);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:20,maxNativeZoom:19,crossOrigin:true,attribution:"© OpenStreetMap"}).addTo(m);
   L.control.zoom({position:"bottomright"}).addTo(m);
   const pts=[];
   for(const p of withGps){const st=pointStatus(p),col=st.miss?"#c0782b":"#2f7a52";
@@ -611,17 +611,149 @@ async function renderMap(){
 }
 
 /* Cheminement : relie les relevés dans l'ordre de création, en suivant les routes (OSRM) */
-async function routeOSRM(ll){ // ll : [[lat,lon],...] -> {coords,dist}
-  const out=[];let dist=0;const CH=40;
+async function routeOSRM(ll){ // ll : [[lat,lon],...] -> {coords,dist,legs}
+  const out=[],legs=[];let dist=0;const CH=40;
   for(let i=0;i<ll.length-1;i+=CH-1){const part=ll.slice(i,i+CH);if(part.length<2)break;
     const q=part.map(([la,lo])=>`${lo.toFixed(6)},${la.toFixed(6)}`).join(";");
     const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${q}?overview=full&geometries=geojson&continue_straight=false`);
     if(!r.ok)throw new Error("route");const j=await r.json();if(j.code!=="Ok"||!j.routes||!j.routes[0])throw new Error("route");
-    const g=j.routes[0].geometry.coordinates.map(([lo,la])=>[la,lo]);if(out.length)g.shift();out.push(...g);dist+=j.routes[0].distance}
-  return{coords:out,dist}}
+    const g=j.routes[0].geometry.coordinates.map(([lo,la])=>[la,lo]);if(out.length)g.shift();out.push(...g);dist+=j.routes[0].distance;
+    (j.routes[0].legs||[]).forEach(l=>legs.push(l.distance))}
+  return{coords:out,dist,legs:legs.length===ll.length-1?legs:ll.slice(1).map((x,i)=>hav(ll[i],x))}}
 const fmtDist=m=>m<1000?`${Math.round(m)} m`:`${(m/1000).toFixed(m<10000?2:1).replace(".",",")} km`;
 function straightDist(ll){let d=0;for(let i=1;i<ll.length;i++){const [a1,o1]=ll[i-1],[a2,o2]=ll[i],R=6371000,r=Math.PI/180;
   const x=(o2-o1)*r*Math.cos((a1+a2)/2*r),y=(a2-a1)*r;d+=Math.hypot(x,y)*R}return d}
+/* ---------- Plan et synoptique du DOE (images ajoutées au ZIP) ---------- */
+function hav(a,b){const R=6371000,r=Math.PI/180,x=(b[1]-a[1])*r*Math.cos((a[0]+b[0])/2*r),y=(b[0]-a[0])*r;return Math.hypot(x,y)*R}
+// Cheminement pour l'export : routes si possible (mémorisé), sinon vol d'oiseau
+async function routeForExport(c){
+  const pts=c.points.filter(p=>p.gps),ll=pts.map(p=>[p.gps.lat,p.gps.lon]);
+  if(ll.length<2)return{pts,coords:ll,legs:[],dist:0,road:false};
+  const key=ll.map(x=>x[0].toFixed(6)+","+x[1].toFixed(6)).join("|");
+  if(c.route&&c.route.key===key&&c.route.legs)return{pts,coords:c.route.coords,legs:c.route.legs,dist:c.route.dist,road:true};
+  if(navigator.onLine){try{const r=await routeOSRM(ll);
+    c.route={key,coords:r.coords.map(([a,b])=>[+a.toFixed(6),+b.toFixed(6)]),dist:r.dist,legs:r.legs};save();
+    return{pts,coords:c.route.coords,legs:r.legs,dist:r.dist,road:true}}catch(e){}}
+  const legs=ll.slice(1).map((x,i)=>hav(ll[i],x));
+  return{pts,coords:ll,legs,dist:legs.reduce((a,b)=>a+b,0),road:false}}
+
+const mx=(lon,z)=>(lon+180)/360*256*2**z;
+const my=(lat,z)=>{const s=Math.sin(lat*Math.PI/180);return(.5-Math.log((1+s)/(1-s))/(4*Math.PI))*256*2**z};
+function loadTile(z,x,y){const n=2**z;if(y<0||y>=n)return Promise.resolve(null);x=((x%n)+n)%n;
+  const sub="abc"[Math.abs(x+y)%3];
+  return Promise.race([fetch(`https://${sub}.tile.openstreetmap.org/${z}/${x}/${y}.png`,{mode:"cors"}).then(r=>r.ok?r.blob():null).then(b=>b?createImageBitmap(b):null).catch(()=>null),
+    new Promise(r=>setTimeout(()=>r(null),8000))])}
+function rrect(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
+function fitText(g,t,max){if(g.measureText(t).width<=max)return t;while(t.length>1&&g.measureText(t+"…").width>max)t=t.slice(0,-1);return t+"…"}
+const COL={ok:"#2f7a52",warn:"#c0782b",ink:"#1f2227",mute:"#5b6370",line:"#d3d8de"};
+const canvasBlob=cv=>new Promise(r=>cv.toBlob(r,"image/png"));
+async function fontsReady(){try{await Promise.all(['700 30px "Barlow Condensed"','600 20px Barlow','500 20px Barlow'].map(f=>document.fonts.load(f)))}catch(e){}}
+
+async function makePlan(c,R,onStep){
+  await fontsReady();
+  const W=2400,H=1697,CH=250,MW=W,MH=H-CH,pad=140,FD='"Barlow Condensed","Arial Narrow",sans-serif',FB='Barlow,system-ui,sans-serif';
+  const pts=R.pts,all=R.coords.length?R.coords:pts.map(p=>[p.gps.lat,p.gps.lon]);
+  let z=19;const lat=all.map(a=>a[0]),lon=all.map(a=>a[1]);
+  const mnLa=Math.min(...lat),mxLa=Math.max(...lat),mnLo=Math.min(...lon),mxLo=Math.max(...lon);
+  for(;z>3;z--){if(mx(mxLo,z)-mx(mnLo,z)<=MW-2*pad&&my(mnLa,z)-my(mxLa,z)<=MH-2*pad)break}
+  z=Math.min(z,18);
+  const cx=(mx(mnLo,z)+mx(mxLo,z))/2,cy=(my(mnLa,z)+my(mxLa,z))/2,ox=cx-MW/2,oy=cy-MH/2;
+  const P=([la,lo])=>[mx(lo,z)-ox,my(la,z)-oy];
+  const cv=document.createElement("canvas");cv.width=W;cv.height=H;const g=cv.getContext("2d");
+  g.fillStyle="#eef0f2";g.fillRect(0,0,W,H);
+  // Fond de carte
+  if(onStep)onStep("Fond de carte…");
+  const jobs=[];for(let tx=Math.floor(ox/256);tx<=Math.floor((ox+MW)/256);tx++)for(let ty=Math.floor(oy/256);ty<=Math.floor((oy+MH)/256);ty++)jobs.push([tx,ty]);
+  let okT=0;const q=jobs.slice();
+  await Promise.all(Array.from({length:6},async()=>{while(q.length){const [tx,ty]=q.shift();const im=await loadTile(z,tx,ty);if(im){okT++;g.drawImage(im,tx*256-ox,ty*256-oy);im.close&&im.close()}}}));
+  if(okT){g.fillStyle="rgba(255,255,255,.28)";g.fillRect(0,0,MW,MH)}
+  else{g.strokeStyle="#dde1e6";g.lineWidth=1;for(let x=0;x<MW;x+=100){g.beginPath();g.moveTo(x,0);g.lineTo(x,MH);g.stroke()}for(let y=0;y<MH;y+=100){g.beginPath();g.moveTo(0,y);g.lineTo(MW,y);g.stroke()}}
+  // Tracé du câble
+  if(all.length>1){const path=()=>{g.beginPath();all.forEach((a,i)=>{const [x,y]=P(a);i?g.lineTo(x,y):g.moveTo(x,y)})};
+    g.lineJoin="round";g.lineCap="round";
+    path();g.strokeStyle="#fff";g.lineWidth=16;g.setLineDash(R.road?[]:[]);g.stroke();
+    path();g.strokeStyle=COL.ink;g.lineWidth=8;g.setLineDash(R.road?[]:[26,18]);g.stroke();g.setLineDash([])}
+  // Relevés : pastilles numérotées + étiquettes sans chevauchement
+  const placed=[];const hit=(r)=>placed.some(o=>r.x<o.x+o.w&&r.x+r.w>o.x&&r.y<o.y+o.h&&r.y+r.h>o.y);
+  pts.forEach((p,i)=>{const [x,y]=P([p.gps.lat,p.gps.lon]);placed.push({x:x-24,y:y-24,w:48,h:48})});
+  pts.forEach((p,i)=>{const [x,y]=P([p.gps.lat,p.gps.lon]);const st=pointStatus(p);
+    if(p.type==="chambre")rrect(g,x-24,y-24,48,48,8);else{g.beginPath();g.arc(x,y,25,0,7)}
+    g.fillStyle=st.miss?COL.warn:COL.ok;g.fill();g.lineWidth=5;g.strokeStyle="#fff";g.stroke();
+    g.fillStyle="#fff";g.font=`700 24px ${FB}`;g.textAlign="center";g.textBaseline="middle";g.fillText(i+1,x,y+1);
+    const name=ptName(p);g.font=`700 34px ${FD}`;const tw=g.measureText(name).width+28,th=48;
+    const cand=[[x+32,y-th-8],[x-32-tw,y-th-8],[x+32,y+8],[x-32-tw,y+8],[x-tw/2,y-th-36],[x-tw/2,y+36]];
+    let pos=cand.find(([lx,ly])=>lx>4&&ly>4&&lx+tw<MW-4&&ly+th<MH-4&&!hit({x:lx,y:ly,w:tw,h:th}))||cand[0];
+    placed.push({x:pos[0],y:pos[1],w:tw,h:th});
+    rrect(g,pos[0],pos[1],tw,th,10);g.fillStyle="rgba(255,255,255,.95)";g.fill();g.lineWidth=2;g.strokeStyle=st.miss?COL.warn:COL.ink;g.stroke();
+    g.fillStyle=COL.ink;g.textAlign="left";g.fillText(name,pos[0]+14,pos[1]+th/2+1)});
+  // Nord + échelle
+  g.save();g.translate(MW-90,90);rrect(g,-50,-62,100,124,14);g.fillStyle="rgba(255,255,255,.92)";g.fill();
+  g.beginPath();g.moveTo(0,-38);g.lineTo(20,22);g.lineTo(0,10);g.lineTo(-20,22);g.closePath();g.fillStyle=COL.ink;g.fill();
+  g.font=`700 30px ${FD}`;g.textAlign="center";g.fillText("N",0,48);g.restore();
+  const mpp=156543.03392*Math.cos((mnLa+mxLa)/2*Math.PI/180)/2**z;
+  const nice=[5,10,20,50,100,200,500,1000,2000,5000,10000].find(v=>v/mpp>=180)||10000,sw=nice/mpp;
+  g.save();g.translate(40,MH-40);rrect(g,-14,-62,sw+28+150,80,12);g.fillStyle="rgba(255,255,255,.92)";g.fill();
+  g.fillStyle=COL.ink;g.fillRect(0,-14,sw,12);g.fillStyle="#fff";g.fillRect(sw/2,-12,sw/2-2,8);
+  g.font=`600 24px ${FB}`;g.textAlign="left";g.fillStyle=COL.ink;g.fillText("0",-2,-30);g.textAlign="center";g.fillText(fmtDist(nice),sw,-30);g.restore();
+  g.font=`500 18px ${FB}`;g.textAlign="right";g.fillStyle="rgba(31,34,39,.75)";g.fillText(okT?"Fond © contributeurs OpenStreetMap":"Fond de carte indisponible (hors ligne)",MW-16,MH-14);
+  // Cartouche
+  const y0=MH;g.fillStyle=COL.ink;g.fillRect(0,y0,W,CH);
+  g.fillStyle="#fff";g.textAlign="left";g.textBaseline="alphabetic";
+  g.font=`700 64px ${FD}`;g.fillText(`Plan de cheminement · DOE ${c.name}`,50,y0+88);
+  g.font=`600 26px ${FB}`;g.fillStyle="#c8ccd2";
+  const nCh=c.points.filter(p=>p.type==="chambre").length,nPo=c.points.length-nCh,noG=c.points.length-pts.length;
+  g.fillText(fitText(g,`${c.city||"Ville non renseignée"} · ${nCh} chambre${nCh>1?"s":""}, ${nPo} poteau${nPo>1?"x":""}${noG?` · ${noG} sans position GPS (absent${noG>1?"s":""} du plan)`:""}`,1500),50,y0+138);
+  g.fillText(fitText(g,`Relevé par ${techLabel(S.tech)} (${(S.tech||{}).email||"-"}) · Export du ${new Date().toLocaleDateString("fr-FR")}`,1500),50,y0+182);
+  g.textAlign="right";g.fillStyle="#fff";g.font=`700 72px ${FD}`;g.fillText(fmtDist(R.dist),W-50,y0+100);
+  g.font=`600 24px ${FB}`;g.fillStyle="#c8ccd2";g.fillText(R.road?"Longueur estimée par les routes":"Longueur à vol d'oiseau",W-50,y0+140);
+  // légende
+  const lg=[["sq","#9aa2ad","Chambre"],["ci","#9aa2ad","Poteau"],["ci",COL.ok,"Complet"],["ci",COL.warn,"À compléter"]];let lx=W-50;g.font=`600 24px ${FB}`;g.textBaseline="middle";
+  for(const [sh,col,t] of lg.reverse()){const w=g.measureText(t).width;g.fillStyle="#e4e6e9";g.fillText(t,lx,y0+190);lx-=w+30;
+    if(sh==="sq")rrect(g,lx-13,y0+177,26,26,5);else{g.beginPath();g.arc(lx,y0+190,13,0,7)}g.fillStyle=col;g.fill();g.lineWidth=3;g.strokeStyle="#fff";g.stroke();lx-=44}
+  g.textBaseline="alphabetic";
+  g.textAlign="left";g.fillStyle="#8b929c";g.font=`500 18px ${FB}`;g.fillText("Généré par Sogeo · distances indicatives, ne remplacent pas un métré",50,y0+226);
+  return canvasBlob(cv)}
+
+async function makeSynoptique(c,R){
+  await fontsReady();
+  const FD='"Barlow Condensed","Arial Narrow",sans-serif',FB='Barlow,system-ui,sans-serif';
+  const pts=c.points,PER=4,BW=380,BH=190,GX=150,GY=130,M=90,HEAD=210;
+  const rows=Math.ceil(pts.length/PER)||1,W=M*2+PER*BW+(PER-1)*GX,H=HEAD+rows*BH+(rows-1)*GY+M+40;
+  const cv=document.createElement("canvas");cv.width=W;cv.height=H;const g=cv.getContext("2d");
+  g.fillStyle="#fff";g.fillRect(0,0,W,H);
+  g.fillStyle=COL.ink;g.font=`700 64px ${FD}`;g.textBaseline="alphabetic";g.fillText(`Synoptique · DOE ${c.name}`,M,104);
+  g.font=`600 26px ${FB}`;g.fillStyle=COL.mute;
+  g.fillText(fitText(g,`${c.city||"Ville non renseignée"} · ${pts.length} relevé${pts.length>1?"s":""} dans l'ordre de passage · ${R.road?"longueur par les routes":"longueur à vol d'oiseau"} ≈ ${fmtDist(R.dist)} · ${techLabel(S.tech)}`,W-2*M),M,150);
+  g.fillStyle=COL.line;g.fillRect(M,176,W-2*M,3);
+  // distance entre deux relevés consécutifs (uniquement si les deux ont une position)
+  const gpsIdx=new Map(R.pts.map((p,i)=>[p.id,i]));
+  const legBetween=(a,b)=>{const ia=gpsIdx.get(a.id),ib=gpsIdx.get(b.id);return ia!=null&&ib===ia+1?R.legs[ia]:null};
+  const pos=pts.map((p,i)=>{const r=Math.floor(i/PER),k=i%PER,col=r%2?PER-1-k:k;return{x:M+col*(BW+GX),y:HEAD+r*(BH+GY)}});
+  // liaisons
+  g.lineCap="round";
+  for(let i=1;i<pts.length;i++){const a=pos[i-1],b=pos[i],d=legBetween(pts[i-1],pts[i]);
+    g.strokeStyle=COL.ink;g.lineWidth=8;g.setLineDash(d==null?[18,14]:(R.road?[]:[18,14]));g.beginPath();
+    let lx,ly;
+    if(a.y===b.y){const y=a.y+BH/2,x1=Math.min(a.x,b.x)+BW,x2=Math.max(a.x,b.x);g.moveTo(x1,y);g.lineTo(x2,y);lx=(x1+x2)/2;ly=y}
+    else{const x=a.x+BW/2;g.moveTo(x,a.y+BH);g.lineTo(x,b.y);lx=x;ly=(a.y+BH+b.y)/2}
+    g.stroke();g.setLineDash([]);
+    const t=d==null?"? m":fmtDist(d);g.font=`700 30px ${FD}`;const tw=g.measureText(t).width+26;
+    rrect(g,lx-tw/2,ly-22,tw,44,22);g.fillStyle="#fff";g.fill();g.lineWidth=3;g.strokeStyle=COL.ink;g.stroke();
+    g.fillStyle=COL.ink;g.textAlign="center";g.textBaseline="middle";g.fillText(t,lx,ly+1);g.textAlign="left";g.textBaseline="alphabetic"}
+  // blocs
+  pts.forEach((p,i)=>{const {x,y}=pos[i],st=pointStatus(p),col=st.miss?COL.warn:COL.ok;
+    rrect(g,x,y,BW,BH,18);g.fillStyle="#f6f7f8";g.fill();g.lineWidth=4;g.strokeStyle=col;g.stroke();
+    if(p.type==="chambre")rrect(g,x+20,y+22,48,48,8);else{g.beginPath();g.arc(x+44,y+46,25,0,7)}g.fillStyle=col;g.fill();
+    g.fillStyle="#fff";g.font=`700 22px ${FB}`;g.textAlign="center";g.textBaseline="middle";g.fillText(i+1,x+44,y+47);
+    g.textAlign="left";g.textBaseline="alphabetic";g.fillStyle=COL.mute;g.font=`600 20px ${FB}`;g.fillText(TYPE_LABEL[p.type].toUpperCase(),x+82,y+38);
+    g.fillStyle=COL.ink;g.font=`700 44px ${FD}`;g.fillText(fitText(g,ptName(p),BW-100),x+82,y+80);
+    g.font=`500 20px ${FB}`;g.fillStyle=COL.mute;g.fillText(fitText(g,p.address||"Adresse non renseignée",BW-40),x+22,y+122);
+    g.font=`700 20px ${FB}`;g.fillStyle=col;g.fillText(st.miss?`${st.req-st.miss}/${st.req} photos obligatoires`:`Complet · ${st.n} photo${st.n>1?"s":""}`,x+22,y+156);
+    if(p.note){g.fillStyle=COL.warn;g.font=`600 18px ${FB}`;g.fillText(fitText(g,"Remarque : "+p.note.split(/\n/)[0],BW-40),x+22,y+180)}});
+  if(!pts.length){g.fillStyle=COL.mute;g.font=`500 28px ${FB}`;g.fillText("Aucun relevé",M,HEAD+60)}
+  g.fillStyle="#8b929c";g.font=`500 18px ${FB}`;g.fillText("Généré par Sogeo · distances indicatives, ne remplacent pas un métré",M,H-30);
+  return canvasBlob(cv)}
+
 let pathLine=null;
 async function drawPath(c,m){
   const ll=c.points.filter(p=>p.gps).map(p=>[p.gps.lat,p.gps.lon]);
@@ -633,7 +765,7 @@ async function drawPath(c,m){
   if(c.route&&c.route.key===key){show(c.route.coords,true);setInfo(`Cheminement ≈ ${fmtDist(c.route.dist)}`);return}
   show(ll,false);setInfo("Calcul du cheminement…");
   try{const r=await routeOSRM(ll);if(route.v!=="map"||mapObj!==m)return;
-    c.route={key,coords:r.coords.map(([a,b])=>[+a.toFixed(6),+b.toFixed(6)]),dist:r.dist};save();show(c.route.coords,true);setInfo(`Cheminement ≈ ${fmtDist(r.dist)}`)}
+    c.route={key,coords:r.coords.map(([a,b])=>[+a.toFixed(6),+b.toFixed(6)]),dist:r.dist,legs:r.legs};save();show(c.route.coords,true);setInfo(`Cheminement ≈ ${fmtDist(r.dist)}`)}
   catch(e){if(route.v==="map")setInfo(`À vol d'oiseau ≈ ${fmtDist(straightDist(ll))}`,"warn")}}
 
 /* Position automatique à la première photo d'un relevé (sans bloquer) */
@@ -852,7 +984,13 @@ async function exportZip(){
   const ov=sheet(`<h2>Création du ZIP</h2><p id="zp">Préparation…</p><div class="progress"><i id="zbar"></i></div>`);
   try{
     const zip=new JSZip();const folder=zip.folder(root);
-    const used=new Set();const T=S.tech||{};const csv=[["Technicien","Mail","Date","Ville","Type","Nom","Adresse","Latitude","Longitude","Photos","Manquantes","Masques absents","Remarque"]];
+    $("#zp").textContent="Calcul du cheminement…";const R=await routeForExport(c);
+    try{$("#zp").textContent="Dessin du plan…";
+      if(R.pts.length)folder.file(`PLAN_${safe(c.name)}.png`,await makePlan(c,R,t=>{$("#zp").textContent=t}));
+      $("#zp").textContent="Dessin du synoptique…";folder.file(`SYNOPTIQUE_${safe(c.name)}.png`,await makeSynoptique(c,R));
+    }catch(e){console.warn("plan",e)}
+    const legOf=new Map();R.pts.forEach((p,i)=>{if(i)legOf.set(p.id,Math.round(R.legs[i-1]))});
+    const used=new Set();const T=S.tech||{};const csv=[["Technicien","Mail","Date","Ville","Type","Nom","Adresse","Latitude","Longitude","Photos","Manquantes","Masques absents","Remarque","Ordre","Distance depuis le précédent (m)"]];
     const total=c.points.reduce((a,p)=>a+pointStatus(p).n,0);let done=0;
     for(const p of c.points){
       let name=safe(p.name||p.autoName),base=name,i=2;while(used.has(name.toLowerCase()))name=`${base}_${i++}`;used.add(name.toLowerCase());
@@ -868,12 +1006,14 @@ async function exportZip(){
         ...(p.na&&Object.keys(p.na).some(k=>p.na[k])?[`Masques absents : ${SLOTS[p.type].filter(s=>isNA(p,s.k)).map(s=>s.label).join(", ")}`]:[]),
         `Remarque : ${p.note?p.note.replace(/\r?\n/g," / "):"-"}`];
       f.file("infos.txt",infos.join("\r\n"));
-      csv.push([p.by||techLabel(T),T.email||"",new Date(p.at||c.created).toLocaleDateString("fr-FR"),c.city||"",TYPE_LABEL[p.type],p.name||p.autoName,p.address||"",p.gps?p.gps.lat.toFixed(6):"",p.gps?p.gps.lon.toFixed(6):"",st.n,st.miss,SLOTS[p.type].filter(s=>isNA(p,s.k)).map(s=>s.label).join(", "),(p.note||"").replace(/\r?\n/g," / ")]);
+      csv.push([p.by||techLabel(T),T.email||"",new Date(p.at||c.created).toLocaleDateString("fr-FR"),c.city||"",TYPE_LABEL[p.type],p.name||p.autoName,p.address||"",p.gps?p.gps.lat.toFixed(6):"",p.gps?p.gps.lon.toFixed(6):"",st.n,st.miss,SLOTS[p.type].filter(s=>isNA(p,s.k)).map(s=>s.label).join(", "),(p.note||"").replace(/\r?\n/g," / "),c.points.indexOf(p)+1,legOf.has(p.id)?legOf.get(p.id):""]);
     }
     const nC=c.points.filter(p=>!pointStatus(p).miss).length;
     folder.file("LISEZ-MOI.txt",[`DOE ${c.name}`,`Ville : ${c.city||"-"}`,``,`Technicien : ${techLabel(T)}`,`Mail : ${T.email||"-"}`,
       `Export : ${new Date().toLocaleString("fr-FR")}`,``,`Relevés : ${c.points.length} (${c.points.filter(p=>p.type==="chambre").length} chambres, ${c.points.filter(p=>p.type==="poteau").length} poteaux)`,
-      `Complets : ${nC} / ${c.points.length}`,`Photos : ${total}`,``,`Généré par Sogeo`].join("\r\n"));
+      `Complets : ${nC} / ${c.points.length}`,`Photos : ${total}`,
+      `Cheminement : ${R.pts.length>1?`${fmtDist(R.dist)} (${R.road?"par les routes":"à vol d'oiseau"}, indicatif)`:"-"}`,``,
+      `Plan : PLAN_${safe(c.name)}.png · Synoptique : SYNOPTIQUE_${safe(c.name)}.png`,``,`Généré par Sogeo`].join("\r\n"));
     folder.file("recap.csv","﻿"+csv.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\r\n"));
     const blob=await zip.generateAsync({type:"blob",compression:"STORE"},m=>{$("#zbar").style.width=m.percent.toFixed(0)+"%";$("#zp").textContent=`Assemblage ${m.percent.toFixed(0)} %`});
     ov.remove();offerZip(blob,root+".zip");
