@@ -287,6 +287,13 @@ textarea.inp{font-family:var(--body);resize:vertical;min-height:100px;font-size:
 .offline{flex:none;display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 10px;border-radius:99px;background:#3a3f47;color:#e4e6e9;font:600 13px var(--body);margin-right:4px}
 .offline svg{width:16px;height:16px}
 .bar.hero .offline{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);right:max(10px,env(safe-area-inset-right,0px))}
+.lead{margin:0;color:var(--muted);font-size:16px;max-width:60ch}
+.techrow{margin-top:auto;flex:none;display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;border:1px dashed var(--line);border-radius:14px;padding:10px 12px}
+.techrow .av{flex:none;width:40px;height:40px;border-radius:50%;background:var(--fg);color:var(--bg);display:grid;place-items:center;font:700 17px var(--display);letter-spacing:.04em}
+.techrow .tx{flex:1;min-width:0;display:flex;flex-direction:column}
+.techrow b{font:600 16px var(--body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.techrow small{color:var(--muted);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.techrow .ed{flex:none;font:600 14px var(--body);color:var(--muted)}
 .toast{pointer-events:none;position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 70px);transform:translateX(-50%);z-index:70;
   background:var(--fg);color:var(--bg);padding:12px 18px;border-radius:12px;font-weight:600;max-width:90vw;text-align:center;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -557,7 +564,7 @@ const dupOf=(c,p,name)=>name?c.points.find(x=>x!==p&&ptName(x).toUpperCase()===n
 function addPoint(type){
   const c=cur();const pre=type==="chambre"?"CH":"PT";let n=c.points.filter(p=>p.type===type).length+1,auto;
   const mk=i=>`${pre}_${String(i).padStart(2,"0")}`;while(c.points.some(x=>ptName(x)===mk(n)))n++;auto=mk(n);
-  const p={id:uid(),type,name:"",autoName:auto,address:"",gps:null,photos:{}};
+  const p={id:uid(),type,name:"",autoName:auto,address:"",gps:null,photos:{},by:techLabel(S.tech),at:Date.now()};
   c.points.push(p);save();renderPoint(p.id,true);
 }
 
@@ -845,7 +852,7 @@ async function exportZip(){
   const ov=sheet(`<h2>Création du ZIP</h2><p id="zp">Préparation…</p><div class="progress"><i id="zbar"></i></div>`);
   try{
     const zip=new JSZip();const folder=zip.folder(root);
-    const used=new Set();const csv=[["Ville","Type","Nom","Adresse","Latitude","Longitude","Photos","Manquantes","Masques absents","Remarque"]];
+    const used=new Set();const T=S.tech||{};const csv=[["Technicien","Mail","Date","Ville","Type","Nom","Adresse","Latitude","Longitude","Photos","Manquantes","Masques absents","Remarque"]];
     const total=c.points.reduce((a,p)=>a+pointStatus(p).n,0);let done=0;
     for(const p of c.points){
       let name=safe(p.name||p.autoName),base=name,i=2;while(used.has(name.toLowerCase()))name=`${base}_${i++}`;used.add(name.toLowerCase());
@@ -855,14 +862,18 @@ async function exportZip(){
           const ext=(rec.type.split("/")[1]||"jpg").replace("jpeg","jpg");
           f.file(`${name}_${s.file}${list.length>1?"_"+(n+1):""}.${ext}`,rec.blob,{binary:true,date:new Date(rec.ts)});
           done++;$("#zp").textContent=`Ajout des photos ${done} / ${total}`;}}
-      const infos=[`Chantier : ${c.name}`,`Ville : ${c.city||"-"}`,`${TYPE_LABEL[p.type]} : ${p.name||p.autoName}`,`Adresse : ${p.address||"-"}`,
+      const infos=[`Chantier : ${c.name}`,`Ville : ${c.city||"-"}`,`Relevé par : ${p.by||techLabel(T)} (${T.email||"-"})`,`Date : ${new Date(p.at||c.created).toLocaleString("fr-FR")}`,`${TYPE_LABEL[p.type]} : ${p.name||p.autoName}`,`Adresse : ${p.address||"-"}`,
         `GPS : ${p.gps?p.gps.lat.toFixed(6)+", "+p.gps.lon.toFixed(6):"-"}`,`Photos : ${st.n}`,
         st.miss?`Manquantes : ${missing(p).map(s=>s.label).join(", ")}`:"Complet",
         ...(p.na&&Object.keys(p.na).some(k=>p.na[k])?[`Masques absents : ${SLOTS[p.type].filter(s=>isNA(p,s.k)).map(s=>s.label).join(", ")}`]:[]),
         `Remarque : ${p.note?p.note.replace(/\r?\n/g," / "):"-"}`];
       f.file("infos.txt",infos.join("\r\n"));
-      csv.push([c.city||"",TYPE_LABEL[p.type],p.name||p.autoName,p.address||"",p.gps?p.gps.lat.toFixed(6):"",p.gps?p.gps.lon.toFixed(6):"",st.n,st.miss,SLOTS[p.type].filter(s=>isNA(p,s.k)).map(s=>s.label).join(", "),(p.note||"").replace(/\r?\n/g," / ")]);
+      csv.push([p.by||techLabel(T),T.email||"",new Date(p.at||c.created).toLocaleDateString("fr-FR"),c.city||"",TYPE_LABEL[p.type],p.name||p.autoName,p.address||"",p.gps?p.gps.lat.toFixed(6):"",p.gps?p.gps.lon.toFixed(6):"",st.n,st.miss,SLOTS[p.type].filter(s=>isNA(p,s.k)).map(s=>s.label).join(", "),(p.note||"").replace(/\r?\n/g," / ")]);
     }
+    const nC=c.points.filter(p=>!pointStatus(p).miss).length;
+    folder.file("LISEZ-MOI.txt",[`DOE ${c.name}`,`Ville : ${c.city||"-"}`,``,`Technicien : ${techLabel(T)}`,`Mail : ${T.email||"-"}`,
+      `Export : ${new Date().toLocaleString("fr-FR")}`,``,`Relevés : ${c.points.length} (${c.points.filter(p=>p.type==="chambre").length} chambres, ${c.points.filter(p=>p.type==="poteau").length} poteaux)`,
+      `Complets : ${nC} / ${c.points.length}`,`Photos : ${total}`,``,`Généré par Sogeo`].join("\r\n"));
     folder.file("recap.csv","﻿"+csv.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\r\n"));
     const blob=await zip.generateAsync({type:"blob",compression:"STORE"},m=>{$("#zbar").style.width=m.percent.toFixed(0)+"%";$("#zp").textContent=`Assemblage ${m.percent.toFixed(0)} %`});
     ov.remove();offerZip(blob,root+".zip");
@@ -878,12 +889,38 @@ function offerZip(blob,fname){
     <button class="ghost" data-x>Fermer</button></div>`);
   ov.querySelector("[data-dl]").onclick=()=>{const u=URL.createObjectURL(blob);const a=document.createElement("a");a.href=u;a.download=fname;
     document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),60000);toast("ZIP enregistré dans Téléchargements")};
-  const sh=ov.querySelector("[data-sh]");if(sh)sh.onclick=()=>navigator.share({files:[file],title:fname}).catch(()=>{});
+  const sh=ov.querySelector("[data-sh]");if(sh)sh.onclick=()=>navigator.share({files:[file],title:fname,text:`${fname} — relevé par ${techLabel(S.tech)}`}).catch(()=>{});
   ov.querySelector("[data-x]").onclick=()=>ov.remove();
 }
 
 /* ---------- Accueil Sogeo : liste des chantiers ---------- */
+/* ---------- Profil du technicien (obligatoire à la première ouverture) ---------- */
+const EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const capName=v=>v.trim().replace(/\s+/g," ").toLowerCase().replace(/(^|[\s'-])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase());
+const techLabel=t=>t?`${t.prenom} ${t.nom}`:"";
+function renderProfil(first){
+  route={v:"profil"};view.className="fit";setBar(first?"Bienvenue":"Mon profil",first?"Qui es-tu ?":techLabel(S.tech),!first,false);
+  if(first){$("#homeBtn").hidden=true}
+  const t=S.tech||{};
+  view.innerHTML=`${first?`<p class="lead">Ton nom sera indiqué sur chaque DOE, pour que le bureau sache qui a fait le relevé.</p>`:""}
+    <div class="field"><label for="tPrenom">Prénom</label><input class="inp" id="tPrenom" value="${esc(t.prenom||"")}" autocomplete="given-name" autocapitalize="words" enterkeyhint="next"></div>
+    <div class="field"><label for="tNom">Nom</label><input class="inp" id="tNom" value="${esc(t.nom||"")}" autocomplete="family-name" autocapitalize="words" enterkeyhint="next"></div>
+    <div class="field"><label for="tMail">Adresse mail</label><input class="inp" id="tMail" type="email" inputmode="email" value="${esc(t.email||"")}" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="prenom.nom@…" enterkeyhint="done">
+      <div class="hint" id="tHint"></div></div>`;
+  setDock(`<button class="primary" id="tOk" disabled>${I.check}<span>${first?"C'est parti":"Enregistrer"}</span></button>`);
+  const P=$("#tPrenom"),N=$("#tNom"),M=$("#tMail"),ok=$("#tOk"),h=$("#tHint");
+  const chk=()=>{const m=M.value.trim(),em=EMAIL_RE.test(m);
+    h.textContent=m&&!em?"Adresse mail incomplète":"";M.classList.toggle("bad",!!m&&!em&&document.activeElement!==M);
+    ok.disabled=!(P.value.trim()&&N.value.trim()&&em);return!ok.disabled};
+  [P,N,M].forEach(i=>i.addEventListener("input",chk));M.addEventListener("blur",chk);chk();
+  P.onkeydown=e=>{if(e.key==="Enter")N.focus()};N.onkeydown=e=>{if(e.key==="Enter")M.focus()};M.onkeydown=e=>{if(e.key==="Enter"&&chk())ok.click()};
+  ok.onclick=()=>{if(!chk())return;S.tech={prenom:capName(P.value),nom:capName(N.value).toUpperCase(),email:M.value.trim().toLowerCase()};save();
+    toast(first?`Bienvenue ${S.tech.prenom}`:"Profil enregistré");renderAccueil()};
+  if(first)setTimeout(()=>P.focus(),80);
+}
+
 function renderAccueil(){
+  if(!S.tech)return renderProfil(true);
   route={v:"accueil"};view.className="";setBar("","Sogeo",false,false);
   const list=Object.values(S.chantiers).sort((a,b)=>b.created-a.created);
   const nR=list.reduce((t,c)=>t+c.points.length,0),nP=list.reduce((t,c)=>t+c.points.reduce((u,p)=>u+pointStatus(p).n,0),0);
@@ -894,6 +931,9 @@ function renderAccueil(){
         <span class="n">${esc(c.name)}</span><span class="a">${c.city?esc(c.city)+" · ":""}${c.points.length} relevé${c.points.length>1?"s":""} · ${new Date(c.created).toLocaleDateString("fr-FR")}</span></span>
         ${!c.points.length?"":inc?`<span class="chip warn">${inc} à finir</span>`:`<span class="chip ok">Complet</span>`}</button>`}).join("")}</div>`
     :`<div class="empty"><div>Crée un chantier pour photographier les chambres et les poteaux, puis exporter le ZIP du DOE.</div></div>`;
+  view.insertAdjacentHTML("beforeend",`<button class="techrow" id="techBtn"><span class="av">${esc((S.tech.prenom[0]||"")+(S.tech.nom[0]||""))}</span>
+    <span class="tx"><b>${esc(techLabel(S.tech))}</b><small>${esc(S.tech.email)}</small></span><span class="ed">Modifier</span></button>`);
+  $("#techBtn").onclick=()=>renderProfil(false);
   view.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{S.current=b.dataset.go;save();renderHome()});
   setDock(`<button class="primary" id="newBtn">${I.plus}<span>Nouveau chantier</span></button>`);
   $("#newBtn").onclick=renderNew;
@@ -911,7 +951,7 @@ function renameChantier(){const c=cur();
   ov.querySelector("[data-ok]").onclick=()=>{const v=cleanCh(i.value);if(!CH_RE.test(v))return;c.name=v;c.city=ov.querySelector("#chCity").value.trim();save();ov.remove();renderHome()};
   ov.querySelector("[data-x]").onclick=()=>ov.remove();}
 
-$("#homeBtn").onclick=async()=>{if(route.v==="point"&&!await confirmLeave())return;renderAccueil()};
+$("#homeBtn").onclick=async()=>{if(route.v==="profil"&&!S.tech)return;if(route.v==="point"&&!await confirmLeave())return;renderAccueil()};
 $("#backBtn").onclick=()=>{route.v==="point"?leavePoint():route.v==="map"?renderHome():renderAccueil()};
 $("#mapBtn").onclick=renderMap;
 $("#barName").onclick=$("#barEyebrow").onclick=()=>{if(route.v==="home"&&cur())renameChantier()};
