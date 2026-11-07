@@ -154,6 +154,9 @@ textarea.inp{font-family:var(--body);resize:vertical;min-height:100px;font-size:
 .head{flex:none;display:flex;gap:8px}
 .head #pName{flex:0 0 38%;min-width:0;font-size:22px;padding:8px 10px}
 .head #pAddr{flex:1;min-width:0;font-size:16px}
+.gps-btn small{position:absolute;bottom:2px;left:0;right:0;font:700 11px/1 var(--body);text-align:center;font-variant-numeric:tabular-nums}
+.gps-btn.has svg{margin-bottom:8px}
+.gps-btn.weak{border-color:var(--warn);color:var(--warn)}
 .gps-btn{position:relative;flex:none;width:56px;border-radius:12px;border:2px solid var(--line);background:var(--card);display:grid;place-items:center}
 .gps-btn svg{width:26px;height:26px}
 .gps-btn.has{border-color:var(--ok);color:var(--ok)}
@@ -486,6 +489,19 @@ function pointStatus(p){const req=SLOTS[p.type].filter(s=>s.req);const miss=miss
 function getPos(){return new Promise((res,rej)=>{
   if(!navigator.geolocation)return rej({code:0});
   navigator.geolocation.getCurrentPosition(p=>res(p.coords),rej,{enableHighAccuracy:true,timeout:20000,maximumAge:0})})}
+/* Position précise du tech : on écoute la puce GPS jusqu'à ±10 m (ou 15 s max) et on garde la meilleure mesure.
+   La première mesure d'un téléphone est souvent approximative (antenne, wifi) : on ne s'en contente pas. */
+function getPrecisePos(onProgress,target=10,maxMs=15000){return new Promise((res,rej)=>{
+  if(!navigator.geolocation)return rej({code:0});
+  let best=null,done=false;const t0=Date.now();
+  const end=()=>{if(done)return;done=true;navigator.geolocation.clearWatch(w);clearTimeout(to);best?res(best):rej({code:3})};
+  const w=navigator.geolocation.watchPosition(p=>{const c=p.coords;
+      if(!best||c.accuracy<best.accuracy)best={latitude:c.latitude,longitude:c.longitude,accuracy:c.accuracy};
+      if(onProgress)onProgress(best.accuracy);
+      if(best.accuracy<=target||(Date.now()-t0>6000&&best.accuracy<=20))end()},
+    e=>{if(e.code===1){done=true;navigator.geolocation.clearWatch(w);clearTimeout(to);rej(e)}},
+    {enableHighAccuracy:true,timeout:maxMs,maximumAge:0});
+  const to=setTimeout(end,maxMs)})}
 async function reverseGeo(lat,lon){
   const r=await fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`);const j=await r.json();
   const pr=j.features&&j.features[0]&&j.features[0].properties;return pr?{label:pr.label,city:pr.city}:null}
@@ -621,14 +637,15 @@ async function renderMap(){
 
 /* Cheminement : relie les relevés dans l'ordre de création, en suivant les routes (OSRM) */
 async function routeOSRM(ll){ // ll : [[lat,lon],...] -> {coords,dist,legs}
-  const out=[],legs=[];let dist=0;const CH=40;
+  const out=[],legs=[],snaps=[];let dist=0;const CH=40;
   for(let i=0;i<ll.length-1;i+=CH-1){const part=ll.slice(i,i+CH);if(part.length<2)break;
     const q=part.map(([la,lo])=>`${lo.toFixed(6)},${la.toFixed(6)}`).join(";");
     const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${q}?overview=full&geometries=geojson&continue_straight=false`);
     if(!r.ok)throw new Error("route");const j=await r.json();if(j.code!=="Ok"||!j.routes||!j.routes[0])throw new Error("route");
     const g=j.routes[0].geometry.coordinates.map(([lo,la])=>[la,lo]);if(out.length)g.shift();out.push(...g);dist+=j.routes[0].distance;
-    (j.routes[0].legs||[]).forEach(l=>legs.push(l.distance))}
-  return{coords:out,dist,legs:legs.length===ll.length-1?legs:ll.slice(1).map((x,i)=>hav(ll[i],x))}}
+    (j.routes[0].legs||[]).forEach(l=>legs.push(l.distance));
+    (j.waypoints||[]).forEach((w,k)=>{if(i&&!k)return;snaps.push([w.location[1],w.location[0]])})}
+  return{coords:out,dist,legs:legs.length===ll.length-1?legs:ll.slice(1).map((x,i)=>hav(ll[i],x)),snaps:snaps.length===ll.length?snaps:[]}}
 const fmtDist=m=>m<1000?`${Math.round(m)} m`:`${(m/1000).toFixed(m<10000?2:1).replace(".",",")} km`;
 function straightDist(ll){let d=0;for(let i=1;i<ll.length;i++){const [a1,o1]=ll[i-1],[a2,o2]=ll[i],R=6371000,r=Math.PI/180;
   const x=(o2-o1)*r*Math.cos((a1+a2)/2*r),y=(a2-a1)*r;d+=Math.hypot(x,y)*R}return d}
@@ -647,10 +664,10 @@ async function routeForExport(c){
   const pts=c.points.filter(p=>p.gps),ll=pts.map(p=>[p.gps.lat,p.gps.lon]);
   if(ll.length<2)return{pts,coords:ll,legs:[],dist:0,road:false};
   const key=ll.map(x=>x[0].toFixed(6)+","+x[1].toFixed(6)).join("|");
-  if(c.route&&c.route.key===key&&c.route.legs)return{pts,coords:c.route.coords,legs:c.route.legs,dist:c.route.dist,road:true};
+  if(c.route&&c.route.key===key&&c.route.legs&&c.route.snaps)return{pts,coords:c.route.coords,legs:c.route.legs,dist:c.route.dist,road:true,snaps:c.route.snaps};
   if(navigator.onLine){try{const r=await routeOSRM(ll);
-    c.route={key,coords:r.coords.map(([a,b])=>[+a.toFixed(6),+b.toFixed(6)]),dist:r.dist,legs:r.legs};save();
-    return{pts,coords:c.route.coords,legs:r.legs,dist:r.dist,road:true}}catch(e){}}
+    c.route={key,coords:r.coords.map(([a,b])=>[+a.toFixed(6),+b.toFixed(6)]),dist:r.dist,legs:r.legs,snaps:r.snaps};save();
+    return{pts,coords:c.route.coords,legs:r.legs,dist:r.dist,road:true,snaps:r.snaps}}catch(e){}}
   const legs=ll.slice(1).map((x,i)=>hav(ll[i],x));
   return{pts,coords:ll,legs,dist:legs.reduce((a,b)=>a+b,0),road:false}}
 
@@ -692,6 +709,9 @@ async function makePlan(c,R,onStep){
     g.lineJoin="round";g.lineCap="round";
     path();g.strokeStyle="#fff";g.lineWidth=16;g.setLineDash(R.road?[]:[]);g.stroke();
     path();g.strokeStyle=COL.ink;g.lineWidth=8;g.setLineDash(R.road?[]:[26,18]);g.stroke();g.setLineDash([])}
+  // Raccords : de la route jusqu'à la position réelle de l'ouvrage
+  if(R.road&&R.snaps&&R.snaps.length===pts.length){g.strokeStyle=COL.ink;g.lineWidth=4;g.setLineDash([10,9]);
+    pts.forEach((p,i)=>{const s=R.snaps[i];if(hav(s,[p.gps.lat,p.gps.lon])<2)return;const [x1,y1]=P(s),[x2,y2]=P([p.gps.lat,p.gps.lon]);g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke()});g.setLineDash([])}
   // Relevés : pastilles numérotées + étiquettes sans chevauchement
   const placed=[];const hit=(r)=>placed.some(o=>r.x<o.x+o.w&&r.x+r.w>o.x&&r.y<o.y+o.h&&r.y+r.h>o.y);
   pts.forEach((p,i)=>{const [x,y]=P([p.gps.lat,p.gps.lon]);placed.push({x:x-24,y:y-24,w:48,h:48})});
@@ -779,18 +799,24 @@ async function drawPath(c,m){
   const info=$("#pathInfo");if(ll.length<2){if(info)info.hidden=true;return}
   const key=ll.map(x=>x[0].toFixed(6)+","+x[1].toFixed(6)).join("|");
   const setInfo=(t,cls)=>{const e=$("#pathInfo");if(e){e.hidden=false;e.textContent=t;e.className="pathinfo "+(cls||"")}};
-  const show=(coords,road)=>{if(pathLine)pathLine.remove();
-    const line=pathLine=L.polyline(coords,road?{color:"#1f2227",weight:5,opacity:.85,lineJoin:"round"}:{color:"#1f2227",weight:3,opacity:.6,dashArray:"6 8"}).addTo(m);line.bringToBack()};
-  if(c.route&&c.route.key===key){show(c.route.coords,true);setInfo(`Cheminement ≈ ${fmtDist(c.route.dist)}`);return}
+  const show=(coords,road,snaps)=>{if(pathLine)pathLine.remove();
+    const grp=pathLine=L.layerGroup().addTo(m);
+    L.polyline(coords,road?{color:"#1f2227",weight:5,opacity:.85,lineJoin:"round"}:{color:"#1f2227",weight:3,opacity:.6,dashArray:"6 8"}).addTo(grp).bringToBack();
+    // raccord pointillé entre la route et la position réelle prise par le tech
+    if(road&&snaps&&snaps.length===ll.length)snaps.forEach((s,i)=>{if(hav(s,ll[i])>=2)L.polyline([s,ll[i]],{color:"#1f2227",weight:2.5,opacity:.8,dashArray:"4 5"}).addTo(grp)})};
+  if(c.route&&c.route.key===key&&c.route.snaps){show(c.route.coords,true,c.route.snaps);setInfo(`Cheminement ≈ ${fmtDist(c.route.dist)}`);return}
   show(ll,false);setInfo("Calcul du cheminement…");
   try{const r=await routeOSRM(ll);if(route.v!=="map"||mapObj!==m)return;
-    c.route={key,coords:r.coords.map(([a,b])=>[+a.toFixed(6),+b.toFixed(6)]),dist:r.dist,legs:r.legs};save();show(c.route.coords,true);setInfo(`Cheminement ≈ ${fmtDist(r.dist)}`)}
+    c.route={key,coords:r.coords.map(([a,b])=>[+a.toFixed(6),+b.toFixed(6)]),dist:r.dist,legs:r.legs,snaps:r.snaps};save();show(c.route.coords,true,c.route.snaps);setInfo(`Cheminement ≈ ${fmtDist(r.dist)}`)}
   catch(e){if(route.v==="map")setInfo(`À vol d'oiseau ≈ ${fmtDist(straightDist(ll))}`,"warn")}}
 
 /* Position automatique à la première photo d'un relevé (sans bloquer) */
-async function autoLocate(p){if(p.gps||p._locating)return;p._locating=true;
-  try{const co=await getPos();p.gps={lat:co.latitude,lon:co.longitude,acc:co.accuracy};
-    if(route.v==="point"&&route.id===p.id){const b=$("#gpsBtn");if(b)b.classList.add("has")}
+async function autoLocate(p){if(p._locating||(p.gps&&p.gps.acc<=15))return;p._locating=true;
+  try{const co=await getPrecisePos();
+    // à chaque photo, on garde la mesure la plus précise prise devant l'ouvrage
+    if(p.gps&&p.gps.acc<=co.accuracy)return;
+    p.gps={lat:co.latitude,lon:co.longitude,acc:co.accuracy,at:Date.now()};
+    if(route.v==="point"&&route.id===p.id){const b=$("#gpsBtn");if(b)b.classList.add("has");paintGps(p)}
     if(!p.address||!cur().city){const g=await reverseGeo(co.latitude,co.longitude).catch(()=>null);
       if(g){if(!p.address){p.address=g.label;const a=$("#pAddr");if(a&&route.id===p.id)a.value=g.label}const c=cur();if(c&&!c.city&&g.city)c.city=g.city}}
   }catch(e){}finally{delete p._locating;save()}}
@@ -809,7 +835,7 @@ async function renderPoint(id,isNew){
     <div class="head">
       <input class="inp huge" id="pName" value="${esc(p.name)}" placeholder="Nom" autocapitalize="characters" autocomplete="off" spellcheck="false" enterkeyhint="done" aria-label="Nom ${p.type==="chambre"?"de la chambre":"du poteau"}">
       <input class="inp" id="pAddr" value="${esc(p.address)}" placeholder="Adresse" autocomplete="off" enterkeyhint="done" aria-label="Adresse">
-      <button class="gps-btn ${p.gps?"has":""}" id="gpsBtn" aria-label="Position GPS et adresse automatique">${I.gps}</button>
+      <button class="gps-btn ${p.gps?"has":""}" id="gpsBtn" aria-label="Prendre ma position ici">${I.gps}<small id="gpsAcc"></small></button>
     </div>
     ${minis.length?`<div class="mrow"><div class="minis">${minis.map(s=>`<button class="mini" data-slot="${s.k}" aria-label="${esc(s.label)}">
         <img class="bgimg" alt="" decoding="async" hidden><span class="mck">${I.check}</span><b>${s.letter}</b><small>${I.cam}</small></button>`).join("")}<button class="mgal" id="mGal" aria-label="Masques depuis la galerie">${I.gal}<span>Galerie</span></button></div></div>`:""}
@@ -836,7 +862,7 @@ async function renderPoint(id,isNew){
   nm.addEventListener("blur",()=>{const d=chkDup();if(d)toast(`${ptName(p)} existe déjà dans ce chantier`)});
   const addr=$("#pAddr");addr.oninput=()=>{p.address=addr.value;save()};
   [nm,addr].forEach(i=>i.onkeydown=e=>{if(e.key==="Enter")i.blur()});
-  $("#gpsBtn").onclick=()=>locate(p);
+  $("#gpsBtn").onclick=()=>locate(p);paintGps(p);
   view.querySelectorAll("[data-cam]").forEach(b=>b.onclick=()=>shoot(p,b.dataset.cam));
   view.querySelectorAll(".mini").forEach(b=>{const k=b.dataset.slot;let t=null,long=false;
     let x0=0,y0=0;const stop=()=>clearTimeout(t);
@@ -853,6 +879,8 @@ async function renderPoint(id,isNew){
     if((p.photos[b.dataset.more]||[]).length)openSlot(p,b.dataset.more);else gallery(p,b.dataset.more)});
   $("#doneBtn").onclick=leavePoint;
 }
+function paintGps(p){const b=$("#gpsBtn"),s=$("#gpsAcc");if(!b||!s)return;
+  if(p.gps){b.classList.add("has");s.textContent=p.gps.acc!=null?`±${Math.round(p.gps.acc)} m`:"";b.classList.toggle("weak",p.gps.acc>30)}else s.textContent=""}
 function shoot(p,k){pendingSlot={pid:p.id,k};$("#camInput").click()}
 function gallery(p,k){pendingSlot={pid:p.id,k};$("#galInput").click()}
 async function confirmLeave(){const p=curPoint();if(!p)return true;if(!p.name){p.name=p.autoName;save()}
@@ -977,14 +1005,15 @@ $("#delBtn").onclick=async()=>{if(route.v==="home"&&cur())return deleteChantier(
 async function locate(p){
   const btn=$("#gpsBtn"),c=cur();
   btn.classList.add("busy");toast("Recherche de la position…");
-  let co;try{co=await getPos()}catch(e){btn.classList.remove("busy");toast(posErr(e));return}
-  const {latitude:lat,longitude:lon,accuracy:acc}=co;p.gps={lat,lon,acc};save();btn.classList.add("has");
+  let co;try{co=await getPrecisePos(a=>toast(`Précision GPS : ±${Math.round(a)} m…`))}catch(e){btn.classList.remove("busy");toast(posErr(e));return}
+  const {latitude:lat,longitude:lon,accuracy:acc}=co;p.gps={lat,lon,acc,at:Date.now()};save();btn.classList.add("has");paintGps(p);
+  if(acc>30)toast(`Position imprécise (±${Math.round(acc)} m) : réessaie à découvert`);
   try{const g=await reverseGeo(lat,lon);
     if(g){p.address=g.label;const a=$("#pAddr");if(a&&route.id===p.id)a.value=g.label;
-      let msg=`Adresse trouvée (±${Math.round(acc)} m)`;
+      let msg=`Position prise ici (±${Math.round(acc)} m) · ${g.label}`;
       if(g.city&&c&&!c.city){c.city=g.city;msg+=` · ville du chantier : ${g.city}`;if(route.id===p.id)updateBarPoint(p)}
       save();toast(msg)}
-    else toast("Position GPS enregistrée, adresse introuvable");
+    else if(acc<=30)toast(`Position prise ici (±${Math.round(acc)} m)`);
   }catch(e){toast("Position enregistrée. L'adresse sera ajoutée au retour du réseau")}
   btn.classList.remove("busy");
 }
