@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="application-name" content="Sogeo">
 <meta name="apple-mobile-web-app-title" content="Sogeo">
 <meta name="theme-color" content="#1f2227">
@@ -41,6 +41,8 @@
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{height:100%}
+html,body{touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+button,a,input,textarea,.mini,.tile,.shoot{touch-action:manipulation}
 body{margin:0;height:100%;height:100dvh;display:flex;flex-direction:column;overflow:hidden;
   background:var(--bg);color:var(--fg);font:500 17px/1.35 var(--body);-webkit-user-select:none;user-select:none}
 input{-webkit-user-select:text;user-select:text}
@@ -125,6 +127,9 @@ textarea.inp{font-family:var(--body);resize:vertical;min-height:100px;font-size:
 .big span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .big:active{transform:scale(.98)}
 .list{display:flex;flex-direction:column;gap:8px}
+main.fit .list.scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:4px;
+  mask-image:linear-gradient(to bottom,#000 calc(100% - 18px),transparent);-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 18px),transparent)}
+main.fit .list.scroll>*{flex:none}
 .pt{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;text-align:left;width:100%;min-height:66px}
 .pt .ic{width:42px;height:42px;border-radius:10px;display:grid;place-items:center;background:var(--bg);flex:none}
 .pt .ic svg{width:24px;height:24px}
@@ -555,7 +560,7 @@ function renderNew(){
 /* ---------- Écran : chantier ---------- */
 function renderHome(){
   const c=cur();if(!c)return renderAccueil();
-  route={v:"home"};view.className="";
+  route={v:"home"};view.className="fit";
   const nCh=c.points.filter(p=>p.type==="chambre").length,nPo=c.points.length-nCh;
   const nPh=c.points.reduce((a,p)=>a+pointStatus(p).n,0),nInc=c.points.filter(p=>pointStatus(p).miss).length;
   setBar(c.city?"Chantier · "+c.city:"Chantier · ville ?",c.name,true,true);
@@ -569,7 +574,7 @@ function renderHome(){
       <button class="big" data-add="poteau">${I.plus}<span>Poteau</span></button>
     </div>
     ${c.points.length?`<div class="stats"><span><b>${nCh}</b> ch.</span>·<span><b>${nPo}</b> pot.</span>·<span><b>${nPh}</b> photos</span>${nInc?`·<span style="color:var(--warn)"><b style="color:inherit">${nInc}</b> à compléter</span>`:""}</div>
-      <div class="list">${items}</div>`:
+      <div class="list scroll">${items}</div>`:
       `<div class="empty">Appuie sur Chambre ou Poteau pour commencer les photos.</div>`}`;
   view.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>addPoint(b.dataset.add));
   view.querySelectorAll(".pt").forEach(b=>b.onclick=()=>renderPoint(b.dataset.id));
@@ -1155,11 +1160,11 @@ async function loadDemo(){
 
 function renderAccueil(){
   if(!S.tech)return renderProfil(true);
-  route={v:"accueil"};view.className="";setBar("","Sogeo",false,false);
+  route={v:"accueil"};view.className="fit";setBar("","Sogeo",false,false);
   const list=Object.values(S.chantiers).sort((a,b)=>b.created-a.created);
   const nR=list.reduce((t,c)=>t+c.points.length,0),nP=list.reduce((t,c)=>t+c.points.reduce((u,p)=>u+pointStatus(p).n,0),0);
   view.innerHTML=list.length?`<div class="overview"><div><b>${list.length}</b><span>Chantier${list.length>1?"s":""}</span></div><div><b>${nR}</b><span>Relevé${nR>1?"s":""}</span></div><div><b>${nP}</b><span>Photo${nP>1?"s":""}</span></div></div>
-    <div class="section-t">Chantiers</div><div class="list">${list.map(c=>{
+    <div class="section-t">Chantiers</div><div class="list scroll">${list.map(c=>{
       const inc=c.points.filter(p=>pointStatus(p).miss).length;
       return `<button class="pt" data-go="${c.id}"><span class="ic">${I.folder}</span><span class="tx">
         <span class="n">${esc(c.name)}${c.demo?` <span class="demo">Démo</span>`:""}</span><span class="a">${c.city?esc(c.city)+" · ":""}${c.points.length} relevé${c.points.length>1?"s":""} · ${new Date(c.created).toLocaleDateString("fr-FR")}</span></span>
@@ -1210,6 +1215,10 @@ addEventListener("offline",()=>{updateOnline();toast("Hors ligne : tout continue
   mk.addEventListener("pointerdown",()=>{t=setTimeout(()=>{t=null;vibrate();loadDemo()},900)});
   ["pointerup","pointerleave","pointercancel"].forEach(e=>mk.addEventListener(e,()=>{if(t)clearTimeout(t)}));
   mk.addEventListener("contextmenu",e=>e.preventDefault())})();
+
+/* Pas de zoom de page (pincement, double-tap) — la carte garde son propre zoom */
+["gesturestart","gesturechange","gestureend"].forEach(ev=>document.addEventListener(ev,e=>{if(!e.target.closest||!e.target.closest("#map"))e.preventDefault()},{passive:false}));
+document.addEventListener("touchmove",e=>{if(e.touches.length>1&&!(e.target.closest&&e.target.closest("#map")))e.preventDefault()},{passive:false});
 
 /* ---------- Démarrage ---------- */
 (async()=>{
