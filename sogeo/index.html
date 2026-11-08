@@ -279,7 +279,7 @@ main.fit .list.scroll>*{flex:none}
 .mapnote.off{bottom:auto;top:94px;color:var(--muted)}
 .pathinfo.warn{color:var(--warn);font-weight:600}
 .mapmsg{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);text-align:center;padding:20px}
-.ttip{font-size:11px!important;color:#5b6370!important}
+.mtip .tk{display:block;font-size:12px;font-weight:700;color:#5b6370;text-align:center;border-bottom:1px solid #d3d8de;margin:0 -2px 2px;padding-bottom:2px}
 .tdia{width:14px;height:14px;transform:rotate(45deg);background:#5b6370;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
 .tdia.warn{background:#c0782b}
 .mtip{font:700 13px var(--body)!important;padding:2px 6px!important;border-radius:6px!important}
@@ -607,7 +607,7 @@ function renderHome(){
     const chip=isTech(p)?(st.n?`<span class="chip ok">${st.n} photo${st.n>1?"s":""}</span>`:`<span class="chip warn">0 photo</span>`)
       :(st.miss?`<span class="chip warn">${st.req-st.miss}/${st.req}</span>`:`<span class="chip ok">${st.n} photo${st.n>1?"s":""}</span>`);
     const kids=isTech(p)?0:childrenOf(c,p).length;
-    const sub2=isTech(p)?(parentOf(c,p)?esc(addrOf(c,p)||"Point technique"):`<span class="orph">À rattacher</span>`):esc(p.address||TYPE_LABEL[p.type])+(kids?` · ${kids} pt tech.`:"");
+    const sub2=isTech(p)?(parentOf(c,p)?esc(addrOf(c,p)||"Point technique"):`<span class="orph">À rattacher</span>`):esc(p.address||TYPE_LABEL[p.type])+(kids?` · ${childrenOf(c,p).map(x=>esc(ptName(x))).join(", ")}`:"");
     return `<button class="pt ${sub?"sub":""}" data-id="${p.id}"><span class="ic">${I[p.type]}</span><span class="tx">
       <span class="n">${esc(p.name||p.autoName)}</span><span class="a">${p.note?`<span class="nt">● ${esc(p.note.split(/\n/)[0])}</span> · `:""}${sub2}</span></span>${chip}</button>`};
   const items=c.points.filter(p=>!isTech(p)).reverse().map(p=>row(p)+childrenOf(c,p).map(k=>row(k,true)).join("")).join("")
@@ -618,7 +618,7 @@ function renderHome(){
       <button class="big" data-add="poteau">${I.plus}<span>Poteau</span></button>
       <button class="big wide" data-add="technique">${I.plus}<span>Point technique</span></button>
     </div>
-    ${c.points.length?`<div class="stats"><span><b>${nCh}</b> ch.</span>·<span><b>${nPo}</b> pot.</span>·${nTe?`<span><b>${nTe}</b> pt tech.</span>·`:""}<span><b>${nPh}</b> photos</span>${nInc?`·<span style="color:var(--warn)"><b style="color:inherit">${nInc}</b> à compléter</span>`:""}</div>
+    ${c.points.length?`<div class="stats"><span><b>${nCh}</b> ch.</span>·<span><b>${nPo}</b> pot.</span>·${nTe?`<span><b>${nTe}</b> point${nTe>1?"s":""} technique${nTe>1?"s":""}</span>·`:""}<span><b>${nPh}</b> photos</span>${nInc?`·<span style="color:var(--warn)"><b style="color:inherit">${nInc}</b> à compléter</span>`:""}</div>
       <div class="list scroll">${items}</div>`:
       `<div class="empty">Appuie sur Chambre ou Poteau pour commencer les photos.</div>`}`;
   view.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>b.dataset.add==="technique"?pickParent(null):addPoint(b.dataset.add));
@@ -661,7 +661,7 @@ async function renderMap(){
   route={v:"map"};view.className="fit";setBar("Carte · "+(c.city||"chantier"),c.name,true,false);
   const withGps=c.points.filter(p=>p.gps&&!isTech(p)),noGps=c.points.filter(p=>!isTech(p)).length-withGps.length;
   view.innerHTML=`<div class="mapwrap"><div id="map"></div>
-    <div class="legend"><span><i class="dot ok"></i>Complet</span><span><i class="dot warn"></i>À finir</span>${c.points.some(isTech)?`<span><i class="tdia" style="width:10px;height:10px;display:inline-block"></i>Pt tech.</span>`:""}</div>
+    <div class="legend"><span><i class="dot ok"></i>Complet</span><span><i class="dot warn"></i>À finir</span>${c.points.some(isTech)?`<span><i class="tdia" style="width:10px;height:10px;display:inline-block"></i>Point technique</span>`:""}</div>
     <div class="pathinfo" id="pathInfo" hidden></div>
     ${navigator.onLine?"":`<div class="mapnote off">Hors ligne : seules les zones déjà consultées s'affichent</div>`}
     ${noGps?`<div class="mapnote">${noGps} relevé${noGps>1?"s":""} sans position GPS</div>`:""}
@@ -684,7 +684,8 @@ async function renderMap(){
   const pts=[];
   for(const p of withGps){const st=pointStatus(p),col=st.miss?"#c0782b":"#2f7a52";
     const mk=L.circleMarker([p.gps.lat,p.gps.lon],{radius:11,color:"#fff",weight:3,fillColor:col,fillOpacity:1}).addTo(m);
-    mk.bindTooltip(esc(ptName(p)),{permanent:true,direction:"top",offset:[0,-10],className:"mtip"});
+    const kidsN=childrenOf(c,p).map(ptName);
+    mk.bindTooltip(`${kidsN.length?`<span class="tk">◆ ${kidsN.map(esc).join(" · ")}</span>`:""}${esc(ptName(p))}`,{permanent:true,direction:"top",offset:[0,-10],className:"mtip"});
     const html=document.createElement("div");html.className="mpop";
     html.innerHTML=`<b>${esc(ptName(p))}</b><span>${TYPE_LABEL[p.type]} · ${st.miss?`${st.req-st.miss}/${st.req} faites`:"complet"}</span>${p.note?`<em>${esc(p.note.split(/\n/)[0])}</em>`:""}<button>Ouvrir</button>`;
     html.querySelector("button").onclick=()=>renderPoint(p.id);
@@ -692,7 +693,6 @@ async function renderMap(){
   for(const p of c.points.filter(isTech)){const pos=techPos(c,p);if(!pos)continue;const par=parentOf(c,p),n=(p.photos.photos||[]).length;
     if(par&&par.gps)L.polyline([[par.gps.lat,par.gps.lon],[pos.lat,pos.lon]],{color:"#5b6370",weight:2.5,dashArray:"3 5"}).addTo(m);
     const mk=L.marker([pos.lat,pos.lon],{icon:L.divIcon({className:"",html:`<div class="tdia ${n?"":"warn"}"></div>`,iconSize:[18,18],iconAnchor:[9,9]}),zIndexOffset:500}).addTo(m);
-    mk.bindTooltip(esc(ptName(p)),{permanent:true,direction:"right",offset:[10,0],className:"mtip ttip"});
     const html=document.createElement("div");html.className="mpop";
     html.innerHTML=`<b>${esc(ptName(p))}</b><span>Point technique · ${n} photo${n>1?"s":""}${par?` · rattaché à ${esc(ptName(par))}`:""}${pos.approx?"<br>Position approximative (près de l'ouvrage)":""}</span><button>Ouvrir</button>`;
     html.querySelector("button").onclick=()=>renderPoint(p.id);mk.bindPopup(html,{closeButton:false});pts.push([pos.lat,pos.lon])}
@@ -795,12 +795,16 @@ async function makePlan(c,R,onStep){
     if(p.type==="chambre")rrect(g,x-24,y-24,48,48,8);else{g.beginPath();g.arc(x,y,25,0,7)}
     g.fillStyle=st.miss?COL.warn:COL.ok;g.fill();g.lineWidth=5;g.strokeStyle="#fff";g.stroke();
     g.fillStyle="#fff";g.font=`700 24px ${FB}`;g.textAlign="center";g.textBaseline="middle";g.fillText(i+1,x,y+1);
-    const name=ptName(p);g.font=`700 34px ${FD}`;const tw=g.measureText(name).width+28,th=48;
+    const name=ptName(p),kids=childrenOf(c,p).map(ptName),kt=kids.length?"◆ "+kids.join(" · "):"";
+    g.font=`700 34px ${FD}`;let tw=g.measureText(name).width+28;g.font=`700 24px ${FD}`;if(kt)tw=Math.max(tw,g.measureText(kt).width+28);g.font=`700 34px ${FD}`;const th=kt?82:48;
     const cand=[[x+32,y-th-8],[x-32-tw,y-th-8],[x+32,y+8],[x-32-tw,y+8],[x-tw/2,y-th-36],[x-tw/2,y+36]];
     let pos=cand.find(([lx,ly])=>lx>4&&ly>4&&lx+tw<MW-4&&ly+th<MH-4&&!hit({x:lx,y:ly,w:tw,h:th}))||cand[0];
     placed.push({x:pos[0],y:pos[1],w:tw,h:th});
     rrect(g,pos[0],pos[1],tw,th,10);g.fillStyle="rgba(255,255,255,.95)";g.fill();g.lineWidth=2;g.strokeStyle=st.miss?COL.warn:COL.ink;g.stroke();
-    g.fillStyle=COL.ink;g.textAlign="left";g.fillText(name,pos[0]+14,pos[1]+th/2+1)});
+    g.textAlign="left";
+    if(kt){g.font=`700 24px ${FD}`;g.fillStyle=COL.mute;g.fillText(kt,pos[0]+14,pos[1]+20);g.fillStyle=COL.line;g.fillRect(pos[0]+10,pos[1]+36,tw-20,2);
+      g.font=`700 34px ${FD}`;g.fillStyle=COL.ink;g.fillText(name,pos[0]+14,pos[1]+60)}
+    else{g.fillStyle=COL.ink;g.fillText(name,pos[0]+14,pos[1]+th/2+1)}});
   // Nord + échelle
   g.save();g.translate(MW-90,90);rrect(g,-50,-62,100,124,14);g.fillStyle="rgba(255,255,255,.92)";g.fill();
   g.beginPath();g.moveTo(0,-38);g.lineTo(20,22);g.lineTo(0,10);g.lineTo(-20,22);g.closePath();g.fillStyle=COL.ink;g.fill();
@@ -822,7 +826,7 @@ async function makePlan(c,R,onStep){
   g.textAlign="right";g.fillStyle="#fff";g.font=`700 72px ${FD}`;g.fillText(fmtDist(R.dist),W-50,y0+100);
   g.font=`600 24px ${FB}`;g.fillStyle="#c8ccd2";g.fillText(R.road?"Longueur estimée par les routes":"Longueur à vol d'oiseau",W-50,y0+140);
   // légende
-  const lg=[["sq","#9aa2ad","Chambre"],["ci","#9aa2ad","Poteau"],...(c.points.some(isTech)?[["di","#9aa2ad","Pt technique"]]:[]),["ci",COL.ok,"Complet"],["ci",COL.warn,"À compléter"]];let lx=W-50;g.font=`600 24px ${FB}`;g.textBaseline="middle";
+  const lg=[["sq","#9aa2ad","Chambre"],["ci","#9aa2ad","Poteau"],...(c.points.some(isTech)?[["di","#9aa2ad","Point technique"]]:[]),["ci",COL.ok,"Complet"],["ci",COL.warn,"À compléter"]];let lx=W-50;g.font=`600 24px ${FB}`;g.textBaseline="middle";
   for(const [sh,col,t] of lg.reverse()){const w=g.measureText(t).width;g.fillStyle="#e4e6e9";g.fillText(t,lx,y0+190);lx-=w+30;
     if(sh==="sq")rrect(g,lx-13,y0+177,26,26,5);else if(sh==="di"){g.beginPath();g.moveTo(lx,y0+175);g.lineTo(lx+15,y0+190);g.lineTo(lx,y0+205);g.lineTo(lx-15,y0+190);g.closePath()}else{g.beginPath();g.arc(lx,y0+190,13,0,7)}g.fillStyle=col;g.fill();g.lineWidth=3;g.strokeStyle="#fff";g.stroke();lx-=44}
   g.textBaseline="alphabetic";
@@ -832,7 +836,7 @@ async function makePlan(c,R,onStep){
 async function makeSynoptique(c,R){
   await fontsReady();
   const FD='"Barlow Condensed","Arial Narrow",sans-serif',FB='Barlow,system-ui,sans-serif';
-  const pts=c.points.filter(p=>!isTech(p)),PER=4,BW=380,BH=190,GX=150,GY=130,M=90,HEAD=210;
+  const pts=c.points.filter(p=>!isTech(p)),PER=4,BW=380,BH=224,GX=150,GY=130,M=90,HEAD=210;
   const rows=Math.ceil(pts.length/PER)||1,W=M*2+PER*BW+(PER-1)*GX,H=HEAD+rows*BH+(rows-1)*GY+M+40;
   const cv=document.createElement("canvas");cv.width=W;cv.height=H;const g=cv.getContext("2d");
   g.fillStyle="#fff";g.fillRect(0,0,W,H);
@@ -864,9 +868,10 @@ async function makeSynoptique(c,R){
     g.fillStyle=COL.ink;g.font=`700 44px ${FD}`;g.fillText(fitText(g,ptName(p),BW-100),x+82,y+80);
     g.font=`500 20px ${FB}`;g.fillStyle=COL.mute;g.fillText(fitText(g,p.address||"Adresse non renseignée",BW-40),x+22,y+122);
     g.font=`700 20px ${FB}`;g.fillStyle=col;g.fillText(st.miss?`${st.req-st.miss}/${st.req} photos obligatoires`:`Complet · ${st.n} photo${st.n>1?"s":""}`,x+22,y+156);
-    const kn=childrenOf(c,p).length;if(kn){const t=`+${kn} PT TECH.`;g.font=`700 16px ${FB}`;const tw=g.measureText(t).width+18;
-      rrect(g,x+BW-tw-14,y+14,tw,28,14);g.fillStyle=COL.ink;g.fill();g.fillStyle="#fff";g.fillText(t,x+BW-tw-5,y+33)}
-    if(p.note){g.fillStyle=COL.warn;g.font=`600 18px ${FB}`;g.fillText(fitText(g,"Remarque : "+p.note.split(/\n/)[0],BW-40),x+22,y+180)}});
+    const kids=childrenOf(c,p);let ky=y+156;
+    if(kids.length){g.fillStyle=COL.ink;g.font=`700 22px ${FD}`;const t="◆ "+kids.map(ptName).join(" · ");
+      rrect(g,x+14,y+168,BW-28,32,8);g.fillStyle="#e4e6e9";g.fill();g.fillStyle=COL.ink;g.fillText(fitText(g,t,BW-52),x+26,y+192);ky=y+214}
+    if(p.note){g.fillStyle=COL.warn;g.font=`600 18px ${FB}`;g.fillText(fitText(g,"Remarque : "+p.note.split(/\n/)[0],BW-40),x+22,kids.length?y+216:y+186)}});
   if(!pts.length){g.fillStyle=COL.mute;g.font=`500 28px ${FB}`;g.fillText("Aucun relevé",M,HEAD+60)}
   g.fillStyle="#8b929c";g.font=`500 18px ${FB}`;g.fillText("Généré par Sogeo · distances indicatives, ne remplacent pas un métré",M,H-30);
   return canvasBlob(cv)}
@@ -911,7 +916,7 @@ async function renderTech(p){
   const par=parentOf(c,p);
   view.innerHTML=`
     <div class="head">
-      <input class="inp huge" id="pName" style="flex:1" value="${esc(p.name)}" placeholder="Nom" autocapitalize="characters" autocomplete="off" spellcheck="false" enterkeyhint="done" aria-label="Nom du point technique">
+      <input class="inp huge" id="pName" style="flex:1" value="${esc(p.name)}" placeholder="PT 00892" autocapitalize="characters" autocomplete="off" spellcheck="false" enterkeyhint="done" aria-label="Nom du point technique (ex. PT 00892)">
       <button class="gps-btn ${p.gps?"has":""}" id="gpsBtn" aria-label="Prendre ma position ici">${I.gps}<small id="gpsAcc"></small></button>
     </div>
     <button class="techbar ${par?"":"orph"}" id="parBtn">${I.link}<span class="tx"><small>Rattaché à</small><b>${par?`${esc(ptName(par))} · ${TYPE_LABEL[par.type]}`:"À rattacher (obligatoire)"}</b>${par?`<em>${esc(par.address||"Adresse de l'ouvrage non renseignée")}</em>`:""}</span><span class="ch">Changer</span></button>
@@ -921,9 +926,11 @@ async function renderTech(p){
     <button class="primary" id="doneBtn">${I.check}<span>Terminé</span></button>`);
   const nm=$("#pName");
   const chkDup=()=>{const d=dupOf(c,p,ptName(p));nm.classList.toggle("bad",!!d);return d};chkDup();
-  nm.oninput=()=>{p.name=nm.value.toUpperCase().trim();$("#barName").textContent=p.name||p.autoName;save();chkDup()};
+  nm.oninput=()=>{p.name=nm.value.toUpperCase().replace(/\s+/g," ").trim();$("#barName").textContent=p.name||p.autoName;save();chkDup()};
   nm.addEventListener("blur",()=>{if(chkDup())toast(`${ptName(p)} existe déjà dans ce chantier`)});
   nm.onkeydown=e=>{if(e.key==="Enter")nm.blur()};
+  nm.addEventListener("focus",()=>{if(!nm.value){nm.value="PT ";p.name="PT";requestAnimationFrame(()=>nm.setSelectionRange(3,3))}});
+  nm.addEventListener("blur",()=>{if(nm.value.trim()==="PT"){nm.value="";p.name="";save();$("#barName").textContent=p.autoName}});
   $("#gpsBtn").onclick=()=>locate(p);paintGps(p);
   $("#parBtn").onclick=()=>pickParent(p);
   $("#noteBtn").onclick=()=>noteSheet(p);
@@ -1000,6 +1007,8 @@ function paintGps(p){const b=$("#gpsBtn"),s=$("#gpsAcc");if(!b||!s)return;
 function shoot(p,k){pendingSlot={pid:p.id,k};$("#camInput").click()}
 function gallery(p,k){pendingSlot={pid:p.id,k};$("#galInput").click()}
 async function confirmLeave(){const p=curPoint();if(!p)return true;if(!p.name){p.name=p.autoName;save()}
+  if(isTech(p)&&p.name===p.autoName&&!p._warned){p._warned=1;p.name="";const go=await ask("Point technique sans nom","Renseigne son numéro (ex. PT 00892) pour qu'il soit identifiable dans le DOE.","Laisser "+p.autoName);
+    if(!go){const i=$("#pName");if(i)i.focus();return false}p.name=p.autoName;save()}
   if(isTech(p)&&!parentOf(cur(),p)){toast("Rattache ce point technique à une chambre ou un poteau");pickParent(p);return false}
   const d=dupOf(cur(),p,ptName(p));if(!d)return true;
   const keep=await ask(`${ptName(p)} existe déjà`,`Un autre relevé de ce chantier porte le même nom. Dans le ZIP, il sera renommé ${safe(ptName(p))}_2.`,"Garder");
