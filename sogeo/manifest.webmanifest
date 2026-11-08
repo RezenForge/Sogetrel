@@ -1,7 +1,7 @@
 {
   "name": "Sogeo",
   "short_name": "Sogeo",
-  "description": "Relevés photo fibre : chambres, poteaux et DOE",
+  "description": "Relevés photo terrain : chambres, poteaux et DOE",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",
