@@ -410,11 +410,9 @@ const parentOf=(c,p)=>p&&p.parent?c.points.find(x=>x.id===p.parent):null;
 const childrenOf=(c,p)=>c.points.filter(x=>x.parent===p.id);
 // Adresse d'un relevé : un point technique reprend celle de sa chambre ou de son poteau
 const addrOf=(c,p)=>isTech(p)?((parentOf(c,p)||{}).address||""):(p.address||"");
-// Position sur la carte : la sienne si prise, sinon à côté de son ouvrage (marquée « approx. »)
-function techPos(c,p){if(p.gps)return{lat:p.gps.lat,lon:p.gps.lon,approx:false};
-  const par=parentOf(c,p);if(!par||!par.gps)return null;
-  const sib=childrenOf(c,par).filter(x=>!x.gps),i=Math.max(0,sib.indexOf(p)),ang=-Math.PI/4+i*(Math.PI/3),r=9;
-  return{lat:par.gps.lat+r*Math.sin(ang)/111320,lon:par.gps.lon+r*Math.cos(ang)/(111320*Math.cos(par.gps.lat*Math.PI/180)),approx:true}}
+// Position : un point technique est à la position de son support (chambre ou poteau)
+function techPos(c,p){const par=parentOf(c,p);return par&&par.gps?{lat:par.gps.lat,lon:par.gps.lon}:null}
+const gpsOf=(c,p)=>isTech(p)?techPos(c,p):(p.gps?{lat:p.gps.lat,lon:p.gps.lon}:null);
 
 /* ---------- Stockage (IndexedDB : rien n'est perdu si le téléphone ferme la page) ---------- */
 let db;
@@ -691,11 +689,11 @@ async function renderMap(){
     html.querySelector("button").onclick=()=>renderPoint(p.id);
     mk.bindPopup(html,{closeButton:false});pts.push([p.gps.lat,p.gps.lon])}
   for(const p of c.points.filter(isTech)){const pos=techPos(c,p);if(!pos)continue;const par=parentOf(c,p),n=(p.photos.photos||[]).length;
-    if(par&&par.gps)L.polyline([[par.gps.lat,par.gps.lon],[pos.lat,pos.lon]],{color:"#5b6370",weight:2.5,dashArray:"3 5"}).addTo(m);
-    const mk=L.marker([pos.lat,pos.lon],{icon:L.divIcon({className:"",html:`<div class="tdia ${n?"":"warn"}"></div>`,iconSize:[18,18],iconAnchor:[9,9]}),zIndexOffset:500}).addTo(m);
+    const k=childrenOf(c,par).indexOf(p);
+    const mk=L.marker([pos.lat,pos.lon],{icon:L.divIcon({className:"",html:`<div class="tdia ${n?"":"warn"}"></div>`,iconSize:[18,18],iconAnchor:[-6-k*16,-4]}),zIndexOffset:500}).addTo(m);
     const html=document.createElement("div");html.className="mpop";
-    html.innerHTML=`<b>${esc(ptName(p))}</b><span>Point technique · ${n} photo${n>1?"s":""}${par?` · rattaché à ${esc(ptName(par))}`:""}${pos.approx?"<br>Position approximative (près de l'ouvrage)":""}</span><button>Ouvrir</button>`;
-    html.querySelector("button").onclick=()=>renderPoint(p.id);mk.bindPopup(html,{closeButton:false});pts.push([pos.lat,pos.lon])}
+    html.innerHTML=`<b>${esc(ptName(p))}</b><span>Point technique · ${n} photo${n>1?"s":""}${par?` · rattaché à ${esc(ptName(par))}`:""}</span><button>Ouvrir</button>`;
+    html.querySelector("button").onclick=()=>renderPoint(p.id);mk.bindPopup(html,{closeButton:false});}
   if(pts.length)m.fitBounds(pts,{padding:[50,50],maxZoom:18});
   else getPos().then(co=>m.setView([co.latitude,co.longitude],16)).catch(()=>{});
   drawPath(c,m);
@@ -783,8 +781,8 @@ async function makePlan(c,R,onStep){
   // Points techniques (hors cheminement), reliés à leur ouvrage
   for(const p of c.points.filter(isTech)){const pos=techPos(c,p);if(!pos)continue;const par=parentOf(c,p);const [x,y]=P([pos.lat,pos.lon]);
     if(x<0||y<0||x>MW||y>MH)continue;
-    if(par&&par.gps){const [px,py]=P([par.gps.lat,par.gps.lon]);g.strokeStyle=COL.mute;g.lineWidth=3;g.setLineDash([6,8]);g.beginPath();g.moveTo(px,py);g.lineTo(x,y);g.stroke();g.setLineDash([])}
-    g.save();g.translate(x,y);g.rotate(Math.PI/4);g.fillStyle=(p.photos.photos||[]).length?COL.mute:COL.warn;g.fillRect(-11,-11,22,22);g.lineWidth=4;g.strokeStyle="#fff";g.strokeRect(-11,-11,22,22);g.restore()}
+    const k=childrenOf(c,par).indexOf(p);
+    g.save();g.translate(x+30+k*30,y+24);g.rotate(Math.PI/4);g.fillStyle=(p.photos.photos||[]).length?COL.mute:COL.warn;g.fillRect(-11,-11,22,22);g.lineWidth=4;g.strokeStyle="#fff";g.strokeRect(-11,-11,22,22);g.restore()}
   // Raccords : de la route jusqu'à la position réelle de l'ouvrage
   if(R.road&&R.snaps&&R.snaps.length===pts.length){g.strokeStyle=COL.ink;g.lineWidth=4;g.setLineDash([10,9]);
     pts.forEach((p,i)=>{const s=R.snaps[i];if(hav(s,[p.gps.lat,p.gps.lon])<2)return;const [x1,y1]=P(s),[x2,y2]=P([p.gps.lat,p.gps.lon]);g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke()});g.setLineDash([])}
@@ -894,7 +892,7 @@ async function drawPath(c,m){
   catch(e){if(route.v==="map")setInfo(`À vol d'oiseau ≈ ${fmtDist(straightDist(ll))}`,"warn")}}
 
 /* Position automatique à la première photo d'un relevé (sans bloquer) */
-async function autoLocate(p){if(p._locating||(p.gps&&p.gps.acc<=15))return;p._locating=true;
+async function autoLocate(p){if(isTech(p))return;if(p._locating||(p.gps&&p.gps.acc<=15))return;p._locating=true;
   try{const co=await getPrecisePos();
     // à chaque photo, on garde la mesure la plus précise prise devant l'ouvrage
     if(p.gps&&p.gps.acc<=co.accuracy)return;
@@ -916,10 +914,9 @@ async function renderTech(p){
   const par=parentOf(c,p);
   view.innerHTML=`
     <div class="head">
-      <input class="inp huge" id="pName" style="flex:1" value="${esc(p.name)}" placeholder="PT 00892" autocapitalize="characters" autocomplete="off" spellcheck="false" enterkeyhint="done" aria-label="Nom du point technique (ex. PT 00892)">
-      <button class="gps-btn ${p.gps?"has":""}" id="gpsBtn" aria-label="Prendre ma position ici">${I.gps}<small id="gpsAcc"></small></button>
+      <input class="inp huge" id="pName" style="flex:1;max-width:none" value="${esc(p.name)}" placeholder="PT 00892" autocapitalize="characters" autocomplete="off" spellcheck="false" enterkeyhint="done" aria-label="Nom du point technique (ex. PT 00892)">
     </div>
-    <button class="techbar ${par?"":"orph"}" id="parBtn">${I.link}<span class="tx"><small>Rattaché à</small><b>${par?`${esc(ptName(par))} · ${TYPE_LABEL[par.type]}`:"À rattacher (obligatoire)"}</b>${par?`<em>${esc(par.address||"Adresse de l'ouvrage non renseignée")}</em>`:""}</span><span class="ch">Changer</span></button>
+    <button class="techbar ${par?"":"orph"}" id="parBtn">${I.link}<span class="tx"><small>Rattaché à</small><b>${par?`${esc(ptName(par))} · ${TYPE_LABEL[par.type]}`:"À rattacher (obligatoire)"}</b>${par?`<em>${esc(par.address||"Adresse non renseignée")} · position du support</em>`:""}</span><span class="ch">Changer</span></button>
     <div class="fgrid" id="fgrid"></div>`;
   setDock(`<button class="ghost sq ${p.note?"on":""}" id="noteBtn" aria-label="Remarque">${I.note}<i></i></button>
     <button class="ghost sq" id="tGal" aria-label="Ajouter depuis la galerie">${I.gal}</button>
@@ -931,7 +928,6 @@ async function renderTech(p){
   nm.onkeydown=e=>{if(e.key==="Enter")nm.blur()};
   nm.addEventListener("focus",()=>{if(!nm.value){nm.value="PT ";p.name="PT";requestAnimationFrame(()=>nm.setSelectionRange(3,3))}});
   nm.addEventListener("blur",()=>{if(nm.value.trim()==="PT"){nm.value="";p.name="";save();$("#barName").textContent=p.autoName}});
-  $("#gpsBtn").onclick=()=>locate(p);paintGps(p);
   $("#parBtn").onclick=()=>pickParent(p);
   $("#noteBtn").onclick=()=>noteSheet(p);
   $("#tGal").onclick=()=>gallery(p,"photos");
@@ -1184,12 +1180,12 @@ async function exportZip(){
           f.file(`${name}_${s.file}${list.length>1?"_"+(n+1):""}.${ext}`,rec.blob,{binary:true,date:new Date(rec.ts)});
           done++;$("#zp").textContent=`Ajout des photos ${done} / ${total}`;}}
       const infos=[`Chantier : ${c.name}`,`Ville : ${c.city||"-"}`,`Relevé par : ${p.by||techLabel(T)} (${T.email||"-"})`,`Date : ${new Date(p.at||c.created).toLocaleString("fr-FR")}`,`${TYPE_LABEL[p.type]} : ${p.name||p.autoName}`,...(isTech(p)?[`Rattaché à : ${parentOf(c,p)?ptName(parentOf(c,p))+" ("+TYPE_LABEL[parentOf(c,p).type]+")":"-"}`]:childrenOf(c,p).length?[`Points techniques : ${childrenOf(c,p).map(ptName).join(", ")}`]:[]),`Adresse : ${addrOf(c,p)||"-"}`,
-        `GPS : ${p.gps?p.gps.lat.toFixed(6)+", "+p.gps.lon.toFixed(6):"-"}`,`Photos : ${st.n}`,
+        `GPS : ${gpsOf(c,p)?gpsOf(c,p).lat.toFixed(6)+", "+gpsOf(c,p).lon.toFixed(6)+(isTech(p)?" (position du support)":""):"-"}`,`Photos : ${st.n}`,
         st.miss?`Manquantes : ${missing(p).map(s=>s.label).join(", ")}`:"Complet",
         ...(p.na&&Object.keys(p.na).some(k=>p.na[k])?[`Masques absents : ${SLOTS[p.type].filter(s=>isNA(p,s.k)).map(s=>s.label).join(", ")}`]:[]),
         `Remarque : ${p.note?p.note.replace(/\r?\n/g," / "):"-"}`];
       f.file("infos.txt",infos.join("\r\n"));
-      csv.push([p.by||techLabel(T),T.email||"",new Date(p.at||c.created).toLocaleDateString("fr-FR"),c.city||"",TYPE_LABEL[p.type],p.name||p.autoName,addrOf(c,p),p.gps?p.gps.lat.toFixed(6):"",p.gps?p.gps.lon.toFixed(6):"",st.n,st.miss,SLOTS[p.type].filter(s=>isNA(p,s.k)).map(s=>s.label).join(", "),(p.note||"").replace(/\r?\n/g," / "),isTech(p)?"":c.points.filter(x=>!isTech(x)).indexOf(p)+1,legOf.has(p.id)?legOf.get(p.id):"",isTech(p)&&parentOf(c,p)?ptName(parentOf(c,p)):""]);
+      csv.push([p.by||techLabel(T),T.email||"",new Date(p.at||c.created).toLocaleDateString("fr-FR"),c.city||"",TYPE_LABEL[p.type],p.name||p.autoName,addrOf(c,p),gpsOf(c,p)?gpsOf(c,p).lat.toFixed(6):"",gpsOf(c,p)?gpsOf(c,p).lon.toFixed(6):"",st.n,st.miss,SLOTS[p.type].filter(s=>isNA(p,s.k)).map(s=>s.label).join(", "),(p.note||"").replace(/\r?\n/g," / "),isTech(p)?"":c.points.filter(x=>!isTech(x)).indexOf(p)+1,legOf.has(p.id)?legOf.get(p.id):"",isTech(p)&&parentOf(c,p)?ptName(parentOf(c,p)):""]);
     }
     const nC=c.points.filter(p=>!pointStatus(p).miss).length;
     folder.file("LISEZ-MOI.txt",[`DOE ${c.name}`,`Ville : ${c.city||"-"}`,``,`Technicien : ${techLabel(T)}`,`Mail : ${T.email||"-"}`,
@@ -1285,7 +1281,7 @@ async function loadDemo(){
         done++;const b=w.querySelector("#dbar");if(b)b.style.width=Math.round(done/total*100)+"%"}
       for(let e=0;e<(d.extra||0);e++){(p.photos.autres=p.photos.autres||[]).push(await demoPhoto("Autre photo",`${d.name} · détail`,140));done++}
       c.points.push(p)}
-    const par=c.points[0],tp={id:uid(),type:"technique",name:"PTECH-EYS-01",autoName:"PTECH-EYS-01",address:"",gps:{lat:44.88392,lon:-0.65071,acc:5},photos:{photos:[]},by,at:t0+10*60e3,note:"Réserve de câble",parent:par.id};
+    const par=c.points[0],tp={id:uid(),type:"technique",name:"PTECH-EYS-01",autoName:"PTECH-EYS-01",address:"",gps:null,photos:{photos:[]},by,at:t0+10*60e3,note:"Réserve de câble",parent:par.id};
     for(const [t,s] of [["Réserve de câble","love de 15 m"],["Point technique","vue d'ensemble"]])tp.photos.photos.push(await demoPhoto(t,`PTECH-EYS-01 · ${s}`,265));
     c.points.splice(1,0,tp);
     S.chantiers[c.id]=c;S.current=c.id;await save();w.remove();renderHome();toast("Chantier de démo chargé");catchUp()
@@ -1361,6 +1357,7 @@ document.addEventListener("touchmove",e=>{if(e.touches.length>1&&!(e.target.clos
   for(const c of Object.values(S.chantiers))for(const p of c.points){const old=p.photos&&p.photos.masques;if(!old)continue;
     ["a","b","c","d"].forEach((l,i)=>{const k="masque_"+l;if(i<3){if(old[i])(p.photos[k]=p.photos[k]||[]).push(old[i])}
       else{const r=old.slice(3);if(r.length)(p.photos[k]=p.photos[k]||[]).push(...r)}});delete p.photos.masques;save()}
+  for(const c of Object.values(S.chantiers))for(const p of c.points)if(isTech(p)&&p.gps)p.gps=null;
   renderAccueil();
   updateOnline();
   if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))navigator.serviceWorker.register("sw.js").catch(()=>{});
