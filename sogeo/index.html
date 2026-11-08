@@ -121,6 +121,28 @@ textarea.inp{font-family:var(--body);resize:vertical;min-height:100px;font-size:
 .stats{display:flex;gap:6px;flex-wrap:wrap;color:var(--muted);font-size:15px;flex:none}
 .stats b{color:var(--fg);font-variant-numeric:tabular-nums}
 .add-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:none}
+.add-row .big.wide{grid-column:span 2;min-height:54px;font-size:clamp(16px,5vw,20px)}
+.pt.sub{margin-left:22px;width:calc(100% - 22px);min-height:56px;padding:8px 10px;border-style:dashed;position:relative}
+.pt.sub::before{content:"";position:absolute;left:-14px;top:-9px;bottom:50%;width:12px;border-left:2px solid var(--line);border-bottom:2px solid var(--line);border-bottom-left-radius:8px}
+.pt.sub .ic{width:34px;height:34px}.pt.sub .ic svg{width:20px;height:20px}
+.pt.sub .n{font-size:18px}
+.pt.pick.on{border:2px solid var(--fg)}
+.techbar{flex:none;display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--card);border:2px solid var(--line);border-radius:12px;padding:8px 12px;min-height:52px}
+.techbar svg{width:20px;height:20px;flex:none;color:var(--muted)}
+.techbar .tx{flex:1;min-width:0;display:flex;flex-direction:column}
+.techbar small{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.techbar b{font:700 20px/1.1 var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.techbar .ch{font:600 14px var(--body);color:var(--muted);flex:none}
+.techbar.orph{border-color:var(--danger)}.techbar.orph b{color:var(--danger)}
+.fgrid{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-content:start;padding-bottom:4px}
+.fgrid>button{aspect-ratio:1;max-width:100%;border-radius:12px;border:0;padding:0;overflow:hidden;background:var(--bg);position:relative;display:grid;place-items:center}
+.fgrid img{width:100%;height:100%;object-fit:cover;display:block}
+.fgrid .add{border:2px dashed var(--line);background:var(--card);display:flex;flex-direction:column;gap:4px;font:700 17px var(--display);text-transform:uppercase}
+.fgrid .add svg{width:30px;height:30px}
+.fgrid .add.first{grid-column:span 3;aspect-ratio:auto;min-height:170px;padding:16px;font-size:22px;background:var(--fg);color:var(--bg);border:0}
+.fgrid .num2{position:absolute;left:6px;bottom:6px;min-width:22px;height:22px;border-radius:99px;background:rgba(0,0,0,.6);color:#fff;font:700 13px/22px var(--body);padding:0 6px}
+.fgrid .busyc::after{content:"";width:22px;height:22px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--fg);animation:spin .8s linear infinite}
+.pt .a .orph{color:var(--danger);font-weight:600}
 .big{min-width:0;border-radius:16px;min-height:76px;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 8px;overflow:hidden;
   font:700 clamp(17px,5.6vw,23px)/1 var(--display);letter-spacing:.03em;text-transform:uppercase;background:var(--card);color:var(--fg);border:2px solid var(--line)}
 .big svg{width:26px;height:26px;flex:none}
@@ -256,6 +278,8 @@ main.fit .list.scroll>*{flex:none}
 .mapnote.off{bottom:auto;top:94px;color:var(--muted)}
 .pathinfo.warn{color:var(--warn);font-weight:600}
 .mapmsg{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);text-align:center;padding:20px}
+.tdia{width:14px;height:14px;transform:rotate(45deg);background:#5b6370;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.tdia.warn{background:#c0782b}
 .mtip{font:700 13px var(--body)!important;padding:2px 6px!important;border-radius:6px!important}
 .mpop{display:flex;flex-direction:column;gap:3px;min-width:150px;font-family:var(--body)}
 .mpop b{font:700 20px var(--display)}
@@ -353,6 +377,8 @@ const I={
   zip:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   folder:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/></svg>',
+  technique:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><circle cx="12" cy="12" r="2.6"/></svg>',
+  link:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>',
   note:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h10l4 4v12H5z"/><path d="M14 4v5h5M8 13h8M8 17h5"/></svg>',
   map:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg>',
   stack:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><rect x="7" y="7" width="13" height="13" rx="2"/><path d="M4 16V5a1 1 0 0 1 1-1h11"/></svg>'
@@ -375,7 +401,11 @@ const SLOTS={
     {k:"autres",label:"Autres photos",file:"autre",req:false,extra:true}
   ]
 };
-const TYPE_LABEL={chambre:"Chambre",poteau:"Poteau"};
+SLOTS.technique=[{k:"photos",label:"Photos",file:"photo",req:true,free:true}];
+const TYPE_LABEL={chambre:"Chambre",poteau:"Poteau",technique:"Point technique"};
+const isTech=p=>p.type==="technique";
+const parentOf=(c,p)=>p&&p.parent?c.points.find(x=>x.id===p.parent):null;
+const childrenOf=(c,p)=>c.points.filter(x=>x.parent===p.id);
 
 /* ---------- Stockage (IndexedDB : rien n'est perdu si le téléphone ferme la page) ---------- */
 let db;
@@ -561,22 +591,28 @@ function renderNew(){
 function renderHome(){
   const c=cur();if(!c)return renderAccueil();
   route={v:"home"};view.className="fit";
-  const nCh=c.points.filter(p=>p.type==="chambre").length,nPo=c.points.length-nCh;
+  const nCh=c.points.filter(p=>p.type==="chambre").length,nPo=c.points.filter(p=>p.type==="poteau").length,nTe=c.points.filter(isTech).length;
   const nPh=c.points.reduce((a,p)=>a+pointStatus(p).n,0),nInc=c.points.filter(p=>pointStatus(p).miss).length;
   setBar(c.city?"Chantier · "+c.city:"Chantier · ville ?",c.name,true,true);
-  const items=c.points.slice().reverse().map(p=>{const st=pointStatus(p);
-    return `<button class="pt" data-id="${p.id}"><span class="ic">${I[p.type]}</span><span class="tx">
-      <span class="n">${esc(p.name||p.autoName)}</span><span class="a">${p.note?`<span class="nt">● ${esc(p.note.split(/\n/)[0])}</span> · `:""}${esc(p.address||TYPE_LABEL[p.type])}</span></span>
-      ${st.miss?`<span class="chip warn">${st.req-st.miss}/${st.req}</span>`:`<span class="chip ok">${st.n} photo${st.n>1?"s":""}</span>`}</button>`}).join("");
+  const row=(p,sub)=>{const st=pointStatus(p);
+    const chip=isTech(p)?(st.n?`<span class="chip ok">${st.n} photo${st.n>1?"s":""}</span>`:`<span class="chip warn">0 photo</span>`)
+      :(st.miss?`<span class="chip warn">${st.req-st.miss}/${st.req}</span>`:`<span class="chip ok">${st.n} photo${st.n>1?"s":""}</span>`);
+    const kids=isTech(p)?0:childrenOf(c,p).length;
+    const sub2=isTech(p)?(parentOf(c,p)?`Point technique`:`<span class="orph">À rattacher</span>`):esc(p.address||TYPE_LABEL[p.type])+(kids?` · ${kids} pt tech.`:"");
+    return `<button class="pt ${sub?"sub":""}" data-id="${p.id}"><span class="ic">${I[p.type]}</span><span class="tx">
+      <span class="n">${esc(p.name||p.autoName)}</span><span class="a">${p.note?`<span class="nt">● ${esc(p.note.split(/\n/)[0])}</span> · `:""}${sub2}</span></span>${chip}</button>`};
+  const items=c.points.filter(p=>!isTech(p)).reverse().map(p=>row(p)+childrenOf(c,p).map(k=>row(k,true)).join("")).join("")
+    +c.points.filter(p=>isTech(p)&&!parentOf(c,p)).map(p=>row(p,true)).join("");
   view.innerHTML=`
     <div class="add-row">
       <button class="big" data-add="chambre">${I.plus}<span>Chambre</span></button>
       <button class="big" data-add="poteau">${I.plus}<span>Poteau</span></button>
+      <button class="big wide" data-add="technique">${I.plus}<span>Point technique</span></button>
     </div>
-    ${c.points.length?`<div class="stats"><span><b>${nCh}</b> ch.</span>·<span><b>${nPo}</b> pot.</span>·<span><b>${nPh}</b> photos</span>${nInc?`·<span style="color:var(--warn)"><b style="color:inherit">${nInc}</b> à compléter</span>`:""}</div>
+    ${c.points.length?`<div class="stats"><span><b>${nCh}</b> ch.</span>·<span><b>${nPo}</b> pot.</span>·${nTe?`<span><b>${nTe}</b> pt tech.</span>·`:""}<span><b>${nPh}</b> photos</span>${nInc?`·<span style="color:var(--warn)"><b style="color:inherit">${nInc}</b> à compléter</span>`:""}</div>
       <div class="list scroll">${items}</div>`:
       `<div class="empty">Appuie sur Chambre ou Poteau pour commencer les photos.</div>`}`;
-  view.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>addPoint(b.dataset.add));
+  view.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>b.dataset.add==="technique"?pickParent(null):addPoint(b.dataset.add));
   view.querySelectorAll(".pt").forEach(b=>b.onclick=()=>renderPoint(b.dataset.id));
   setDock(`<button class="primary" id="zipBtn" ${c.points.length?"":"disabled"}>${I.zip}<span class="two">Créer le ZIP<small>DOE_${esc(safe(c.name))}.zip</small></span></button>`);
   $("#zipBtn").onclick=exportZip;
@@ -584,10 +620,24 @@ function renderHome(){
 
 const ptName=p=>p.name||p.autoName||"";
 const dupOf=(c,p,name)=>name?c.points.find(x=>x!==p&&ptName(x).toUpperCase()===name.toUpperCase()):null;
-function addPoint(type){
-  const c=cur();const pre=type==="chambre"?"CH":"PT";let n=c.points.filter(p=>p.type===type).length+1,auto;
+let lastParent=null;
+function pickParent(p){ // p : point technique existant à re-rattacher, ou null pour en créer un
+  const c=cur();const cands=c.points.filter(x=>!isTech(x)).slice().reverse();
+  if(!cands.length){toast("Ajoute d'abord une chambre ou un poteau");return}
+  const sel=p?p.parent:null;
+  const ov=sheet(`<h2>${p?"Changer le rattachement":"Rattacher le point technique à…"}</h2>
+    <p>Choisis la chambre ou le poteau concerné.</p>
+    <div class="list" style="max-height:52dvh;overflow:auto">${cands.map(x=>`<button class="pt pick ${x.id===sel?"on":""}" data-pid="${x.id}"><span class="ic">${I[x.type]}</span><span class="tx">
+      <span class="n">${esc(ptName(x))}</span><span class="a">${TYPE_LABEL[x.type]}${x.address?" · "+esc(x.address):""}</span></span>${x.id===sel?`<span class="chip ok">✓</span>`:""}</button>`).join("")}</div>
+    <button class="ghost" data-x>Annuler</button>`);
+  ov.querySelectorAll("[data-pid]").forEach(b=>b.onclick=()=>{ov.remove();lastParent=b.dataset.pid;
+    if(p){p.parent=b.dataset.pid;save();renderPoint(p.id);toast(`Rattaché à ${ptName(cur().points.find(x=>x.id===p.parent))}`)}
+    else addPoint("technique",b.dataset.pid)});
+  ov.querySelector("[data-x]").onclick=()=>ov.remove()}
+function addPoint(type,parent){
+  const c=cur();const pre=type==="chambre"?"CH":type==="poteau"?"PT":"PTECH";let n=c.points.filter(p=>p.type===type).length+1,auto;
   const mk=i=>`${pre}_${String(i).padStart(2,"0")}`;while(c.points.some(x=>ptName(x)===mk(n)))n++;auto=mk(n);
-  const p={id:uid(),type,name:"",autoName:auto,address:"",gps:null,photos:{},by:techLabel(S.tech),at:Date.now()};
+  const p={id:uid(),type,name:"",autoName:auto,address:"",gps:null,photos:{},by:techLabel(S.tech),at:Date.now(),...(parent?{parent}:{})};
   c.points.push(p);save();renderPoint(p.id,true);
 }
 
@@ -600,7 +650,7 @@ function loadLeaflet(){if(window.L)return Promise.resolve();if(leafletP)return l
 async function renderMap(){
   const c=cur();if(!c)return renderAccueil();
   route={v:"map"};view.className="fit";setBar("Carte · "+(c.city||"chantier"),c.name,true,false);
-  const withGps=c.points.filter(p=>p.gps),noGps=c.points.length-withGps.length;
+  const withGps=c.points.filter(p=>p.gps&&!isTech(p)),noGps=c.points.filter(p=>!isTech(p)).length-withGps.length;
   view.innerHTML=`<div class="mapwrap"><div id="map"></div>
     <div class="legend"><span><i class="dot ok"></i>Complet</span><span><i class="dot warn"></i>À finir</span></div>
     <div class="pathinfo" id="pathInfo" hidden></div>
@@ -630,6 +680,12 @@ async function renderMap(){
     html.innerHTML=`<b>${esc(ptName(p))}</b><span>${TYPE_LABEL[p.type]} · ${st.miss?`${st.req-st.miss}/${st.req} faites`:"complet"}</span>${p.note?`<em>${esc(p.note.split(/\n/)[0])}</em>`:""}<button>Ouvrir</button>`;
     html.querySelector("button").onclick=()=>renderPoint(p.id);
     mk.bindPopup(html,{closeButton:false});pts.push([p.gps.lat,p.gps.lon])}
+  for(const p of c.points.filter(x=>isTech(x)&&x.gps)){const par=parentOf(c,p),n=(p.photos.photos||[]).length;
+    if(par&&par.gps)L.polyline([[par.gps.lat,par.gps.lon],[p.gps.lat,p.gps.lon]],{color:"#5b6370",weight:2,dashArray:"3 5"}).addTo(m);
+    const mk=L.marker([p.gps.lat,p.gps.lon],{icon:L.divIcon({className:"",html:`<div class="tdia ${n?"":"warn"}"></div>`,iconSize:[16,16],iconAnchor:[8,8]})}).addTo(m);
+    const html=document.createElement("div");html.className="mpop";
+    html.innerHTML=`<b>${esc(ptName(p))}</b><span>Point technique · ${n} photo${n>1?"s":""}${par?` · rattaché à ${esc(ptName(par))}`:""}</span><button>Ouvrir</button>`;
+    html.querySelector("button").onclick=()=>renderPoint(p.id);mk.bindPopup(html,{closeButton:false});pts.push([p.gps.lat,p.gps.lon])}
   if(pts.length)m.fitBounds(pts,{padding:[50,50],maxZoom:18});
   else getPos().then(co=>m.setView([co.latitude,co.longitude],16)).catch(()=>{});
   drawPath(c,m);
@@ -666,7 +722,7 @@ const LEAF_URL={ign:TILE_URL.ign("{z}","{x}","{y}"),cad:TILE_URL.cad("{z}","{x}"
 function hav(a,b){const R=6371000,r=Math.PI/180,x=(b[1]-a[1])*r*Math.cos((a[0]+b[0])/2*r),y=(b[0]-a[0])*r;return Math.hypot(x,y)*R}
 // Cheminement pour l'export : routes si possible (mémorisé), sinon vol d'oiseau
 async function routeForExport(c){
-  const pts=c.points.filter(p=>p.gps),ll=pts.map(p=>[p.gps.lat,p.gps.lon]);
+  const pts=c.points.filter(p=>p.gps&&!isTech(p)),ll=pts.map(p=>[p.gps.lat,p.gps.lon]);
   if(ll.length<2)return{pts,coords:ll,legs:[],dist:0,road:false};
   const key=ll.map(x=>x[0].toFixed(6)+","+x[1].toFixed(6)).join("|");
   if(c.route&&c.route.key===key&&c.route.legs&&c.route.snaps)return{pts,coords:c.route.coords,legs:c.route.legs,dist:c.route.dist,road:true,snaps:c.route.snaps};
@@ -714,6 +770,11 @@ async function makePlan(c,R,onStep){
     g.lineJoin="round";g.lineCap="round";
     path();g.strokeStyle="#fff";g.lineWidth=16;g.setLineDash(R.road?[]:[]);g.stroke();
     path();g.strokeStyle=COL.ink;g.lineWidth=8;g.setLineDash(R.road?[]:[26,18]);g.stroke();g.setLineDash([])}
+  // Points techniques (hors cheminement), reliés à leur ouvrage
+  for(const p of c.points.filter(x=>isTech(x)&&x.gps)){const par=parentOf(c,p);const [x,y]=P([p.gps.lat,p.gps.lon]);
+    if(x<0||y<0||x>MW||y>MH)continue;
+    if(par&&par.gps){const [px,py]=P([par.gps.lat,par.gps.lon]);g.strokeStyle=COL.mute;g.lineWidth=3;g.setLineDash([6,8]);g.beginPath();g.moveTo(px,py);g.lineTo(x,y);g.stroke();g.setLineDash([])}
+    g.save();g.translate(x,y);g.rotate(Math.PI/4);g.fillStyle=(p.photos.photos||[]).length?COL.mute:COL.warn;g.fillRect(-11,-11,22,22);g.lineWidth=4;g.strokeStyle="#fff";g.strokeRect(-11,-11,22,22);g.restore()}
   // Raccords : de la route jusqu'à la position réelle de l'ouvrage
   if(R.road&&R.snaps&&R.snaps.length===pts.length){g.strokeStyle=COL.ink;g.lineWidth=4;g.setLineDash([10,9]);
     pts.forEach((p,i)=>{const s=R.snaps[i];if(hav(s,[p.gps.lat,p.gps.lon])<2)return;const [x1,y1]=P(s),[x2,y2]=P([p.gps.lat,p.gps.lon]);g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke()});g.setLineDash([])}
@@ -751,9 +812,9 @@ async function makePlan(c,R,onStep){
   g.textAlign="right";g.fillStyle="#fff";g.font=`700 72px ${FD}`;g.fillText(fmtDist(R.dist),W-50,y0+100);
   g.font=`600 24px ${FB}`;g.fillStyle="#c8ccd2";g.fillText(R.road?"Longueur estimée par les routes":"Longueur à vol d'oiseau",W-50,y0+140);
   // légende
-  const lg=[["sq","#9aa2ad","Chambre"],["ci","#9aa2ad","Poteau"],["ci",COL.ok,"Complet"],["ci",COL.warn,"À compléter"]];let lx=W-50;g.font=`600 24px ${FB}`;g.textBaseline="middle";
+  const lg=[["sq","#9aa2ad","Chambre"],["ci","#9aa2ad","Poteau"],...(c.points.some(isTech)?[["di","#9aa2ad","Pt technique"]]:[]),["ci",COL.ok,"Complet"],["ci",COL.warn,"À compléter"]];let lx=W-50;g.font=`600 24px ${FB}`;g.textBaseline="middle";
   for(const [sh,col,t] of lg.reverse()){const w=g.measureText(t).width;g.fillStyle="#e4e6e9";g.fillText(t,lx,y0+190);lx-=w+30;
-    if(sh==="sq")rrect(g,lx-13,y0+177,26,26,5);else{g.beginPath();g.arc(lx,y0+190,13,0,7)}g.fillStyle=col;g.fill();g.lineWidth=3;g.strokeStyle="#fff";g.stroke();lx-=44}
+    if(sh==="sq")rrect(g,lx-13,y0+177,26,26,5);else if(sh==="di"){g.beginPath();g.moveTo(lx,y0+175);g.lineTo(lx+15,y0+190);g.lineTo(lx,y0+205);g.lineTo(lx-15,y0+190);g.closePath()}else{g.beginPath();g.arc(lx,y0+190,13,0,7)}g.fillStyle=col;g.fill();g.lineWidth=3;g.strokeStyle="#fff";g.stroke();lx-=44}
   g.textBaseline="alphabetic";
   g.textAlign="left";g.fillStyle="#8b929c";g.font=`500 18px ${FB}`;g.fillText("Généré par Sogeo · distances indicatives, ne remplacent pas un métré",50,y0+226);
   return canvasBlob(cv)}
@@ -761,7 +822,7 @@ async function makePlan(c,R,onStep){
 async function makeSynoptique(c,R){
   await fontsReady();
   const FD='"Barlow Condensed","Arial Narrow",sans-serif',FB='Barlow,system-ui,sans-serif';
-  const pts=c.points,PER=4,BW=380,BH=190,GX=150,GY=130,M=90,HEAD=210;
+  const pts=c.points.filter(p=>!isTech(p)),PER=4,BW=380,BH=190,GX=150,GY=130,M=90,HEAD=210;
   const rows=Math.ceil(pts.length/PER)||1,W=M*2+PER*BW+(PER-1)*GX,H=HEAD+rows*BH+(rows-1)*GY+M+40;
   const cv=document.createElement("canvas");cv.width=W;cv.height=H;const g=cv.getContext("2d");
   g.fillStyle="#fff";g.fillRect(0,0,W,H);
@@ -793,6 +854,8 @@ async function makeSynoptique(c,R){
     g.fillStyle=COL.ink;g.font=`700 44px ${FD}`;g.fillText(fitText(g,ptName(p),BW-100),x+82,y+80);
     g.font=`500 20px ${FB}`;g.fillStyle=COL.mute;g.fillText(fitText(g,p.address||"Adresse non renseignée",BW-40),x+22,y+122);
     g.font=`700 20px ${FB}`;g.fillStyle=col;g.fillText(st.miss?`${st.req-st.miss}/${st.req} photos obligatoires`:`Complet · ${st.n} photo${st.n>1?"s":""}`,x+22,y+156);
+    const kn=childrenOf(c,p).length;if(kn){const t=`+${kn} PT TECH.`;g.font=`700 16px ${FB}`;const tw=g.measureText(t).width+18;
+      rrect(g,x+BW-tw-14,y+14,tw,28,14);g.fillStyle=COL.ink;g.fill();g.fillStyle="#fff";g.fillText(t,x+BW-tw-5,y+33)}
     if(p.note){g.fillStyle=COL.warn;g.font=`600 18px ${FB}`;g.fillText(fitText(g,"Remarque : "+p.note.split(/\n/)[0],BW-40),x+22,y+180)}});
   if(!pts.length){g.fillStyle=COL.mute;g.font=`500 28px ${FB}`;g.fillText("Aucun relevé",M,HEAD+60)}
   g.fillStyle="#8b929c";g.font=`500 18px ${FB}`;g.fillText("Généré par Sogeo · distances indicatives, ne remplacent pas un métré",M,H-30);
@@ -800,7 +863,7 @@ async function makeSynoptique(c,R){
 
 let pathLine=null;
 async function drawPath(c,m){
-  const ll=c.points.filter(p=>p.gps).map(p=>[p.gps.lat,p.gps.lon]);
+  const ll=c.points.filter(p=>p.gps&&!isTech(p)).map(p=>[p.gps.lat,p.gps.lon]);
   const info=$("#pathInfo");if(ll.length<2){if(info)info.hidden=true;return}
   const key=ll.map(x=>x[0].toFixed(6)+","+x[1].toFixed(6)).join("|");
   const setInfo=(t,cls)=>{const e=$("#pathInfo");if(e){e.hidden=false;e.textContent=t;e.className="pathinfo "+(cls||"")}};
@@ -830,10 +893,50 @@ async function autoLocate(p){if(p._locating||(p.gps&&p.gps.acc<=15))return;p._lo
 let route={v:"home"},pendingSlot=null,slotSheet=null;
 function curPoint(){const c=cur();return route.v==="point"&&c?c.points.find(x=>x.id===route.id):null}
 function updateBarPoint(p){const st=pointStatus(p);
+  if(isTech(p))return setBar(`Point technique · ${st.n} photo${st.n>1?"s":""}`,p.name||p.autoName,true,true);
   setBar(`${TYPE_LABEL[p.type]} · ${st.miss?`${st.req-st.miss}/${st.req} faites`:"complet"}`,p.name||p.autoName,true,true)}
+
+async function renderTech(p){
+  const c=cur();route={v:"point",id:p.id};view.className="fit";updateBarPoint(p);
+  const par=parentOf(c,p);
+  view.innerHTML=`
+    <div class="head">
+      <input class="inp huge" id="pName" value="${esc(p.name)}" placeholder="Nom" autocapitalize="characters" autocomplete="off" spellcheck="false" enterkeyhint="done" aria-label="Nom du point technique">
+      <input class="inp" id="pAddr" value="${esc(p.address)}" placeholder="Adresse" autocomplete="off" enterkeyhint="done" aria-label="Adresse">
+      <button class="gps-btn ${p.gps?"has":""}" id="gpsBtn" aria-label="Prendre ma position ici">${I.gps}<small id="gpsAcc"></small></button>
+    </div>
+    <button class="techbar ${par?"":"orph"}" id="parBtn">${I.link}<span class="tx"><small>Rattaché à</small><b>${par?`${esc(ptName(par))} · ${TYPE_LABEL[par.type]}`:"À rattacher (obligatoire)"}</b></span><span class="ch">Changer</span></button>
+    <div class="fgrid" id="fgrid"></div>`;
+  setDock(`<button class="ghost sq ${p.note?"on":""}" id="noteBtn" aria-label="Remarque">${I.note}<i></i></button>
+    <button class="ghost sq" id="tGal" aria-label="Ajouter depuis la galerie">${I.gal}</button>
+    <button class="primary" id="doneBtn">${I.check}<span>Terminé</span></button>`);
+  const nm=$("#pName");
+  const chkDup=()=>{const d=dupOf(c,p,ptName(p));nm.classList.toggle("bad",!!d);return d};chkDup();
+  nm.oninput=()=>{p.name=nm.value.toUpperCase().trim();$("#barName").textContent=p.name||p.autoName;save();chkDup()};
+  nm.addEventListener("blur",()=>{if(chkDup())toast(`${ptName(p)} existe déjà dans ce chantier`)});
+  const addr=$("#pAddr");addr.oninput=()=>{p.address=addr.value;save()};
+  [nm,addr].forEach(i=>i.onkeydown=e=>{if(e.key==="Enter")i.blur()});
+  $("#gpsBtn").onclick=()=>locate(p);paintGps(p);
+  $("#parBtn").onclick=()=>pickParent(p);
+  $("#noteBtn").onclick=()=>noteSheet(p);
+  $("#tGal").onclick=()=>gallery(p,"photos");
+  $("#doneBtn").onclick=leavePoint;
+  paintTech(p);
+}
+async function paintTech(p,flash){
+  const g=$("#fgrid");if(!g||route.id!==p.id)return;
+  const list=p.photos.photos||[];const urls=await Promise.all(list.map(thumbURL));
+  g.innerHTML=(list.length?"":`<button class="add first" data-shoot>${I.cam}<span>Prendre une photo</span><small style="font:600 14px var(--body);text-transform:none;opacity:.8">Autant de photos que nécessaire</small></button>`)
+    +list.map((id,i)=>`<button data-ph="${id}" class="${urls[i]?"":"busyc"}" aria-label="Photo ${i+1}">${urls[i]?`<img src="${urls[i]}" alt="">`:""}<span class="num2">${i+1}</span></button>`).join("")
+    +(list.length?`<button class="add" data-shoot>${I.plus}<span>Photo</span></button>`:"");
+  g.querySelectorAll("[data-shoot]").forEach(b=>b.onclick=()=>shoot(p,"photos"));
+  g.querySelectorAll("[data-ph]").forEach(b=>b.onclick=()=>viewPhoto(p,"photos",b.dataset.ph));
+  if(flash){const last=g.querySelector("[data-ph]:last-of-type");if(last){last.classList.add("flash")}g.scrollTop=g.scrollHeight}
+}
 
 async function renderPoint(id,isNew){
   const c=cur();const p=c.points.find(x=>x.id===id);if(!p)return renderHome();
+  if(isTech(p))return renderTech(p);
   route={v:"point",id};view.className="fit";updateBarPoint(p);
   const minis=SLOTS[p.type].filter(s=>s.mini),rest=SLOTS[p.type].filter(s=>!s.mini&&!s.extra);
   view.innerHTML=`
@@ -889,13 +992,14 @@ function paintGps(p){const b=$("#gpsBtn"),s=$("#gpsAcc");if(!b||!s)return;
 function shoot(p,k){pendingSlot={pid:p.id,k};$("#camInput").click()}
 function gallery(p,k){pendingSlot={pid:p.id,k};$("#galInput").click()}
 async function confirmLeave(){const p=curPoint();if(!p)return true;if(!p.name){p.name=p.autoName;save()}
+  if(isTech(p)&&!parentOf(cur(),p)){toast("Rattache ce point technique à une chambre ou un poteau");pickParent(p);return false}
   const d=dupOf(cur(),p,ptName(p));if(!d)return true;
   const keep=await ask(`${ptName(p)} existe déjà`,`Un autre relevé de ce chantier porte le même nom. Dans le ZIP, il sera renommé ${safe(ptName(p))}_2.`,"Garder");
   if(!keep){const i=$("#pName");if(i){i.focus();i.select()}}return keep}
 async function leavePoint(){if(await confirmLeave())renderHome()}
 
 async function paintTile(p,k,flash){
-  const s=SLOTS[p.type].find(x=>x.k===k);if(s&&s.mini)return paintMini(p,k,flash);
+  const s=SLOTS[p.type].find(x=>x.k===k);if(s&&s.free)return paintTech(p,flash);if(s&&s.mini)return paintMini(p,k,flash);
   if(s&&s.extra){const n=(p.photos[k]||[]).length,b=$("#xN");if(b){b.hidden=!n;b.textContent=n}
     const x=$("#xBtn");if(x&&flash){x.classList.remove("flash");void x.offsetWidth;x.classList.add("flash")}return}
   const box=view.querySelector(`.tile[data-slot="${k}"]`);if(!box)return;
@@ -929,6 +1033,7 @@ async function openSlot(p,k){
 }
 
 const NOTE_CHIPS={chambre:["Tampon cassé","Chambre inondée","Chambre encombrée","Boîtier non étiqueté","Masque abîmé","Accès impossible"],
+  technique:["Accès difficile","Câble abîmé","Boîtier non étiqueté","Réserve de câble","Accès impossible"],
   poteau:["Poteau penché","Poteau abîmé","Étiquette illisible","Boîtier non étiqueté","Élagage nécessaire","Accès impossible"]};
 function noteSheet(p){
   const ov=sheet(`<h2>Remarque</h2><div class="chips">${NOTE_CHIPS[p.type].map(t=>`<button class="qchip" data-t="${esc(t)}">${esc(t)}</button>`).join("")}</div>
@@ -1003,8 +1108,10 @@ async function viewPhoto(p,k,id){
 }
 
 $("#delBtn").onclick=async()=>{if(route.v==="home"&&cur())return deleteChantier(cur());const p=curPoint();if(!p)return;const c=cur();
-  if(!await ask(`Supprimer ${p.name||p.autoName} ?`,"Ses photos seront effacées du téléphone.","Supprimer",true))return;
-  for(const l of Object.values(p.photos))for(const ph of l)await phDel(ph);c.points=c.points.filter(x=>x!==p);save();renderHome()};
+  const kids=isTech(p)?[]:childrenOf(c,p);
+  if(!await ask(`Supprimer ${p.name||p.autoName} ?`,kids.length?`Ses photos et ses ${kids.length} point${kids.length>1?"s":""} technique${kids.length>1?"s":""} (${kids.map(ptName).join(", ")}) seront effacés du téléphone.`:"Ses photos seront effacées du téléphone.","Supprimer",true))return;
+  for(const x of [p,...kids])for(const l of Object.values(x.photos))for(const ph of l)await phDel(ph);
+  c.points=c.points.filter(x=>x!==p&&!kids.includes(x));save();renderHome()};
 
 /* ---------- GPS + adresse (API Adresse du gouvernement) ---------- */
 async function locate(p){
@@ -1026,6 +1133,8 @@ async function locate(p){
 /* ---------- Export ZIP ---------- */
 async function exportZip(){
   const c=cur();if(!c||!c.points.length)return;
+  const orph=c.points.filter(p=>isTech(p)&&!parentOf(c,p));
+  if(orph.length){toast(`${orph.map(ptName).join(", ")} : à rattacher avant le ZIP`);return renderPoint(orph[0].id)}
   const inc=c.points.filter(p=>pointStatus(p).miss);
   if(inc.length&&!await ask(`${inc.length} relevé${inc.length>1?"s":""} incomplet${inc.length>1?"s":""}`,
     inc.map(p=>p.name||p.autoName).join(", ")+" : il manque des photos obligatoires. Créer le ZIP quand même ?","Créer"))return;
@@ -1043,27 +1152,30 @@ async function exportZip(){
       $("#zp").textContent="Dessin du synoptique…";folder.file(`SYNOPTIQUE_${safe(c.name)}.png`,await makeSynoptique(c,R));
     }catch(e){console.warn("plan",e)}
     const legOf=new Map();R.pts.forEach((p,i)=>{if(i)legOf.set(p.id,Math.round(R.legs[i-1]))});
-    const used=new Set();const T=S.tech||{};const csv=[["Technicien","Mail","Date","Ville","Type","Nom","Adresse","Latitude","Longitude","Photos","Manquantes","Masques absents","Remarque","Ordre","Distance depuis le précédent (m)"]];
+    const used=new Set();const T=S.tech||{};const csv=[["Technicien","Mail","Date","Ville","Type","Nom","Adresse","Latitude","Longitude","Photos","Manquantes","Masques absents","Remarque","Ordre","Distance depuis le précédent (m)","Rattaché à"]];
     const total=c.points.reduce((a,p)=>a+pointStatus(p).n,0);let done=0;
-    for(const p of c.points){
+    const dirOf=new Map();
+    const ordered=[...c.points.filter(p=>!isTech(p)),...c.points.filter(isTech)];
+    for(const p of ordered){
       let name=safe(p.name||p.autoName),base=name,i=2;while(used.has(name.toLowerCase()))name=`${base}_${i++}`;used.add(name.toLowerCase());
-      const f=folder.folder(name);const st=pointStatus(p);
+      const par=isTech(p)?parentOf(c,p):null;
+      const f=isTech(p)?(par&&dirOf.get(par.id)||folder.folder("A_RATTACHER")).folder(name):folder.folder(name);dirOf.set(p.id,f);const st=pointStatus(p);
       for(const s of SLOTS[p.type]){const list=p.photos[s.k]||[];
         for(let n=0;n<list.length;n++){const rec=await phGet(list[n]);if(!rec)continue;
           const ext=(rec.type.split("/")[1]||"jpg").replace("jpeg","jpg");
           f.file(`${name}_${s.file}${list.length>1?"_"+(n+1):""}.${ext}`,rec.blob,{binary:true,date:new Date(rec.ts)});
           done++;$("#zp").textContent=`Ajout des photos ${done} / ${total}`;}}
-      const infos=[`Chantier : ${c.name}`,`Ville : ${c.city||"-"}`,`Relevé par : ${p.by||techLabel(T)} (${T.email||"-"})`,`Date : ${new Date(p.at||c.created).toLocaleString("fr-FR")}`,`${TYPE_LABEL[p.type]} : ${p.name||p.autoName}`,`Adresse : ${p.address||"-"}`,
+      const infos=[`Chantier : ${c.name}`,`Ville : ${c.city||"-"}`,`Relevé par : ${p.by||techLabel(T)} (${T.email||"-"})`,`Date : ${new Date(p.at||c.created).toLocaleString("fr-FR")}`,`${TYPE_LABEL[p.type]} : ${p.name||p.autoName}`,...(isTech(p)?[`Rattaché à : ${parentOf(c,p)?ptName(parentOf(c,p))+" ("+TYPE_LABEL[parentOf(c,p).type]+")":"-"}`]:childrenOf(c,p).length?[`Points techniques : ${childrenOf(c,p).map(ptName).join(", ")}`]:[]),`Adresse : ${p.address||"-"}`,
         `GPS : ${p.gps?p.gps.lat.toFixed(6)+", "+p.gps.lon.toFixed(6):"-"}`,`Photos : ${st.n}`,
         st.miss?`Manquantes : ${missing(p).map(s=>s.label).join(", ")}`:"Complet",
         ...(p.na&&Object.keys(p.na).some(k=>p.na[k])?[`Masques absents : ${SLOTS[p.type].filter(s=>isNA(p,s.k)).map(s=>s.label).join(", ")}`]:[]),
         `Remarque : ${p.note?p.note.replace(/\r?\n/g," / "):"-"}`];
       f.file("infos.txt",infos.join("\r\n"));
-      csv.push([p.by||techLabel(T),T.email||"",new Date(p.at||c.created).toLocaleDateString("fr-FR"),c.city||"",TYPE_LABEL[p.type],p.name||p.autoName,p.address||"",p.gps?p.gps.lat.toFixed(6):"",p.gps?p.gps.lon.toFixed(6):"",st.n,st.miss,SLOTS[p.type].filter(s=>isNA(p,s.k)).map(s=>s.label).join(", "),(p.note||"").replace(/\r?\n/g," / "),c.points.indexOf(p)+1,legOf.has(p.id)?legOf.get(p.id):""]);
+      csv.push([p.by||techLabel(T),T.email||"",new Date(p.at||c.created).toLocaleDateString("fr-FR"),c.city||"",TYPE_LABEL[p.type],p.name||p.autoName,p.address||"",p.gps?p.gps.lat.toFixed(6):"",p.gps?p.gps.lon.toFixed(6):"",st.n,st.miss,SLOTS[p.type].filter(s=>isNA(p,s.k)).map(s=>s.label).join(", "),(p.note||"").replace(/\r?\n/g," / "),isTech(p)?"":c.points.filter(x=>!isTech(x)).indexOf(p)+1,legOf.has(p.id)?legOf.get(p.id):"",isTech(p)&&parentOf(c,p)?ptName(parentOf(c,p)):""]);
     }
     const nC=c.points.filter(p=>!pointStatus(p).miss).length;
     folder.file("LISEZ-MOI.txt",[`DOE ${c.name}`,`Ville : ${c.city||"-"}`,``,`Technicien : ${techLabel(T)}`,`Mail : ${T.email||"-"}`,
-      `Export : ${new Date().toLocaleString("fr-FR")}`,``,`Relevés : ${c.points.length} (${c.points.filter(p=>p.type==="chambre").length} chambres, ${c.points.filter(p=>p.type==="poteau").length} poteaux)`,
+      `Export : ${new Date().toLocaleString("fr-FR")}`,``,`Relevés : ${c.points.length} (${c.points.filter(p=>p.type==="chambre").length} chambres, ${c.points.filter(p=>p.type==="poteau").length} poteaux, ${c.points.filter(isTech).length} points techniques)`,
       `Complets : ${nC} / ${c.points.length}`,`Photos : ${total}`,
       `Cheminement : ${R.pts.length>1?`${fmtDist(R.dist)} (${R.road?"par les routes":"à vol d'oiseau"}, indicatif)`:"-"}`,``,
       `Plan : PLAN_${safe(c.name)}.png · Synoptique : SYNOPTIQUE_${safe(c.name)}.png`,``,`Généré par Sogeo`].join("\r\n"));
@@ -1155,6 +1267,9 @@ async function loadDemo(){
         done++;const b=w.querySelector("#dbar");if(b)b.style.width=Math.round(done/total*100)+"%"}
       for(let e=0;e<(d.extra||0);e++){(p.photos.autres=p.photos.autres||[]).push(await demoPhoto("Autre photo",`${d.name} · détail`,140));done++}
       c.points.push(p)}
+    const par=c.points[0],tp={id:uid(),type:"technique",name:"PTECH-EYS-01",autoName:"PTECH-EYS-01",address:"",gps:{lat:44.88392,lon:-0.65071,acc:5},photos:{photos:[]},by,at:t0+10*60e3,note:"Réserve de câble",parent:par.id};
+    for(const [t,s] of [["Réserve de câble","love de 15 m"],["Point technique","vue d'ensemble"]])tp.photos.photos.push(await demoPhoto(t,`PTECH-EYS-01 · ${s}`,265));
+    c.points.splice(1,0,tp);
     S.chantiers[c.id]=c;S.current=c.id;await save();w.remove();renderHome();toast("Chantier de démo chargé");catchUp()
   }catch(e){w.remove();toast("La démo n'a pas pu être créée : "+e.message)}}
 
