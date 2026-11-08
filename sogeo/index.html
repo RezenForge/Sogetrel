@@ -132,6 +132,7 @@ textarea.inp{font-family:var(--body);resize:vertical;min-height:100px;font-size:
 .techbar .tx{flex:1;min-width:0;display:flex;flex-direction:column}
 .techbar small{font:600 12px var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .techbar b{font:700 20px/1.1 var(--display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.techbar em{font:500 13px var(--body);font-style:normal;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .techbar .ch{font:600 14px var(--body);color:var(--muted);flex:none}
 .techbar.orph{border-color:var(--danger)}.techbar.orph b{color:var(--danger)}
 .fgrid{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-content:start;padding-bottom:4px}
@@ -278,6 +279,7 @@ main.fit .list.scroll>*{flex:none}
 .mapnote.off{bottom:auto;top:94px;color:var(--muted)}
 .pathinfo.warn{color:var(--warn);font-weight:600}
 .mapmsg{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);text-align:center;padding:20px}
+.ttip{font-size:11px!important;color:#5b6370!important}
 .tdia{width:14px;height:14px;transform:rotate(45deg);background:#5b6370;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
 .tdia.warn{background:#c0782b}
 .mtip{font:700 13px var(--body)!important;padding:2px 6px!important;border-radius:6px!important}
@@ -406,6 +408,13 @@ const TYPE_LABEL={chambre:"Chambre",poteau:"Poteau",technique:"Point technique"}
 const isTech=p=>p.type==="technique";
 const parentOf=(c,p)=>p&&p.parent?c.points.find(x=>x.id===p.parent):null;
 const childrenOf=(c,p)=>c.points.filter(x=>x.parent===p.id);
+// Adresse d'un relevé : un point technique reprend celle de sa chambre ou de son poteau
+const addrOf=(c,p)=>isTech(p)?((parentOf(c,p)||{}).address||""):(p.address||"");
+// Position sur la carte : la sienne si prise, sinon à côté de son ouvrage (marquée « approx. »)
+function techPos(c,p){if(p.gps)return{lat:p.gps.lat,lon:p.gps.lon,approx:false};
+  const par=parentOf(c,p);if(!par||!par.gps)return null;
+  const sib=childrenOf(c,par).filter(x=>!x.gps),i=Math.max(0,sib.indexOf(p)),ang=-Math.PI/4+i*(Math.PI/3),r=9;
+  return{lat:par.gps.lat+r*Math.sin(ang)/111320,lon:par.gps.lon+r*Math.cos(ang)/(111320*Math.cos(par.gps.lat*Math.PI/180)),approx:true}}
 
 /* ---------- Stockage (IndexedDB : rien n'est perdu si le téléphone ferme la page) ---------- */
 let db;
@@ -598,7 +607,7 @@ function renderHome(){
     const chip=isTech(p)?(st.n?`<span class="chip ok">${st.n} photo${st.n>1?"s":""}</span>`:`<span class="chip warn">0 photo</span>`)
       :(st.miss?`<span class="chip warn">${st.req-st.miss}/${st.req}</span>`:`<span class="chip ok">${st.n} photo${st.n>1?"s":""}</span>`);
     const kids=isTech(p)?0:childrenOf(c,p).length;
-    const sub2=isTech(p)?(parentOf(c,p)?`Point technique`:`<span class="orph">À rattacher</span>`):esc(p.address||TYPE_LABEL[p.type])+(kids?` · ${kids} pt tech.`:"");
+    const sub2=isTech(p)?(parentOf(c,p)?esc(addrOf(c,p)||"Point technique"):`<span class="orph">À rattacher</span>`):esc(p.address||TYPE_LABEL[p.type])+(kids?` · ${kids} pt tech.`:"");
     return `<button class="pt ${sub?"sub":""}" data-id="${p.id}"><span class="ic">${I[p.type]}</span><span class="tx">
       <span class="n">${esc(p.name||p.autoName)}</span><span class="a">${p.note?`<span class="nt">● ${esc(p.note.split(/\n/)[0])}</span> · `:""}${sub2}</span></span>${chip}</button>`};
   const items=c.points.filter(p=>!isTech(p)).reverse().map(p=>row(p)+childrenOf(c,p).map(k=>row(k,true)).join("")).join("")
@@ -652,7 +661,7 @@ async function renderMap(){
   route={v:"map"};view.className="fit";setBar("Carte · "+(c.city||"chantier"),c.name,true,false);
   const withGps=c.points.filter(p=>p.gps&&!isTech(p)),noGps=c.points.filter(p=>!isTech(p)).length-withGps.length;
   view.innerHTML=`<div class="mapwrap"><div id="map"></div>
-    <div class="legend"><span><i class="dot ok"></i>Complet</span><span><i class="dot warn"></i>À finir</span></div>
+    <div class="legend"><span><i class="dot ok"></i>Complet</span><span><i class="dot warn"></i>À finir</span>${c.points.some(isTech)?`<span><i class="tdia" style="width:10px;height:10px;display:inline-block"></i>Pt tech.</span>`:""}</div>
     <div class="pathinfo" id="pathInfo" hidden></div>
     ${navigator.onLine?"":`<div class="mapnote off">Hors ligne : seules les zones déjà consultées s'affichent</div>`}
     ${noGps?`<div class="mapnote">${noGps} relevé${noGps>1?"s":""} sans position GPS</div>`:""}
@@ -680,12 +689,13 @@ async function renderMap(){
     html.innerHTML=`<b>${esc(ptName(p))}</b><span>${TYPE_LABEL[p.type]} · ${st.miss?`${st.req-st.miss}/${st.req} faites`:"complet"}</span>${p.note?`<em>${esc(p.note.split(/\n/)[0])}</em>`:""}<button>Ouvrir</button>`;
     html.querySelector("button").onclick=()=>renderPoint(p.id);
     mk.bindPopup(html,{closeButton:false});pts.push([p.gps.lat,p.gps.lon])}
-  for(const p of c.points.filter(x=>isTech(x)&&x.gps)){const par=parentOf(c,p),n=(p.photos.photos||[]).length;
-    if(par&&par.gps)L.polyline([[par.gps.lat,par.gps.lon],[p.gps.lat,p.gps.lon]],{color:"#5b6370",weight:2,dashArray:"3 5"}).addTo(m);
-    const mk=L.marker([p.gps.lat,p.gps.lon],{icon:L.divIcon({className:"",html:`<div class="tdia ${n?"":"warn"}"></div>`,iconSize:[16,16],iconAnchor:[8,8]})}).addTo(m);
+  for(const p of c.points.filter(isTech)){const pos=techPos(c,p);if(!pos)continue;const par=parentOf(c,p),n=(p.photos.photos||[]).length;
+    if(par&&par.gps)L.polyline([[par.gps.lat,par.gps.lon],[pos.lat,pos.lon]],{color:"#5b6370",weight:2.5,dashArray:"3 5"}).addTo(m);
+    const mk=L.marker([pos.lat,pos.lon],{icon:L.divIcon({className:"",html:`<div class="tdia ${n?"":"warn"}"></div>`,iconSize:[18,18],iconAnchor:[9,9]}),zIndexOffset:500}).addTo(m);
+    mk.bindTooltip(esc(ptName(p)),{permanent:true,direction:"right",offset:[10,0],className:"mtip ttip"});
     const html=document.createElement("div");html.className="mpop";
-    html.innerHTML=`<b>${esc(ptName(p))}</b><span>Point technique · ${n} photo${n>1?"s":""}${par?` · rattaché à ${esc(ptName(par))}`:""}</span><button>Ouvrir</button>`;
-    html.querySelector("button").onclick=()=>renderPoint(p.id);mk.bindPopup(html,{closeButton:false});pts.push([p.gps.lat,p.gps.lon])}
+    html.innerHTML=`<b>${esc(ptName(p))}</b><span>Point technique · ${n} photo${n>1?"s":""}${par?` · rattaché à ${esc(ptName(par))}`:""}${pos.approx?"<br>Position approximative (près de l'ouvrage)":""}</span><button>Ouvrir</button>`;
+    html.querySelector("button").onclick=()=>renderPoint(p.id);mk.bindPopup(html,{closeButton:false});pts.push([pos.lat,pos.lon])}
   if(pts.length)m.fitBounds(pts,{padding:[50,50],maxZoom:18});
   else getPos().then(co=>m.setView([co.latitude,co.longitude],16)).catch(()=>{});
   drawPath(c,m);
@@ -771,7 +781,7 @@ async function makePlan(c,R,onStep){
     path();g.strokeStyle="#fff";g.lineWidth=16;g.setLineDash(R.road?[]:[]);g.stroke();
     path();g.strokeStyle=COL.ink;g.lineWidth=8;g.setLineDash(R.road?[]:[26,18]);g.stroke();g.setLineDash([])}
   // Points techniques (hors cheminement), reliés à leur ouvrage
-  for(const p of c.points.filter(x=>isTech(x)&&x.gps)){const par=parentOf(c,p);const [x,y]=P([p.gps.lat,p.gps.lon]);
+  for(const p of c.points.filter(isTech)){const pos=techPos(c,p);if(!pos)continue;const par=parentOf(c,p);const [x,y]=P([pos.lat,pos.lon]);
     if(x<0||y<0||x>MW||y>MH)continue;
     if(par&&par.gps){const [px,py]=P([par.gps.lat,par.gps.lon]);g.strokeStyle=COL.mute;g.lineWidth=3;g.setLineDash([6,8]);g.beginPath();g.moveTo(px,py);g.lineTo(x,y);g.stroke();g.setLineDash([])}
     g.save();g.translate(x,y);g.rotate(Math.PI/4);g.fillStyle=(p.photos.photos||[]).length?COL.mute:COL.warn;g.fillRect(-11,-11,22,22);g.lineWidth=4;g.strokeStyle="#fff";g.strokeRect(-11,-11,22,22);g.restore()}
@@ -885,7 +895,7 @@ async function autoLocate(p){if(p._locating||(p.gps&&p.gps.acc<=15))return;p._lo
     if(p.gps&&p.gps.acc<=co.accuracy)return;
     p.gps={lat:co.latitude,lon:co.longitude,acc:co.accuracy,at:Date.now()};
     if(route.v==="point"&&route.id===p.id){const b=$("#gpsBtn");if(b)b.classList.add("has");paintGps(p)}
-    if(!p.address||!cur().city){const g=await reverseGeo(co.latitude,co.longitude).catch(()=>null);
+    if(!isTech(p)&&(!p.address||!cur().city)){const g=await reverseGeo(co.latitude,co.longitude).catch(()=>null);
       if(g){if(!p.address){p.address=g.label;const a=$("#pAddr");if(a&&route.id===p.id)a.value=g.label}const c=cur();if(c&&!c.city&&g.city)c.city=g.city}}
   }catch(e){}finally{delete p._locating;save()}}
 
@@ -901,11 +911,10 @@ async function renderTech(p){
   const par=parentOf(c,p);
   view.innerHTML=`
     <div class="head">
-      <input class="inp huge" id="pName" value="${esc(p.name)}" placeholder="Nom" autocapitalize="characters" autocomplete="off" spellcheck="false" enterkeyhint="done" aria-label="Nom du point technique">
-      <input class="inp" id="pAddr" value="${esc(p.address)}" placeholder="Adresse" autocomplete="off" enterkeyhint="done" aria-label="Adresse">
+      <input class="inp huge" id="pName" style="flex:1" value="${esc(p.name)}" placeholder="Nom" autocapitalize="characters" autocomplete="off" spellcheck="false" enterkeyhint="done" aria-label="Nom du point technique">
       <button class="gps-btn ${p.gps?"has":""}" id="gpsBtn" aria-label="Prendre ma position ici">${I.gps}<small id="gpsAcc"></small></button>
     </div>
-    <button class="techbar ${par?"":"orph"}" id="parBtn">${I.link}<span class="tx"><small>Rattaché à</small><b>${par?`${esc(ptName(par))} · ${TYPE_LABEL[par.type]}`:"À rattacher (obligatoire)"}</b></span><span class="ch">Changer</span></button>
+    <button class="techbar ${par?"":"orph"}" id="parBtn">${I.link}<span class="tx"><small>Rattaché à</small><b>${par?`${esc(ptName(par))} · ${TYPE_LABEL[par.type]}`:"À rattacher (obligatoire)"}</b>${par?`<em>${esc(par.address||"Adresse de l'ouvrage non renseignée")}</em>`:""}</span><span class="ch">Changer</span></button>
     <div class="fgrid" id="fgrid"></div>`;
   setDock(`<button class="ghost sq ${p.note?"on":""}" id="noteBtn" aria-label="Remarque">${I.note}<i></i></button>
     <button class="ghost sq" id="tGal" aria-label="Ajouter depuis la galerie">${I.gal}</button>
@@ -914,8 +923,7 @@ async function renderTech(p){
   const chkDup=()=>{const d=dupOf(c,p,ptName(p));nm.classList.toggle("bad",!!d);return d};chkDup();
   nm.oninput=()=>{p.name=nm.value.toUpperCase().trim();$("#barName").textContent=p.name||p.autoName;save();chkDup()};
   nm.addEventListener("blur",()=>{if(chkDup())toast(`${ptName(p)} existe déjà dans ce chantier`)});
-  const addr=$("#pAddr");addr.oninput=()=>{p.address=addr.value;save()};
-  [nm,addr].forEach(i=>i.onkeydown=e=>{if(e.key==="Enter")i.blur()});
+  nm.onkeydown=e=>{if(e.key==="Enter")nm.blur()};
   $("#gpsBtn").onclick=()=>locate(p);paintGps(p);
   $("#parBtn").onclick=()=>pickParent(p);
   $("#noteBtn").onclick=()=>noteSheet(p);
@@ -1120,6 +1128,7 @@ async function locate(p){
   let co;try{co=await getPrecisePos(a=>toast(`Précision GPS : ±${Math.round(a)} m…`))}catch(e){btn.classList.remove("busy");toast(posErr(e));return}
   const {latitude:lat,longitude:lon,accuracy:acc}=co;p.gps={lat,lon,acc,at:Date.now()};save();btn.classList.add("has");paintGps(p);
   if(acc>30)toast(`Position imprécise (±${Math.round(acc)} m) : réessaie à découvert`);
+  if(isTech(p)){btn.classList.remove("busy");if(acc<=30)toast(`Position du point technique prise ici (±${Math.round(acc)} m)`);return}
   try{const g=await reverseGeo(lat,lon);
     if(g){p.address=g.label;const a=$("#pAddr");if(a&&route.id===p.id)a.value=g.label;
       let msg=`Position prise ici (±${Math.round(acc)} m) · ${g.label}`;
@@ -1165,13 +1174,13 @@ async function exportZip(){
           const ext=(rec.type.split("/")[1]||"jpg").replace("jpeg","jpg");
           f.file(`${name}_${s.file}${list.length>1?"_"+(n+1):""}.${ext}`,rec.blob,{binary:true,date:new Date(rec.ts)});
           done++;$("#zp").textContent=`Ajout des photos ${done} / ${total}`;}}
-      const infos=[`Chantier : ${c.name}`,`Ville : ${c.city||"-"}`,`Relevé par : ${p.by||techLabel(T)} (${T.email||"-"})`,`Date : ${new Date(p.at||c.created).toLocaleString("fr-FR")}`,`${TYPE_LABEL[p.type]} : ${p.name||p.autoName}`,...(isTech(p)?[`Rattaché à : ${parentOf(c,p)?ptName(parentOf(c,p))+" ("+TYPE_LABEL[parentOf(c,p).type]+")":"-"}`]:childrenOf(c,p).length?[`Points techniques : ${childrenOf(c,p).map(ptName).join(", ")}`]:[]),`Adresse : ${p.address||"-"}`,
+      const infos=[`Chantier : ${c.name}`,`Ville : ${c.city||"-"}`,`Relevé par : ${p.by||techLabel(T)} (${T.email||"-"})`,`Date : ${new Date(p.at||c.created).toLocaleString("fr-FR")}`,`${TYPE_LABEL[p.type]} : ${p.name||p.autoName}`,...(isTech(p)?[`Rattaché à : ${parentOf(c,p)?ptName(parentOf(c,p))+" ("+TYPE_LABEL[parentOf(c,p).type]+")":"-"}`]:childrenOf(c,p).length?[`Points techniques : ${childrenOf(c,p).map(ptName).join(", ")}`]:[]),`Adresse : ${addrOf(c,p)||"-"}`,
         `GPS : ${p.gps?p.gps.lat.toFixed(6)+", "+p.gps.lon.toFixed(6):"-"}`,`Photos : ${st.n}`,
         st.miss?`Manquantes : ${missing(p).map(s=>s.label).join(", ")}`:"Complet",
         ...(p.na&&Object.keys(p.na).some(k=>p.na[k])?[`Masques absents : ${SLOTS[p.type].filter(s=>isNA(p,s.k)).map(s=>s.label).join(", ")}`]:[]),
         `Remarque : ${p.note?p.note.replace(/\r?\n/g," / "):"-"}`];
       f.file("infos.txt",infos.join("\r\n"));
-      csv.push([p.by||techLabel(T),T.email||"",new Date(p.at||c.created).toLocaleDateString("fr-FR"),c.city||"",TYPE_LABEL[p.type],p.name||p.autoName,p.address||"",p.gps?p.gps.lat.toFixed(6):"",p.gps?p.gps.lon.toFixed(6):"",st.n,st.miss,SLOTS[p.type].filter(s=>isNA(p,s.k)).map(s=>s.label).join(", "),(p.note||"").replace(/\r?\n/g," / "),isTech(p)?"":c.points.filter(x=>!isTech(x)).indexOf(p)+1,legOf.has(p.id)?legOf.get(p.id):"",isTech(p)&&parentOf(c,p)?ptName(parentOf(c,p)):""]);
+      csv.push([p.by||techLabel(T),T.email||"",new Date(p.at||c.created).toLocaleDateString("fr-FR"),c.city||"",TYPE_LABEL[p.type],p.name||p.autoName,addrOf(c,p),p.gps?p.gps.lat.toFixed(6):"",p.gps?p.gps.lon.toFixed(6):"",st.n,st.miss,SLOTS[p.type].filter(s=>isNA(p,s.k)).map(s=>s.label).join(", "),(p.note||"").replace(/\r?\n/g," / "),isTech(p)?"":c.points.filter(x=>!isTech(x)).indexOf(p)+1,legOf.has(p.id)?legOf.get(p.id):"",isTech(p)&&parentOf(c,p)?ptName(parentOf(c,p)):""]);
     }
     const nC=c.points.filter(p=>!pointStatus(p).miss).length;
     folder.file("LISEZ-MOI.txt",[`DOE ${c.name}`,`Ville : ${c.city||"-"}`,``,`Technicien : ${techLabel(T)}`,`Mail : ${T.email||"-"}`,
@@ -1316,7 +1325,7 @@ function updateOnline(){$("#offBadge").hidden=navigator.onLine}
 let catching=false;
 async function catchUp(){if(catching||!navigator.onLine)return;catching=true;let n=0;
   try{for(const c of Object.values(S.chantiers))for(const p of c.points){
-      if(!p.gps||(p.address&&c.city))continue;
+      if(isTech(p)||!p.gps||(p.address&&c.city))continue;
       const g=await reverseGeo(p.gps.lat,p.gps.lon).catch(()=>null);if(!g)continue;
       if(!p.address){p.address=g.label;n++;const a=$("#pAddr");if(a&&route.v==="point"&&route.id===p.id)a.value=g.label}
       if(!c.city&&g.city)c.city=g.city}
