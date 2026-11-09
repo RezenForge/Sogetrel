@@ -502,16 +502,54 @@ async function processPhotoMain(file){
     return{blob:big&&big.size<file.size?big:file,thumb,xl,xw,xh}
   }catch(e){return{blob:file,thumb:null}}}
 
+/* Horodatage incrusté + métadonnées EXIF (code partagé entre l'appli et ses workers) */
+const SHARED_FN=String.raw`function band(c,lines){const g=c.getContext("2d"),W=c.width,H=c.height,fs=Math.round(Math.max(W,H*1.33)/46),pad=Math.round(fs*.7),lh=Math.round(fs*1.32);
+  const st=[{f:"bold "+Math.round(fs*1.08)+"px sans-serif",c:"#fff"},{f:"600 "+fs+"px sans-serif",c:"#fff"},{f:"500 "+Math.round(fs*.86)+"px sans-serif",c:"rgba(255,255,255,.85)"}];
+  const L=lines.filter(Boolean).length?lines.filter(Boolean):[" "],bh=pad*2+lh*L.length;
+  const gr=g.createLinearGradient(0,H-bh-pad*2,0,H);gr.addColorStop(0,"rgba(0,0,0,0)");gr.addColorStop(.25,"rgba(0,0,0,.62)");gr.addColorStop(1,"rgba(0,0,0,.78)");
+  g.save();g.fillStyle=gr;g.fillRect(0,H-bh-pad*2,W,bh+pad*2);g.shadowColor="rgba(0,0,0,.6)";g.shadowBlur=4;g.textBaseline="alphabetic";
+  const fit=(t,max)=>{if(g.measureText(t).width<=max)return t;while(t.length>1&&g.measureText(t+"…").width>max)t=t.slice(0,-1);return t+"…"};
+  g.font="bold "+Math.round(fs*.9)+"px sans-serif";const mark=g.measureText("SOGEO").width;
+  L.forEach((t,i)=>{const s=st[i]||st[2];g.font=s.f;g.fillStyle=s.c;g.fillText(fit(t,W-pad*2-(i?0:mark+pad)),pad,H-bh+pad+lh*(i+1)-lh*.25)});
+  g.font="bold "+Math.round(fs*.9)+"px sans-serif";g.textAlign="right";g.fillStyle="rgba(255,255,255,.85)";g.fillText("SOGEO",W-pad,H-bh+pad+lh*.75);g.restore()}
+function exifBytes(f){
+  const A=s=>{s=String(s==null?"":s).normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\x20-\x7E]/g,"?");const b=new Uint8Array(s.length+1);for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i);return b};
+  const U=s=>{const b=new Uint8Array((String(s).length+1)*2);for(let i=0;i<String(s).length;i++){const c=String(s).charCodeAt(i);b[i*2]=c&255;b[i*2+1]=c>>8}return b};
+  const R=list=>{const b=new Uint8Array(list.length*8),v=new DataView(b.buffer);list.forEach(([n,d],i)=>{v.setUint32(i*8,n,true);v.setUint32(i*8+4,d,true)});return b};
+  const dms=x=>{x=Math.abs(x);const d=Math.floor(x),mf=(x-d)*60,m=Math.floor(mf),s=Math.round((mf-m)*60*10000);return[[d,1],[m,1],[s,10000]]};
+  const E=(tag,type,data,count)=>({tag,type,data,count:count!=null?count:(type===5?data.length/8:type===4?1:data.length)});
+  const ifd0=[E(0x010E,2,A(f.desc)),E(0x010F,2,A("Sogeo")),E(0x0110,2,A("Sogeo terrain")),E(0x0131,2,A(f.software)),E(0x0132,2,A(f.dt)),E(0x013B,2,A(f.artist)),
+    E(0x8769,4,0),...(f.lat!=null?[E(0x8825,4,0)]:[]),E(0x9C9C,1,U(f.xp)),E(0x9C9B,1,U(f.desc))];
+  const exif=[E(0x9000,7,new Uint8Array([48,50,51,50])),E(0x9003,2,A(f.dt)),E(0x9004,2,A(f.dt)),E(0x9010,2,A(f.off)),E(0x9011,2,A(f.off)),E(0x9012,2,A(f.off))];
+  const gps=f.lat!=null?[E(0x0000,1,new Uint8Array([2,3,0,0])),E(0x0001,2,A(f.lat>=0?"N":"S")),E(0x0002,5,R(dms(f.lat))),E(0x0003,2,A(f.lon>=0?"E":"W")),E(0x0004,5,R(dms(f.lon))),
+    E(0x0007,5,R(f.gpsTime.map(x=>[x,1]))),E(0x001D,2,A(f.gpsDate)),...(f.acc!=null?[E(0x001F,5,R([[Math.round(f.acc*100),100]]))]:[])]:null;
+  const size=es=>2+12*es.length+4+es.reduce((n,e)=>{const l=e.type===4?4:e.data.length;return n+(l>4?l+(l&1):0)},0);
+  const o0=8,oE=o0+size(ifd0),oG=oE+size(exif),total=oG+(gps?size(gps):0);
+  const buf=new Uint8Array(total),v=new DataView(buf.buffer);buf.set([0x49,0x49,0x2A,0,8,0,0,0]);
+  const write=(es,off)=>{es.sort((a,b)=>a.tag-b.tag);v.setUint16(off,es.length,true);let data=off+2+12*es.length+4;
+    es.forEach((e,i)=>{const p=off+2+i*12;v.setUint16(p,e.tag,true);v.setUint16(p+2,e.type,true);v.setUint32(p+4,e.count,true);
+      if(e.type===4){v.setUint32(p+8,e.tag===0x8769?oE:e.tag===0x8825?oG:e.data,true);return}
+      if(e.data.length<=4){buf.set(e.data,p+8)}else{v.setUint32(p+8,data,true);buf.set(e.data,data);data+=e.data.length+(e.data.length&1)}});
+    v.setUint32(off+2+12*es.length,0,true)};
+  write(ifd0,o0);write(exif,oE);if(gps)write(gps,oG);
+  const seg=new Uint8Array(10+total);seg.set([0xFF,0xE1,((8+total)>>8)&255,(8+total)&255,0x45,0x78,0x69,0x66,0,0]);seg.set(buf,10);return seg}
+async function withExif(blob,f){try{const u=new Uint8Array(await blob.arrayBuffer());if(u[0]!==0xFF||u[1]!==0xD8)return blob;
+  let pos=2;if(u[2]===0xFF&&u[3]===0xE0)pos=4+((u[4]<<8)|u[5]);
+  return new Blob([u.subarray(0,pos),exifBytes(f),u.subarray(pos)],{type:"image/jpeg"})}catch(e){return blob}}
+`;
+(0,eval)(SHARED_FN); // band(), exifBytes(), withExif() disponibles aussi dans la page
 /* Compression en arrière-plan : workers dédiés (OffscreenCanvas), plusieurs photos en parallèle.
    La photo d'origine est enregistrée tout de suite (rien n'est perdu), puis remplacée par la version compressée. */
-const WORKER_SRC=`
+const WORKER_SRC=SHARED_FN+`
 const draw=(src,max)=>{const sc=Math.min(1,max/Math.max(src.width,src.height)),w=Math.max(1,Math.round(src.width*sc)),h=Math.max(1,Math.round(src.height*sc));
   const c=new OffscreenCanvas(w,h),x=c.getContext("2d",{alpha:false});x.imageSmoothingQuality="medium";x.drawImage(src,0,0,w,h);return c};
 self.onmessage=async e=>{const d=e.data;
   try{const bmp=await createImageBitmap(d.file,{imageOrientation:"from-image"});
-    const big=draw(bmp,d.max);bmp.close();const th=draw(big,480),xl=draw(big,1280);
-    const [b,t,x]=await Promise.all([big.convertToBlob({type:"image/jpeg",quality:d.q}),th.convertToBlob({type:"image/jpeg",quality:.7}),xl.convertToBlob({type:"image/jpeg",quality:.8})]);
-    self.postMessage({id:d.id,blob:b,thumb:t,xl:x,xw:xl.width,xh:xl.height})}
+    const big=draw(bmp,d.max);bmp.close();if(d.stamp)band(big,d.stamp); // horodatage incrusté au moment de la photo
+    const th=draw(big,480),xl=draw(big,1280);
+    let [b,t,x]=await Promise.all([big.convertToBlob({type:"image/jpeg",quality:d.q}),th.convertToBlob({type:"image/jpeg",quality:.7}),xl.convertToBlob({type:"image/jpeg",quality:.8})]);
+    if(d.exif)b=await withExif(b,d.exif);
+    self.postMessage({id:d.id,blob:b,thumb:t,xl:x,xw:xl.width,xh:xl.height,stamped:!!d.stamp})}
   catch(err){self.postMessage({id:d.id,error:String(err)})}};`;
 const compressQueue=(()=>{
   let workers=[],ok=typeof Worker!=="undefined"&&typeof OffscreenCanvas!=="undefined"&&typeof createImageBitmap!=="undefined";
@@ -522,21 +560,21 @@ const compressQueue=(()=>{
       for(let i=0;i<size;i++){const w=new Worker(u);w.free=true;w.onmessage=e=>finish(w,e.data);w.onerror=()=>{ok=false};workers.push(w)}}
     catch(e){ok=false}}
   async function finish(w,res){const job=busy.get(w);busy.delete(w);w.free=true;
-    let out=res.error?null:{blob:res.blob&&res.blob.size<job.file.size?res.blob:job.file,thumb:res.thumb,xl:res.xl,xw:res.xw,xh:res.xh};
+    let out=res.error?null:{blob:(res.stamped||(res.blob&&res.blob.size<job.file.size))?res.blob:job.file,thumb:res.thumb,xl:res.xl,xw:res.xw,xh:res.xh,stamped:res.stamped};
     if(!out)out=await processPhotoMain(job.file);
     await done(job,out);running--;pump()}
-  async function done(job,out){try{const rec=await phGet(job.id);if(rec){const {pending,...keep}=rec;await phSet(job.id,{...keep,blob:out.blob,thumb:out.thumb,xl:out.xl||null,xw:out.xw||0,xh:out.xh||0,type:out.blob.type||"image/jpeg"})}}catch(e){}
+  async function done(job,out){try{const rec=await phGet(job.id);if(rec){const {pending,...keep}=rec;await phSet(job.id,{...keep,blob:out.blob,thumb:out.thumb,xl:out.xl||null,xw:out.xw||0,xh:out.xh||0,type:out.blob.type||"image/jpeg",stamped:!!out.stamped})}}catch(e){}
     S.pending=(S.pending||[]).filter(x=>x!==job.id);save();onCompressed(job.id,out.thumb)}
   async function pump(){
     makeWorkers();
     while(jobs.length){
       if(ok&&workers.length){const w=workers.find(x=>x.free);if(!w)break;const job=jobs.shift();w.free=false;busy.set(w,job);running++;
-        w.postMessage({id:job.id,file:job.file,max:MAX_PX,q:QUALITY})}
+        w.postMessage({id:job.id,file:job.file,max:MAX_PX,q:QUALITY,stamp:job.meta&&job.meta.stamp||null,exif:job.meta&&job.meta.exif||null})}
       else{if(running)break;const job=jobs.shift();running++;await done(job,await processPhotoMain(job.file));running--}
     }
     if(!jobs.length&&!running)waiters.splice(0).forEach(r=>r())}
   return{
-    add(id,file){jobs.push({id,file});pump()},
+    add(id,file,meta){jobs.push({id,file,meta});pump()},
     idle:()=>!jobs.length&&!running,
     left:()=>jobs.length+running,
     drain:()=>new Promise(r=>{if(!jobs.length&&!running)r();else waiters.push(r)})};
@@ -798,24 +836,24 @@ function stampLines(c,p,slotLabel,rec){
   return[`${fmtStamp(rec.shot||rec.ts)}${rec.mode==="import"?" (importée)":""}  ·  ${c.name}  ·  ${ptName(p)}  ·  ${slotLabel}`,
     addrOf(c,p)||c.city||"",
     `${g?`GPS ${g.lat.toFixed(6)}, ${g.lon.toFixed(6)}${acc&&acc.acc!=null?` (±${Math.round(acc.acc)} m)`:""}`:"GPS non relevé"}  ·  ${p.by||techLabel(S.tech)}`]}
-const needsStamp=rec=>rec&&rec.mode!=="ext";
+const needsStamp=rec=>rec&&rec.mode!=="ext"&&!rec.stamped;
+// Métadonnées EXIF : date/heure de prise de vue, GPS, auteur, description
+function exifFor(c,p,label,rec){const t=new Date(rec.shot||rec.ts),z=n=>String(n).padStart(2,"0"),g=gpsOf(c,p),acc=isTech(p)?(parentOf(c,p)||{}).gps:p.gps;
+  const off=-t.getTimezoneOffset(),offS=(off>=0?"+":"-")+z(Math.floor(Math.abs(off)/60))+":"+z(Math.abs(off)%60);
+  const desc=`${c.name} - ${ptName(p)} - ${label}`;
+  return{desc,artist:p.by||techLabel(S.tech),software:"Sogeo "+APP_VERSION,dt:`${t.getFullYear()}:${z(t.getMonth()+1)}:${z(t.getDate())} ${z(t.getHours())}:${z(t.getMinutes())}:${z(t.getSeconds())}`,off:offS,
+    lat:g?g.lat:null,lon:g?g.lon:null,acc:acc&&acc.acc!=null?acc.acc:null,gpsDate:`${t.getUTCFullYear()}:${z(t.getUTCMonth()+1)}:${z(t.getUTCDate())}`,gpsTime:[t.getUTCHours(),t.getUTCMinutes(),t.getUTCSeconds()],
+    xp:[desc,addrOf(c,p),p.by||techLabel(S.tech)].filter(Boolean).join(" | ")}}
+const slotLabelAt=(p,k,n,count)=>{const s=SLOTS[p.type].find(x=>x.k===k)||{label:k};return isTech(p)?`Photo ${n+1}`:s.extra?`Autre photo ${n+1}`:s.label+(count>1?` (${n+1})`:"")};
 // Pool de workers dédié : bandeau incrusté + version Excel, en parallèle
-const STAMP_SRC=`
+const STAMP_SRC=SHARED_FN+`
 const draw=(src,max)=>{const sc=Math.min(1,max/Math.max(src.width,src.height)),w=Math.max(1,Math.round(src.width*sc)),h=Math.max(1,Math.round(src.height*sc));
   const c=new OffscreenCanvas(w,h),x=c.getContext("2d",{alpha:false});x.imageSmoothingQuality="medium";x.drawImage(src,0,0,w,h);return c};
-function band(c,lines){const g=c.getContext("2d"),W=c.width,H=c.height,fs=Math.round(Math.max(W,H*1.33)/46),pad=Math.round(fs*.7),lh=Math.round(fs*1.32);
-  const st=[{f:"bold "+Math.round(fs*1.08)+"px sans-serif",c:"#fff"},{f:"600 "+fs+"px sans-serif",c:"#fff"},{f:"500 "+Math.round(fs*.86)+"px sans-serif",c:"rgba(255,255,255,.85)"}];
-  const L=lines.filter(Boolean).length?lines:[" "],bh=pad*2+lh*L.length;
-  const gr=g.createLinearGradient(0,H-bh-pad*2,0,H);gr.addColorStop(0,"rgba(0,0,0,0)");gr.addColorStop(.25,"rgba(0,0,0,.62)");gr.addColorStop(1,"rgba(0,0,0,.78)");
-  g.fillStyle=gr;g.fillRect(0,H-bh-pad*2,W,bh+pad*2);g.shadowColor="rgba(0,0,0,.6)";g.shadowBlur=4;g.textBaseline="alphabetic";
-  const fit=(t,max)=>{if(g.measureText(t).width<=max)return t;while(t.length>1&&g.measureText(t+"…").width>max)t=t.slice(0,-1);return t+"…"};
-  g.font="bold "+Math.round(fs*.9)+"px sans-serif";const mark=g.measureText("SOGEO").width;
-  L.forEach((t,i)=>{const s=st[i]||st[2];g.font=s.f;g.fillStyle=s.c;g.fillText(fit(t,W-pad*2-(i?0:mark+pad)),pad,H-bh+pad+lh*(i+1)-lh*.25)});
-  g.font="bold "+Math.round(fs*.9)+"px sans-serif";g.textAlign="right";g.fillStyle="rgba(255,255,255,.85)";g.fillText("SOGEO",W-pad,H-bh+pad+lh*.75)}
 self.onmessage=async e=>{const d=e.data;
   try{const bmp=await createImageBitmap(d.blob,{imageOrientation:"from-image"});const big=draw(bmp,1920);bmp.close();band(big,d.lines);
     const xl=draw(big,1280);
-    const [b,x]=await Promise.all([big.convertToBlob({type:"image/jpeg",quality:.85}),xl.convertToBlob({type:"image/jpeg",quality:.8})]);
+    let [b,x]=await Promise.all([big.convertToBlob({type:"image/jpeg",quality:.85}),xl.convertToBlob({type:"image/jpeg",quality:.8})]);
+    if(d.exif)b=await withExif(b,d.exif);
     self.postMessage({id:d.id,blob:b,xl:x,xw:xl.width,xh:xl.height})}
   catch(err){self.postMessage({id:d.id,error:String(err)})}};`;
 async function stampAll(items,onProgress){ // items : [{id,blob,lines}] -> Map(id -> {blob,xl,xw,xh})
@@ -1062,6 +1100,11 @@ async function drawPath(c,m){
   catch(e){if(route.v==="map")setInfo(`À vol d'oiseau ≈ ${fmtDist(straightDist(ll))}`,"warn")}}
 
 /* Position automatique à la première photo d'un relevé (sans bloquer) */
+const locWait=new Map();
+function locateFor(p){ // position précise de l'ouvrage, prise devant lui à la première photo
+  if(isTech(p)||(p.gps&&p.gps.acc<=15))return Promise.resolve();
+  if(!locWait.has(p.id))locWait.set(p.id,autoLocate(p).finally(()=>locWait.delete(p.id)));
+  return Promise.race([locWait.get(p.id),new Promise(r=>setTimeout(r,20000))])}
 async function autoLocate(p){if(isTech(p))return;if(p._locating||(p.gps&&p.gps.acc<=15))return;p._locating=true;
   try{const co=await getPrecisePos();
     // à chaque photo, on garde la mesure la plus précise prise devant l'ouvrage
@@ -1179,16 +1222,26 @@ let photoSrc="cam";
 const TSC_PKG="com.jeyluta.timestampcamerafree";
 const TSC_LINK=`intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=${TSC_PKG};end`;
 function wireExt(p){const b=$("#impAll");if(!b)return;
-  b.onclick=()=>{pendingSlot={pid:p.id,k:"__all"};photoSrc="gal";$("#galInput").click()};
+  b.onclick=()=>needName(p,()=>{pendingSlot={pid:p.id,k:"__all"};photoSrc="gal";$("#galInput").click()});
   const o=$("#tsOpen");if(o)o.addEventListener("click",ev=>{if(!/Android/i.test(navigator.userAgent)){ev.preventDefault();toast("Ouvre Timestamp Camera depuis l'écran d'accueil du téléphone")}})}
 // Ordre d'import = ordre affiché à l'écran
 const importOrder=p=>isTech(p)?["photos"]:[...SLOTS[p.type].filter(s=>s.mini),...SLOTS[p.type].filter(s=>!s.mini&&!s.extra)].map(s=>s.k);
-function shoot(p,k){if((S.camMode||"sogeo")==="choose")return gallery(p,k); // autre appli photo : on importe sa photo
+function needName(p,then){if(p.name&&p.name!=="PT")return then();
+  const tech=isTech(p);const ov=sheet(`<h2>Nom ${tech?"du point technique":p.type==="chambre"?"de la chambre":"du poteau"}</h2>
+    <p>Il est inscrit sur chaque photo avec la date et l'heure.</p>
+    <input class="inp huge" id="nnm" value="${tech?"PT ":""}" placeholder="${tech?"PT 00892":p.type==="chambre"?"L1T-012":"PT-104"}" autocapitalize="characters" autocomplete="off" spellcheck="false" enterkeyhint="done">
+    <div class="duo"><button class="ghost" data-x>Annuler</button><button class="primary" data-ok>${I.cam}<span>Continuer</span></button></div>`);
+  const i=ov.querySelector("#nnm");setTimeout(()=>{i.focus();i.setSelectionRange(i.value.length,i.value.length)},60);
+  const go=()=>{const v=i.value.toUpperCase().replace(/\s+/g," ").trim();if(!v||v==="PT"){i.focus();return}p.name=v;save();ov.remove();
+    const n=$("#pName");if(n)n.value=v;$("#barName").textContent=v;then()};
+  ov.querySelector("[data-ok]").onclick=go;i.onkeydown=e=>{if(e.key==="Enter")go()};ov.querySelector("[data-x]").onclick=()=>ov.remove()}
+function shoot(p,k){if(!p.name||p.name==="PT")return needName(p,()=>shoot(p,k));
+  if((S.camMode||"sogeo")==="choose")return gallery(p,k); // autre appli photo : on importe sa photo
   pendingSlot={pid:p.id,k};const i=$("#camInput");
   // « Appareil photo du téléphone » : ouverture directe ; « Choisir l'application » : le téléphone propose ses applis photo (ex. Timestamp Camera)
   if((S.camMode||"sogeo")==="choose")i.removeAttribute("capture");else i.setAttribute("capture","environment");
   photoSrc="cam";i.click()}
-function gallery(p,k){pendingSlot={pid:p.id,k};photoSrc="gal";$("#galInput").click()}
+function gallery(p,k){if(!p.name||p.name==="PT")return needName(p,()=>gallery(p,k));pendingSlot={pid:p.id,k};photoSrc="gal";$("#galInput").click()}
 async function confirmLeave(){const p=curPoint();if(!p)return true;if(!p.name){p.name=p.autoName;save()}
   if(isTech(p)&&p.name===p.autoName&&!p._warned){p._warned=1;p.name="";const go=await ask("Point technique sans nom","Renseigne son numéro (ex. PT 00892) pour qu'il soit identifiable dans le DOE.","Laisser "+p.autoName);
     if(!go){const i=$("#pName");if(i)i.focus();return false}p.name=p.autoName;save()}
@@ -1282,11 +1335,15 @@ async function addFiles(files,src){
     const shot=src==="cam"&&!ext?now:(await exifDate(f))||f.lastModified||now;
     await phSet(id,{blob:f,thumb:null,type:f.type||"image/jpeg",ts:now,shot,mode:ext?"ext":src==="cam"?"sogeo":"import",pending:true});
     (p.photos[k]=p.photos[k]||[]).push(id);touched.add(k);if(p.na&&p.na[k])p.na[k]=false;
-    (S.pending=S.pending||[]).push(id);newJobs.push([id,f]);
+    (S.pending=S.pending||[]).push(id);newJobs.push([id,f,k]);
   }
   await save();if(touched.size)vibrate();
-  newJobs.forEach(([id,f])=>compressQueue.add(id,f));
-  if(touched.size)autoLocate(p);
+  // le bandeau est incrusté dès maintenant ; on attend la position GPS prise devant l'ouvrage (20 s max)
+  const gpsP=touched.size&&!ext?locateFor(p):Promise.resolve();
+  if(ext&&touched.size)autoLocate(p);
+  newJobs.forEach(async([id,f,k])=>{await gpsP;const rec=await phGet(id);if(!rec)return;
+    const list=p.photos[k]||[],n=list.indexOf(id),lab=slotLabelAt(p,k,n,list.length);
+    compressQueue.add(id,f,{stamp:ext?null:stampLines(c,p,lab,rec),exif:exifFor(c,p,lab,rec)})});
   if(route.v==="point"&&route.id===p.id){touched.forEach(k=>paintTile(p,k,true));updateBarPoint(p)}
   if(slotSheet&&slotSheet.p===p&&touched.has(slotSheet.k))slotSheet.fill();
   const n=files.length-skipped;
@@ -1367,7 +1424,7 @@ async function exportZip(){
     for(const p of c.points)for(const s of SLOTS[p.type]){const list=p.photos[s.k]||[];
       for(let n=0;n<list.length;n++){const rec=await phGet(list[n]);if(!needsStamp(rec))continue;
         const lab=isTech(p)?`Photo ${n+1}`:s.extra?`Autre photo ${n+1}`:s.label+(list.length>1?` (${n+1})`:"");
-        toStamp.push({id:list[n],blob:rec.blob,lines:stampLines(c,p,lab,rec)})}}
+        toStamp.push({id:list[n],blob:rec.blob,lines:stampLines(c,p,lab,rec),exif:exifFor(c,p,lab,rec)})}}
     stampedNow=await stampAll(toStamp,(d,t)=>{$("#zp").textContent=`Horodatage des photos ${d} / ${t}`;$("#zbar").style.width=Math.round(d/t*60)+"%"});
     const dirOf=new Map();
     const ordered=[...c.points.filter(p=>!isTech(p)),...c.points.filter(isTech)];
@@ -1501,7 +1558,7 @@ async function loadDemo(){
   }catch(e){w.remove();toast("La démo n'a pas pu être créée : "+e.message)}}
 
 /* ---------- À propos ---------- */
-const APP_VERSION="1.19";
+const APP_VERSION="1.20";
 const AUTHOR={name:"Dylan Andriot",role:"Bureau d'étude fibre optique",mail:"dylan.andriot@sogetrel.fr"};
 function openAbout(){
   const ov=sheet(`<div class="about">
