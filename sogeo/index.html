@@ -503,15 +503,11 @@ async function processPhotoMain(file){
   }catch(e){return{blob:file,thumb:null}}}
 
 /* Horodatage incrusté + métadonnées EXIF (code partagé entre l'appli et ses workers) */
-const SHARED_FN=String.raw`function band(c,lines){const g=c.getContext("2d"),W=c.width,H=c.height,fs=Math.round(Math.max(W,H*1.33)/46),pad=Math.round(fs*.7),lh=Math.round(fs*1.32);
-  const st=[{f:"bold "+Math.round(fs*1.08)+"px sans-serif",c:"#fff"},{f:"600 "+fs+"px sans-serif",c:"#fff"},{f:"500 "+Math.round(fs*.86)+"px sans-serif",c:"rgba(255,255,255,.85)"}];
-  const L=lines.filter(Boolean).length?lines.filter(Boolean):[" "],bh=pad*2+lh*L.length;
-  const gr=g.createLinearGradient(0,H-bh-pad*2,0,H);gr.addColorStop(0,"rgba(0,0,0,0)");gr.addColorStop(.25,"rgba(0,0,0,.62)");gr.addColorStop(1,"rgba(0,0,0,.78)");
-  g.save();g.fillStyle=gr;g.fillRect(0,H-bh-pad*2,W,bh+pad*2);g.shadowColor="rgba(0,0,0,.6)";g.shadowBlur=4;g.textBaseline="alphabetic";
-  const fit=(t,max)=>{if(g.measureText(t).width<=max)return t;while(t.length>1&&g.measureText(t+"…").width>max)t=t.slice(0,-1);return t+"…"};
-  g.font="bold "+Math.round(fs*.9)+"px sans-serif";const mark=g.measureText("SOGEO").width;
-  L.forEach((t,i)=>{const s=st[i]||st[2];g.font=s.f;g.fillStyle=s.c;g.fillText(fit(t,W-pad*2-(i?0:mark+pad)),pad,H-bh+pad+lh*(i+1)-lh*.25)});
-  g.font="bold "+Math.round(fs*.9)+"px sans-serif";g.textAlign="right";g.fillStyle="rgba(255,255,255,.85)";g.fillText("SOGEO",W-pad,H-bh+pad+lh*.75);g.restore()}
+const SHARED_FN=String.raw`function band(c,lines){const g=c.getContext("2d"),W=c.width,H=c.height,fs=Math.round(Math.max(W,H*1.33)/40),m=Math.round(fs*.8),lh=Math.round(fs*1.25);
+  g.save();g.textAlign="right";g.textBaseline="top";g.font="600 "+fs+"px sans-serif";g.lineJoin="round";
+  lines.filter(Boolean).forEach((t,i)=>{const y=m+i*lh;g.lineWidth=Math.max(3,fs*.16);g.strokeStyle="rgba(0,0,0,.75)";g.strokeText(t,W-m,y);
+    g.fillStyle="#fff";g.shadowColor="rgba(0,0,0,.5)";g.shadowBlur=fs*.15;g.fillText(t,W-m,y);g.shadowBlur=0});
+  g.restore()}
 function exifBytes(f){
   const A=s=>{s=String(s==null?"":s).normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\x20-\x7E]/g,"?");const b=new Uint8Array(s.length+1);for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i);return b};
   const U=s=>{const b=new Uint8Array((String(s).length+1)*2);for(let i=0;i<String(s).length;i++){const c=String(s).charCodeAt(i);b[i*2]=c&255;b[i*2+1]=c>>8}return b};
@@ -634,7 +630,7 @@ function getPrecisePos(onProgress,target=10,maxMs=15000){return new Promise((res
   const to=setTimeout(end,maxMs)})}
 async function reverseGeo(lat,lon){
   const r=await fetch(`https://api-adresse.data.gouv.fr/reverse/?lon=${lon}&lat=${lat}`);const j=await r.json();
-  const pr=j.features&&j.features[0]&&j.features[0].properties;return pr?{label:pr.label,city:pr.city}:null}
+  const pr=j.features&&j.features[0]&&j.features[0].properties;return pr?{label:pr.label,city:pr.city,parts:{name:pr.name||"",postcode:pr.postcode||"",city:pr.city||""}}:null}
 const posErr=e=>e&&e.code===1?"Autorise la localisation pour cette page":e&&e.code===0?"GPS indisponible sur cet appareil":"Position impossible, réessaie à découvert";
 
 /* Champ ville avec bouton GPS (création et modification du chantier) */
@@ -831,11 +827,13 @@ async function exifDate(file){
       o+=2+len}}catch(e){}return null}
 const fmtStamp=t=>{const d=new Date(t),z=n=>String(n).padStart(2,"0");return`${z(d.getDate())}/${z(d.getMonth()+1)}/${d.getFullYear()} ${z(d.getHours())}:${z(d.getMinutes())}`};
 // Lignes du bandeau, construites au moment du ZIP (noms, adresse et position définitifs)
+// Format : « 23 octobre 2026 +46.339348,-0.384559 » / rue / CP ville / France
+function addrPartsOf(c,p){const src=isTech(p)?(parentOf(c,p)||{}):p;if(src.addrParts&&(src.addrParts.name||src.addrParts.city))return src.addrParts;
+  const a=(src.address||"").trim(),m=/^(.*?)[,\s]+(\d{5})\s+(.+)$/.exec(a);return m?{name:m[1].replace(/,$/,""),postcode:m[2],city:m[3]}:{name:a,postcode:"",city:a?"":(c.city||"")}}
 function stampLines(c,p,slotLabel,rec){
-  const g=gpsOf(c,p),acc=isTech(p)?(parentOf(c,p)||{}).gps:p.gps;
-  return[`${fmtStamp(rec.shot||rec.ts)}${rec.mode==="import"?" (importée)":""}  ·  ${c.name}  ·  ${ptName(p)}  ·  ${slotLabel}`,
-    addrOf(c,p)||c.city||"",
-    `${g?`GPS ${g.lat.toFixed(6)}, ${g.lon.toFixed(6)}${acc&&acc.acc!=null?` (±${Math.round(acc.acc)} m)`:""}`:"GPS non relevé"}  ·  ${p.by||techLabel(S.tech)}`]}
+  const g=gpsOf(c,p),sg=v=>(v>=0?"+":"")+v.toFixed(6),ap=addrPartsOf(c,p);
+  const date=new Date(rec.shot||rec.ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+  return[`${date}${g?` ${sg(g.lat)},${sg(g.lon)}`:""}`,ap.name,[ap.postcode,ap.city].filter(Boolean).join(" "),"France"]}
 const needsStamp=rec=>rec&&rec.mode!=="ext"&&!rec.stamped;
 // Métadonnées EXIF : date/heure de prise de vue, GPS, auteur, description
 function exifFor(c,p,label,rec){const t=new Date(rec.shot||rec.ts),z=n=>String(n).padStart(2,"0"),g=gpsOf(c,p),acc=isTech(p)?(parentOf(c,p)||{}).gps:p.gps;
@@ -1112,7 +1110,7 @@ async function autoLocate(p){if(isTech(p))return;if(p._locating||(p.gps&&p.gps.a
     p.gps={lat:co.latitude,lon:co.longitude,acc:co.accuracy,at:Date.now()};
     if(route.v==="point"&&route.id===p.id){const b=$("#gpsBtn");if(b)b.classList.add("has");paintGps(p)}
     if(!isTech(p)&&(!p.address||!cur().city)){const g=await reverseGeo(co.latitude,co.longitude).catch(()=>null);
-      if(g){if(!p.address){p.address=g.label;const a=$("#pAddr");if(a&&route.id===p.id)a.value=g.label}const c=cur();if(c&&!c.city&&g.city)c.city=g.city}}
+      if(g){if(!p.address){p.address=g.label;p.addrParts=g.parts;const a=$("#pAddr");if(a&&route.id===p.id)a.value=g.label}const c=cur();if(c&&!c.city&&g.city)c.city=g.city}}
   }catch(e){}finally{delete p._locating;save()}}
 
 /* ---------- Écran : chambre / poteau (tient sur un écran) ---------- */
@@ -1195,7 +1193,7 @@ async function renderPoint(id,isNew){
   const chkDup=()=>{const d=dupOf(c,p,ptName(p));nm.classList.toggle("bad",!!d);return d};chkDup();
   nm.oninput=()=>{p.name=nm.value.toUpperCase().trim();$("#barName").textContent=p.name||p.autoName;save();chkDup()};
   nm.addEventListener("blur",()=>{const d=chkDup();if(d)toast(`${ptName(p)} existe déjà dans ce chantier`)});
-  const addr=$("#pAddr");addr.oninput=()=>{p.address=addr.value;save()};
+  const addr=$("#pAddr");addr.oninput=()=>{p.address=addr.value;delete p.addrParts;save()};
   [nm,addr].forEach(i=>i.onkeydown=e=>{if(e.key==="Enter")i.blur()});
   $("#gpsBtn").onclick=()=>locate(p);paintGps(p);
   view.querySelectorAll("[data-cam]").forEach(b=>b.onclick=()=>shoot(p,b.dataset.cam));
@@ -1385,7 +1383,7 @@ async function locate(p){
   if(acc>30)toast(`Position imprécise (±${Math.round(acc)} m) : réessaie à découvert`);
   if(isTech(p)){btn.classList.remove("busy");if(acc<=30)toast(`Position du point technique prise ici (±${Math.round(acc)} m)`);return}
   try{const g=await reverseGeo(lat,lon);
-    if(g){p.address=g.label;const a=$("#pAddr");if(a&&route.id===p.id)a.value=g.label;
+    if(g){p.address=g.label;p.addrParts=g.parts;const a=$("#pAddr");if(a&&route.id===p.id)a.value=g.label;
       let msg=`Position prise ici (±${Math.round(acc)} m) · ${g.label}`;
       if(g.city&&c&&!c.city){c.city=g.city;msg+=` · ville du chantier : ${g.city}`;if(route.id===p.id)updateBarPoint(p)}
       save();toast(msg)}
@@ -1491,7 +1489,7 @@ function renderProfil(first){
       <div class="hint" id="tHint"></div></div>
     <div class="field"><label>Application photo</label>
       <div class="camopts">
-        <button class="camopt ${(S.camMode||"sogeo")==="sogeo"?"on":""}" data-cam="sogeo"><span class="rd"></span><span class="tx"><b>Appareil photo du téléphone</b><small>S'ouvre directement. Sogeo ajoute l'horodatage (date, heure, ouvrage, adresse, GPS).</small></span></button>
+        <button class="camopt ${(S.camMode||"sogeo")==="sogeo"?"on":""}" data-cam="sogeo"><span class="rd"></span><span class="tx"><b>Appareil photo du téléphone</b><small>S'ouvre directement. Sogeo inscrit la date, le GPS et l'adresse sur la photo.</small></span></button>
         <button class="camopt ${S.camMode==="choose"?"on":""}" data-cam="choose"><span class="rd"></span><span class="tx"><b>Autre appli photo (Timestamp Camera…)</b><small>Pour Timestamp Camera : prends les photos avec elle, puis importe-les dans Sogeo (bouton « Importer tout »). L'horodatage est celui de l'appli.</small></span></button>
       </div></div>`;
   setDock(`<button class="primary" id="tOk" disabled>${I.check}<span>${first?"C'est parti":"Enregistrer"}</span></button>`);
@@ -1558,7 +1556,7 @@ async function loadDemo(){
   }catch(e){w.remove();toast("La démo n'a pas pu être créée : "+e.message)}}
 
 /* ---------- À propos ---------- */
-const APP_VERSION="1.20";
+const APP_VERSION="1.21";
 const AUTHOR={name:"Dylan Andriot",role:"Bureau d'étude fibre optique",mail:"dylan.andriot@sogetrel.fr"};
 function openAbout(){
   const ov=sheet(`<div class="about">
@@ -1592,7 +1590,7 @@ function renderAide(){
       <p><b>Pas de réseau ?</b> Aucun problème : tout est gardé dans le téléphone. Les adresses se complètent au retour du réseau.</p>
       <p><b>Ne vide pas les données du navigateur</b> avant d'avoir envoyé le ZIP : les photos sont stockées dans le téléphone.</p>
       <p><b>Carte</b> : l'icône carte dans un chantier montre les ouvrages et le trajet du câble.</p>
-      <p><b>Horodatage</b> : avec l'appareil photo du téléphone, Sogeo ajoute la date, l'heure, l'ouvrage, l'adresse et le GPS sur chaque photo du DOE. Pour utiliser une autre appli (ex. Timestamp Camera), touche ton nom en bas de l'accueil, puis « Autre appli photo ».</p></div></div>`;
+      <p><b>Horodatage</b> : avec l'appareil photo du téléphone, Sogeo inscrit la date, le GPS et l'adresse en haut à droite de chaque photo. Pour utiliser une autre appli (ex. Timestamp Camera), touche ton nom en bas de l'accueil, puis « Autre appli photo ».</p></div></div>`;
   setDock(`<button class="primary" id="aideOk">${I.check}<span>J'ai compris</span></button>`);
   $("#aideOk").onclick=renderAccueil;
 }
@@ -1644,7 +1642,7 @@ async function catchUp(){if(catching||!navigator.onLine)return;catching=true;let
   try{for(const c of Object.values(S.chantiers))for(const p of c.points){
       if(isTech(p)||!p.gps||(p.address&&c.city))continue;
       const g=await reverseGeo(p.gps.lat,p.gps.lon).catch(()=>null);if(!g)continue;
-      if(!p.address){p.address=g.label;n++;const a=$("#pAddr");if(a&&route.v==="point"&&route.id===p.id)a.value=g.label}
+      if(!p.address){p.address=g.label;p.addrParts=g.parts;n++;const a=$("#pAddr");if(a&&route.v==="point"&&route.id===p.id)a.value=g.label}
       if(!c.city&&g.city)c.city=g.city}
     if(n){save();if(route.v==="home")renderHome();toast(`${n} adresse${n>1?"s":""} complétée${n>1?"s":""}`)}
     if(route.v==="map"&&mapObj&&cur())drawPath(cur(),mapObj);
