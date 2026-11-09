@@ -464,8 +464,9 @@ function drawTo(src,maxSide,q){
 async function processPhotoMain(file){
   try{const src=await loadImg(file);
     const big=await drawTo(src,MAX_PX,QUALITY);if(src.close)src.close();
-    const mid=await loadImg(big),thumb=await drawTo(mid,480,.7);if(mid.close)mid.close();
-    return{blob:big&&big.size<file.size?big:file,thumb}
+    const mid=await loadImg(big),thumb=await drawTo(mid,480,.7),xl=await drawTo(mid,1280,.8);
+    const sc=Math.min(1,1280/Math.max(mid.width,mid.height)),xw=Math.round(mid.width*sc),xh=Math.round(mid.height*sc);if(mid.close)mid.close();
+    return{blob:big&&big.size<file.size?big:file,thumb,xl,xw,xh}
   }catch(e){return{blob:file,thumb:null}}}
 
 /* Compression en arrière-plan : workers dédiés (OffscreenCanvas), plusieurs photos en parallèle.
@@ -475,9 +476,9 @@ const draw=(src,max)=>{const sc=Math.min(1,max/Math.max(src.width,src.height)),w
   const c=new OffscreenCanvas(w,h),x=c.getContext("2d",{alpha:false});x.imageSmoothingQuality="medium";x.drawImage(src,0,0,w,h);return c};
 self.onmessage=async e=>{const d=e.data;
   try{const bmp=await createImageBitmap(d.file,{imageOrientation:"from-image"});
-    const big=draw(bmp,d.max);bmp.close();const th=draw(big,480);
-    const [b,t]=await Promise.all([big.convertToBlob({type:"image/jpeg",quality:d.q}),th.convertToBlob({type:"image/jpeg",quality:.7})]);
-    self.postMessage({id:d.id,blob:b,thumb:t})}
+    const big=draw(bmp,d.max);bmp.close();const th=draw(big,480),xl=draw(big,1280);
+    const [b,t,x]=await Promise.all([big.convertToBlob({type:"image/jpeg",quality:d.q}),th.convertToBlob({type:"image/jpeg",quality:.7}),xl.convertToBlob({type:"image/jpeg",quality:.8})]);
+    self.postMessage({id:d.id,blob:b,thumb:t,xl:x,xw:xl.width,xh:xl.height})}
   catch(err){self.postMessage({id:d.id,error:String(err)})}};`;
 const compressQueue=(()=>{
   let workers=[],ok=typeof Worker!=="undefined"&&typeof OffscreenCanvas!=="undefined"&&typeof createImageBitmap!=="undefined";
@@ -488,10 +489,10 @@ const compressQueue=(()=>{
       for(let i=0;i<size;i++){const w=new Worker(u);w.free=true;w.onmessage=e=>finish(w,e.data);w.onerror=()=>{ok=false};workers.push(w)}}
     catch(e){ok=false}}
   async function finish(w,res){const job=busy.get(w);busy.delete(w);w.free=true;
-    let out=res.error?null:{blob:res.blob&&res.blob.size<job.file.size?res.blob:job.file,thumb:res.thumb};
+    let out=res.error?null:{blob:res.blob&&res.blob.size<job.file.size?res.blob:job.file,thumb:res.thumb,xl:res.xl,xw:res.xw,xh:res.xh};
     if(!out)out=await processPhotoMain(job.file);
     await done(job,out);running--;pump()}
-  async function done(job,out){try{const rec=await phGet(job.id);if(rec)await phSet(job.id,{blob:out.blob,thumb:out.thumb,type:out.blob.type||"image/jpeg",ts:rec.ts})}catch(e){}
+  async function done(job,out){try{const rec=await phGet(job.id);if(rec)await phSet(job.id,{blob:out.blob,thumb:out.thumb,xl:out.xl||null,xw:out.xw||0,xh:out.xh||0,type:out.blob.type||"image/jpeg",ts:rec.ts})}catch(e){}
     S.pending=(S.pending||[]).filter(x=>x!==job.id);save();onCompressed(job.id,out.thumb)}
   async function pump(){
     makeWorkers();
@@ -725,7 +726,7 @@ async function routeOSRM(ll){ // ll : [[lat,lon],...] -> {coords,dist,legs}
   const out=[],legs=[],snaps=[];let dist=0;const CH=40;
   for(let i=0;i<ll.length-1;i+=CH-1){const part=ll.slice(i,i+CH);if(part.length<2)break;
     const q=part.map(([la,lo])=>`${lo.toFixed(6)},${la.toFixed(6)}`).join(";");
-    const r=await fetch(`https://router.project-osrm.org/route/v1/driving/${q}?overview=full&geometries=geojson&continue_straight=false`);
+    const r=await fetchT(`https://router.project-osrm.org/route/v1/driving/${q}?overview=full&geometries=geojson&continue_straight=false`,{},6000);
     if(!r.ok)throw new Error("route");const j=await r.json();if(j.code!=="Ok"||!j.routes||!j.routes[0])throw new Error("route");
     const g=j.routes[0].geometry.coordinates.map(([lo,la])=>[la,lo]);if(out.length)g.shift();out.push(...g);dist+=j.routes[0].distance;
     (j.routes[0].legs||[]).forEach(l=>legs.push(l.distance));
@@ -734,6 +735,8 @@ async function routeOSRM(ll){ // ll : [[lat,lon],...] -> {coords,dist,legs}
 const fmtDist=m=>m<1000?`${Math.round(m)} m`:`${(m/1000).toFixed(m<10000?2:1).replace(".",",")} km`;
 function straightDist(ll){let d=0;for(let i=1;i<ll.length;i++){const [a1,o1]=ll[i-1],[a2,o2]=ll[i],R=6371000,r=Math.PI/180;
   const x=(o2-o1)*r*Math.cos((a1+a2)/2*r),y=(a2-a1)*r;d+=Math.hypot(x,y)*R}return d}
+function fetchT(url,opt={},ms=8000){const ac=new AbortController();const t=setTimeout(()=>ac.abort(),ms);
+  return fetch(url,{...opt,signal:ac.signal}).finally(()=>clearTimeout(t))}
 /* ---------- Fonds de carte : Plan IGN (défaut), cadastre IGN en option, OpenStreetMap en secours ---------- */
 const WMTS="https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0";
 const TILE_URL={
@@ -781,6 +784,7 @@ function anchorXml(area,w,h,id,rid){
   return `<xdr:twoCellAnchor editAs="oneCell"><xdr:from><xdr:col>${fc-1}</xdr:col><xdr:colOff>${fco}</xdr:colOff><xdr:row>${fr-1}</xdr:row><xdr:rowOff>${fro}</xdr:rowOff></xdr:from><xdr:to><xdr:col>${tc-1}</xdr:col><xdr:colOff>${tco}</xdr:colOff><xdr:row>${tr-1}</xdr:row><xdr:rowOff>${tro}</xdr:rowOff></xdr:to><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="${id}" name="Photo Sogeo ${id}"/><xdr:cNvPicPr><a:picLocks noChangeAspect="1"/></xdr:cNvPicPr></xdr:nvPicPr><xdr:blipFill><a:blip xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${fw}" cy="${fh}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></xdr:spPr></xdr:pic><xdr:clientData/></xdr:twoCellAnchor>`}
 async function photoForExcel(id){
   const rec=await phGet(id);if(!rec)return null;
+  if(rec.xl&&rec.xw)return{bytes:new Uint8Array(await rec.xl.arrayBuffer()),w:rec.xw,h:rec.xh}; // déjà prête : aucun recalcul
   try{const src=await loadImg(rec.blob);const b=await drawTo(src,1280,.8);const w=Math.round(src.width*Math.min(1,1280/Math.max(src.width,src.height))),h=Math.round(src.height*Math.min(1,1280/Math.max(src.width,src.height)));src.close&&src.close();
     return{bytes:new Uint8Array(await b.arrayBuffer()),w,h}}catch(e){return null}}
 async function makeC16(c,p){
@@ -794,14 +798,14 @@ async function makeC16(c,p){
   let nid=Math.max(100,...[...dr.matchAll(/cNvPr id="(\d+)"/g)].map(m=>+m[1]))+1,anchors="",rels="",n=0;
   for(const ph of C16_PHOTOS){const list=p.photos[ph.slot]||[];if(!list.length)continue;
     const img=await photoForExcel(list[0]);if(!img)continue;n++;
-    const rid=`rIdSogeo${n}`,file=`sogeo_${n}.jpeg`;z.file(`xl/media/${file}`,img.bytes);
+    const rid=`rIdSogeo${n}`,file=`sogeo_${n}.jpeg`;z.file(`xl/media/${file}`,img.bytes,{compression:"STORE"});
     rels+=`<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/${file}"/>`;
     anchors+=anchorXml(ph.area,img.w,img.h,nid++,rid);
     sh=setCell(sh,ph.area.split(":")[0],null)} // retire le texte « PHOTO … » sous l'image
   if(n){dr=dr.replace("</xdr:wsDr>",anchors+"</xdr:wsDr>");drr=drr.replace("</Relationships>",rels+"</Relationships>");
     if(!/Extension="jpeg"/.test(ct))ct=ct.replace("<Default ",'<Default Extension="jpeg" ContentType="image/jpeg"/><Default ')}
   z.file(SH,sh);z.file(DR,dr);z.file(DRR,drr);z.file("[Content_Types].xml",ct);
-  return z.generateAsync({type:"uint8array",compression:"DEFLATE",compressionOptions:{level:6}})}
+  return z.generateAsync({type:"uint8array",compression:"DEFLATE",compressionOptions:{level:3}})}
 
 /* ---------- Plan et synoptique du DOE (images ajoutées au ZIP) ---------- */
 function hav(a,b){const R=6371000,r=Math.PI/180,x=(b[1]-a[1])*r*Math.cos((a[0]+b[0])/2*r),y=(b[0]-a[0])*r;return Math.hypot(x,y)*R}
@@ -820,8 +824,7 @@ async function routeForExport(c){
 const mx=(lon,z)=>(lon+180)/360*256*2**z;
 const my=(lat,z)=>{const s=Math.sin(lat*Math.PI/180);return(.5-Math.log((1+s)/(1-s))/(4*Math.PI))*256*2**z};
 function loadTile(z,x,y,kind="ign"){const n=2**z;if(y<0||y>=n)return Promise.resolve(null);x=((x%n)+n)%n;
-  return Promise.race([fetch(TILE_URL[kind](z,x,y),{mode:"cors"}).then(r=>r.ok?r.blob():null).then(b=>b?createImageBitmap(b):null).catch(()=>null),
-    new Promise(r=>setTimeout(()=>r(null),8000))])}
+  return fetchT(TILE_URL[kind](z,x,y),{mode:"cors"},4000).then(r=>r.ok?r.blob():null).then(b=>b?createImageBitmap(b):null).catch(()=>null)}
 function rrect(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
 function fitText(g,t,max){if(g.measureText(t).width<=max)return t;while(t.length>1&&g.measureText(t+"…").width>max)t=t.slice(0,-1);return t+"…"}
 const COL={ok:"#2f7a52",warn:"#c0782b",ink:"#1f2227",mute:"#5b6370",line:"#d3d8de"};
@@ -843,9 +846,12 @@ async function makePlan(c,R,onStep){
   // Fond de carte
   if(onStep)onStep("Fond de carte…");
   const jobs=[];for(let tx=Math.floor(ox/256);tx<=Math.floor((ox+MW)/256);tx++)for(let ty=Math.floor(oy/256);ty<=Math.floor((oy+MH)/256);ty++)jobs.push([tx,ty]);
-  let okT=0,src=new Set();const q=jobs.slice();const withCad=!!S.cadastre&&z>=15;let okC=0;
-  await Promise.all(Array.from({length:6},async()=>{while(q.length){const [tx,ty]=q.shift();
-    let im=await loadTile(z,tx,ty,"ign"),k="ign";if(!im){im=await loadTile(z,tx,ty,"osm");k="osm"}
+  let okT=0,src=new Set();const q=jobs.slice();const withCad=!!S.cadastre&&z>=15;let okC=0,ignFail=0,ignOk=0;
+  const deadline=Date.now()+(navigator.onLine?10000:2500);
+  await Promise.all(Array.from({length:8},async()=>{while(q.length&&Date.now()<deadline){const [tx,ty]=q.shift();
+    let im=null,k="ign";
+    if(ignOk||ignFail<6){im=await loadTile(z,tx,ty,"ign");im?ignOk++:ignFail++}
+    if(!im){im=await loadTile(z,tx,ty,"osm");k="osm"}
     if(im){okT++;src.add(k);g.drawImage(im,tx*256-ox,ty*256-oy);im.close&&im.close()}
     if(withCad){const cd=await loadTile(z,tx,ty,"cad");if(cd){okC++;g.drawImage(cd,tx*256-ox,ty*256-oy);cd.close&&cd.close()}}}}));
   if(okT){g.fillStyle="rgba(255,255,255,.12)";g.fillRect(0,0,MW,MH)}
@@ -906,7 +912,7 @@ async function makePlan(c,R,onStep){
     if(sh==="sq")rrect(g,lx-13,y0+177,26,26,5);else if(sh==="di"){g.beginPath();g.moveTo(lx,y0+175);g.lineTo(lx+15,y0+190);g.lineTo(lx,y0+205);g.lineTo(lx-15,y0+190);g.closePath()}else{g.beginPath();g.arc(lx,y0+190,13,0,7)}g.fillStyle=col;g.fill();g.lineWidth=3;g.strokeStyle="#fff";g.stroke();lx-=44}
   g.textBaseline="alphabetic";
   g.textAlign="left";g.fillStyle="#8b929c";g.font=`500 18px ${FB}`;g.fillText("Généré par Sogeo · distances indicatives, ne remplacent pas un métré",50,y0+226);
-  return canvasBlob(cv)}
+  return new Promise(r=>cv.toBlob(r,"image/jpeg",.9))}
 
 async function makeSynoptique(c,R){
   await fontsReady();
@@ -1237,12 +1243,13 @@ async function exportZip(){
   const ov=sheet(`<h2>Création du ZIP</h2><p id="zp">Préparation…</p><div class="progress"><i id="zbar"></i></div>`);
   try{
     const zip=new JSZip();const folder=zip.folder(root);
-    $("#zp").textContent="Calcul du cheminement…";const R=await routeForExport(c);
-    try{$("#zp").textContent="Dessin du plan…";
-      if(R.pts.length)folder.file(`PLAN_${safe(c.name)}.png`,await makePlan(c,R,t=>{$("#zp").textContent=t}));
-      $("#zp").textContent="Dessin du synoptique…";folder.file(`SYNOPTIQUE_${safe(c.name)}.png`,await makeSynoptique(c,R));
-    }catch(e){console.warn("plan",e)}
-    const legOf=new Map();R.pts.forEach((p,i)=>{if(i)legOf.set(p.id,Math.round(R.legs[i-1]))});
+    // cheminement + plan attendent surtout le réseau : on les lance pendant qu'on range les photos
+    let R={pts:[],coords:[],legs:[],dist:0,road:false};
+    const planP=(async()=>{try{R=await routeForExport(c);
+      if(R.pts.length)folder.file(`PLAN_${safe(c.name)}.jpg`,await makePlan(c,R));
+      folder.file(`SYNOPTIQUE_${safe(c.name)}.png`,await makeSynoptique(c,R));
+    }catch(e){console.warn("plan",e)}})();
+    const legCell=[];
     const used=new Set();const T=S.tech||{};const csv=[["Technicien","Mail","Date","Ville","Type","Nom","Adresse","Latitude","Longitude","Photos","Manquantes","Masques absents","Remarque","Ordre","Distance depuis le précédent (m)","Rattaché à"]];
     const total=c.points.reduce((a,p)=>a+pointStatus(p).n,0);let done=0;
     const dirOf=new Map();
@@ -1263,14 +1270,17 @@ async function exportZip(){
         `Remarque : ${p.note?p.note.replace(/\r?\n/g," / "):"-"}`];
       f.file("infos.txt",infos.join("\r\n"));
       if(p.type==="chambre"){try{$("#zp").textContent=`Fiche C16 · ${ptName(p)}…`;f.file(`${name}_C16.xlsx`,await makeC16(c,p))}catch(e){console.warn("C16",e)}}
-      csv.push([p.by||techLabel(T),T.email||"",new Date(p.at||c.created).toLocaleDateString("fr-FR"),c.city||"",TYPE_LABEL[p.type],p.name||p.autoName,addrOf(c,p),gpsOf(c,p)?gpsOf(c,p).lat.toFixed(6):"",gpsOf(c,p)?gpsOf(c,p).lon.toFixed(6):"",st.n,st.miss,SLOTS[p.type].filter(s=>isNA(p,s.k)).map(s=>s.label).join(", "),(p.note||"").replace(/\r?\n/g," / "),isTech(p)?"":c.points.filter(x=>!isTech(x)).indexOf(p)+1,legOf.has(p.id)?legOf.get(p.id):"",isTech(p)&&parentOf(c,p)?ptName(parentOf(c,p)):""]);
+      csv.push([p.by||techLabel(T),T.email||"",new Date(p.at||c.created).toLocaleDateString("fr-FR"),c.city||"",TYPE_LABEL[p.type],p.name||p.autoName,addrOf(c,p),gpsOf(c,p)?gpsOf(c,p).lat.toFixed(6):"",gpsOf(c,p)?gpsOf(c,p).lon.toFixed(6):"",st.n,st.miss,SLOTS[p.type].filter(s=>isNA(p,s.k)).map(s=>s.label).join(", "),(p.note||"").replace(/\r?\n/g," / "),isTech(p)?"":c.points.filter(x=>!isTech(x)).indexOf(p)+1,"",isTech(p)&&parentOf(c,p)?ptName(parentOf(c,p)):""]);legCell.push([csv.length-1,p.id]);
     }
+    $("#zp").textContent="Finalisation du plan (fond de carte)…";await planP;
+    const legOf=new Map();R.pts.forEach((p,i)=>{if(i)legOf.set(p.id,Math.round(R.legs[i-1]))});
+    legCell.forEach(([row,id])=>{if(legOf.has(id))csv[row][14]=legOf.get(id)});
     const nC=c.points.filter(p=>!pointStatus(p).miss).length;
     folder.file("LISEZ-MOI.txt",[`DOE ${c.name}`,`Ville : ${c.city||"-"}`,``,`Technicien : ${techLabel(T)}`,`Mail : ${T.email||"-"}`,
       `Export : ${new Date().toLocaleString("fr-FR")}`,``,`Relevés : ${c.points.length} (${c.points.filter(p=>p.type==="chambre").length} chambres, ${c.points.filter(p=>p.type==="poteau").length} poteaux, ${c.points.filter(isTech).length} points techniques)`,
       `Complets : ${nC} / ${c.points.length}`,`Photos : ${total}`,
       `Cheminement : ${R.pts.length>1?`${fmtDist(R.dist)} (${R.road?"par les routes":"à vol d'oiseau"}, indicatif)`:"-"}`,``,
-      `Plan : PLAN_${safe(c.name)}.png · Synoptique : SYNOPTIQUE_${safe(c.name)}.png`,``,`Généré par Sogeo`].join("\r\n"));
+      `Plan : PLAN_${safe(c.name)}.jpg · Synoptique : SYNOPTIQUE_${safe(c.name)}.png`,``,`Généré par Sogeo`].join("\r\n"));
     folder.file("recap.csv","﻿"+csv.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(";")).join("\r\n"));
     const blob=await zip.generateAsync({type:"blob",compression:"STORE"},m=>{$("#zbar").style.width=m.percent.toFixed(0)+"%";$("#zp").textContent=`Assemblage ${m.percent.toFixed(0)} %`});
     ov.remove();offerZip(blob,root+".zip");
