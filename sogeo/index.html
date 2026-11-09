@@ -322,7 +322,25 @@ main.fit .list.scroll>*{flex:none}
 .progress i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
 .offline{flex:none;display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 10px;border-radius:99px;background:#3a3f47;color:#e4e6e9;font:600 13px var(--body);margin-right:4px}
 .offline svg{width:16px;height:16px}
-.bar.hero .offline{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);right:max(10px,env(safe-area-inset-right,0px))}
+.bar.hero .offline{position:absolute;top:calc(env(safe-area-inset-top,0px) + 15px);right:calc(max(10px,env(safe-area-inset-right,0px)) + 48px);width:34px;height:34px;padding:0;justify-content:center;font-size:0;gap:0}
+.bar.hero .offline svg{width:18px;height:18px}
+.about-btn{display:none;position:absolute;z-index:2;top:calc(env(safe-area-inset-top,0px) + 10px);right:max(10px,env(safe-area-inset-right,0px));
+  width:40px;height:40px;border-radius:50%;border:2px solid rgba(255,255,255,.35);background:rgba(255,255,255,.08);color:#fff;font:700 22px/1 var(--display);padding:0}
+.about-btn:active{background:rgba(255,255,255,.2)}
+.bar.hero .about-btn{display:grid;place-items:center}
+.about{display:flex;flex-direction:column;gap:14px;align-items:stretch}
+.about .hd{display:flex;align-items:center;gap:14px}
+.about .lg{--markbg:#1f2227;flex:none;width:60px;height:60px;border-radius:22%;background:#1f2227;color:#f4f5f6;display:grid;place-items:center}
+.about .lg svg{width:64%;height:64%}
+.about .hd b{display:block;font:700 40px/1 var(--display)}
+.about .hd small{color:var(--muted);font:600 13px var(--body);letter-spacing:.08em;text-transform:uppercase}
+.about .card{border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.about .card .k{font:600 12px var(--body);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.about .card .v{font:700 22px/1.15 var(--display)}
+.about .mail{display:flex;align-items:center;gap:8px}
+.about .mail a{flex:1;min-width:0;font:600 16px var(--body);color:var(--fg);overflow-wrap:anywhere;-webkit-user-select:text;user-select:text}
+.about .copy{flex:none;min-height:44px;padding:0 12px;border-radius:10px;border:2px solid var(--line);background:var(--card);font:600 14px var(--body)}
+.about .cred{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
 .helpbtn{flex:none;display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:10px 12px;min-height:60px}
 .helpbtn .q{flex:none;width:38px;height:38px;border-radius:50%;background:var(--fg);color:var(--bg);display:grid;place-items:center;font:700 24px var(--display)}
 .helpbtn .tx{flex:1;min-width:0;display:flex;flex-direction:column}
@@ -353,11 +371,12 @@ main.fit .list.scroll>*{flex:none}
 </head>
 <body>
 <header class="bar">
+  <button class="about-btn" id="aboutBtn" aria-label="À propos de Sogeo">?</button>
   <div class="brand" aria-label="Sogeo"><span class="mark"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5c-8.3 0-15 6.5-15 14.6C9 30.4 24 43 24 43s15-12.6 15-23.4C39 11.5 32.3 5 24 5z" fill="currentColor"/><circle cx="24" cy="19.5" r="8.2" fill="none" stroke="#f4f5f6" stroke-width="3"/><circle cx="24" cy="19.5" r="3" fill="#f4f5f6"/></svg></span>
     <div class="bt"><div class="bn">Sogeo</div><div class="bs"><b>Sogetrel</b> · Relevés photo terrain</div></div></div>
   <button class="icon-btn" id="backBtn" aria-label="Retour" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
   <div class="t"><div class="eyebrow" id="barEyebrow">Chantier</div><div class="name" id="barName">Sogeo</div></div>
-  <span class="offline" id="offBadge" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M2 8.8a15 15 0 0 1 4.2-2.6M9.8 5.2A15 15 0 0 1 22 8.8M5 12.6a10 10 0 0 1 3.4-2M13.6 10.1A10 10 0 0 1 19 12.6M8.6 16.2a5 5 0 0 1 6.8 0M12 20h.01M3 3l18 18"/></svg>Hors ligne</span>
+  <span class="offline" id="offBadge" title="Hors ligne" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M2 8.8a15 15 0 0 1 4.2-2.6M9.8 5.2A15 15 0 0 1 22 8.8M5 12.6a10 10 0 0 1 3.4-2M13.6 10.1A10 10 0 0 1 19 12.6M8.6 16.2a5 5 0 0 1 6.8 0M12 20h.01M3 3l18 18"/></svg>Hors ligne</span>
   <button class="icon-btn" id="mapBtn" aria-label="Carte du chantier" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/></svg></button>
   <button class="icon-btn" id="delBtn" aria-label="Supprimer" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M10 11v6M14 11v6M7 7l1 13h8l1-13M9 7V4h6v3"/></svg></button>
   <button class="icon-btn" id="homeBtn" aria-label="Accueil" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg></button>
@@ -1375,6 +1394,24 @@ async function loadDemo(){
     S.chantiers[c.id]=c;S.current=c.id;await save();w.remove();renderHome();toast("Chantier de démo chargé");catchUp()
   }catch(e){w.remove();toast("La démo n'a pas pu être créée : "+e.message)}}
 
+/* ---------- À propos ---------- */
+const APP_VERSION="1.15";
+const AUTHOR={name:"Dylan Andriot",role:"Bureau d'étude fibre optique",mail:"dylan.andriot@sogetrel.fr"};
+function openAbout(){
+  const ov=sheet(`<div class="about">
+    <div class="hd"><span class="lg"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5c-8.3 0-15 6.5-15 14.6C9 30.4 24 43 24 43s15-12.6 15-23.4C39 11.5 32.3 5 24 5z" fill="#f4f5f6"/><circle cx="24" cy="19.5" r="8.2" fill="none" stroke="#1f2227" stroke-width="3"/><circle cx="24" cy="19.5" r="3" fill="#1f2227"/></svg></span>
+      <div><b>Sogeo</b><small>Relevés photo terrain · v${APP_VERSION}</small></div></div>
+    <div class="card"><span class="k">Conçue et développée par</span><span class="v">${AUTHOR.name}</span><span style="color:var(--muted);font-size:14px">${AUTHOR.role}</span></div>
+    <div class="card"><span class="k">Contact</span><div class="mail"><a href="mailto:${AUTHOR.mail}?subject=Sogeo">${AUTHOR.mail}</a><button class="copy" data-copy>Copier</button></div>
+      <span style="color:var(--muted);font-size:13px">Une question, un bug, une idée : écris-moi.</span></div>
+    <p class="cred">Fonds de carte © IGN (Plan IGN, Parcellaire Express) et © contributeurs OpenStreetMap · Adresses : Base Adresse Nationale · Itinéraires : OSRM · Les photos et les chantiers restent dans le téléphone jusqu'à l'envoi du ZIP.</p>
+    <button class="ghost" data-x>Fermer</button></div>`);
+  ov.querySelector("[data-copy]").onclick=async e=>{const b=e.currentTarget;
+    try{await navigator.clipboard.writeText(AUTHOR.mail);b.textContent="Copié ✓"}
+    catch(_){const r=document.createRange();r.selectNodeContents(ov.querySelector(".mail a"));const s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent="Sélectionné"}
+    setTimeout(()=>b.textContent="Copier",1800)};
+  ov.querySelector("[data-x]").onclick=()=>ov.remove()}
+
 /* ---------- Aide (écran simple, pour le terrain) ---------- */
 function renderAide(){
   route={v:"aide"};view.className="fit";setBar("Aide","Utiliser Sogeo",true,false);
@@ -1451,6 +1488,7 @@ async function catchUp(){if(catching||!navigator.onLine)return;catching=true;let
 addEventListener("online",()=>{updateOnline();toast("Réseau retrouvé");catchUp()});
 addEventListener("offline",()=>{updateOnline();toast("Hors ligne : tout continue de fonctionner")});
 
+$("#aboutBtn").onclick=openAbout;
 (()=>{const mk=document.querySelector(".brand .mark");let t=null;
   mk.addEventListener("pointerdown",()=>{t=setTimeout(()=>{t=null;vibrate();loadDemo()},900)});
   ["pointerup","pointerleave","pointercancel"].forEach(e=>mk.addEventListener(e,()=>{if(t)clearTimeout(t)}));
