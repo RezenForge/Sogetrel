@@ -37,7 +37,7 @@ import { typeParCode, statutParCode } from '../config.js';
 import { CARTES, carteHtml } from './aujourdhui.js';
 import { demarrerMorpion } from './morpion.js';
 import { demarrerDame } from './dame.js';
-import { lireLies } from '../dossiers-lies.js';
+import { lireLies, liesDe } from '../dossiers-lies.js';
 import { lienLine } from '../line.js';
 import { relanceRecente, quandRelance } from '../dossiers.js';
 import { RELANCE_DFT_JOURS } from '../config.js';
@@ -240,15 +240,22 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
         lancerTournee(null);
         return info('tournée LINE arrêtée');
       }
+      // R22 — « sync … lies » (mot final) : même sélection, mais la tournée visite les DOSSIERS LIÉS de chaque
+      // dossier (onglet Documents : retour DOE), pas le dossier lui-même
+      const filtres = [...(v.filtres || [])];
+      const modeLies = !!filtres.length && filtres.at(-1)?.avecLies === true;
+      if (modeLies) filtres.pop();
       const dossiers = store.tous();
-      const avecFiltre = (v.filtres || []).length > 0;
-      const liste = avecFiltre ? resultatLs(criteres, regles, dossiers).liste
+      const liste = filtres.length ? resultatLs(criteresListe({ filtres }), regles, dossiers).liste
         : dossiers.filter(d => d.type && !statutParCode(d.statutDft)?.clos);
-      const items = liste.map(d => ({ gcblo: d.gcblo, url: lienLine(d.gcblo).url })).filter(x => x.url);
-      if (!items.length) return info('aucun dossier à vérifier sur LINE');
+      const lies = modeLies ? lireLies() : null;
+      const items = (modeLies
+        ? liste.flatMap(d => liesDe(d, lies).map(x => ({ gcblo: x.dossier, url: lienLine(x.dossier).url, principal: d.gcblo })))
+        : liste.map(d => ({ gcblo: d.gcblo, url: lienLine(d.gcblo).url }))).filter(x => x.url);
+      if (!items.length) return info(modeLies ? 'aucun dossier lié à vérifier sur LINE' : 'aucun dossier à vérifier sur LINE');
       const ok = await lancerTournee(items);
       if (!ok) return erreur('extension « FCI depuis LINE » introuvable (version 1.3 ou plus) : installe-la ou mets-la à jour, puis refresh');
-      info(`tournée LINE : ${pluriel(items.length, 'dossier', 'dossiers')} · les pages s'ouvrent en arrière-plan · <button type="button" class="lien c-verbe" data-commande="sync stop">sync stop</button> pour arrêter`);
+      info(`tournée LINE : ${modeLies ? `${pluriel(items.length, 'dossier lié', 'dossiers liés')} (documents)` : pluriel(items.length, 'dossier', 'dossiers')} · les pages s'ouvrent en arrière-plan · <button type="button" class="lien c-verbe" data-commande="sync stop">sync stop</button> pour arrêter`);
     },
 
     /** Raccourci de « edit ‹dossier› fci ‹fci› » : met à jour le FCI (« - » pour l'effacer). */

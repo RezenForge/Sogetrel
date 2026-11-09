@@ -213,3 +213,35 @@ groupe('R15 — Mails d\'attachement préparés pour Outlook', () => {
     egal(e.ecrits.size, 0);
   });
 });
+
+groupe('R22 — sync … lies : la tournée passe sur les dossiers liés', () => {
+  const preparer = () => {
+    const store = creerStore(supportMemoire());
+    const regles = creerDossiers(store, { horloge: () => new Date(2026, 10, 9, 9) });
+    regles.creer({ type: 'NUM21', gcblo: 'SBA301460-THF010', dateAffectation: '2026-11-01' });
+    regles.creer({ type: 'AIR', gcblo: 'BOR301461-THF010', dateAffectation: '2026-11-01' });
+    localStorage.setItem('gcblo.v2.dossiersLies', JSON.stringify({ SBA301460: [{ dossier: 'SBA301460-ACD010', valo: 900 }, { dossier: 'SBA301460-ACF020', valo: 12000 }] }));
+    let envoyes = null;
+    const ecran = { ligne() {}, tableau() {}, fiche() {}, vider() {} };
+    const actions = creerActions({ regles, store, ecran, confirmer: async () => true, demander: async () => null, lancerTournee: async items => { envoyes = items; return true; } });
+    const lancer = t => actions.executer(analyser(t, t.length, { dossiers: store.tous(), aujourdhui: '2026-11-09', regles, listeAffichee: () => [] }));
+    return { lancer, items: () => envoyes };
+  };
+  test('sync lies : les liés de chaque dossier, rattachés au principal, plus gros d\'abord', async () => {
+    const e = preparer();
+    await e.lancer('sync lies');
+    egal(e.items().map(i => [i.gcblo, i.principal]), [['SBA301460-ACF020', 'SBA301460-THF010'], ['SBA301460-ACD010', 'SBA301460-THF010']]);
+    vrai(e.items()[0].url.includes('/SBA/') && e.items()[0].url.includes('/ACF02-0/'));
+  });
+  test('sync air lies : filtre puis liés (aucun ici)', async () => {
+    const e = preparer();
+    await e.lancer('sync air lies');
+    egal(e.items(), null);
+  });
+  test('sync sans lies : inchangé', async () => {
+    const e = preparer();
+    await e.lancer('sync');
+    egal(e.items().map(i => i.gcblo).sort(), ['BOR301461-THF010', 'SBA301460-THF010']);
+    egal(e.items()[0].principal, undefined);
+  });
+});

@@ -421,7 +421,7 @@ let barreTournee = null;
  */
 let recap = null;           // { debut, fin, items: Map gcblo → { fci: [], mad, commentaire: [], ok } }
 function commencerRecap(items) {
-  recap = { debut: new Date(), fin: null, items: new Map(items.map(i => [i.gcblo, { fci: [], mad: false, doe: false, commentaire: [], ok: null }])) };
+  recap = { debut: new Date(), fin: null, items: new Map(items.map(i => [i.gcblo, { fci: [], mad: false, doe: false, commentaire: [], ok: null, principal: i.principal || null }])) };
 }
 function noterRecap(gcblo, quoi, valeur) {
   const r = recap && !recap.fin && recap.items.get(gcblo);
@@ -442,7 +442,9 @@ function afficherRecap() {
       ...(r.commentaire.length ? [`<span class="rc-badge rc-com">commentaire LINE · ${esc(r.commentaire.join(' '))}</span>`] : [])
     ];
     const etat = r.ok === false ? '<span class="rc-badge rc-echec">sans réponse</span>' : faits.length ? faits.join('') : '<span class="dim">rien de nouveau</span>';
-    return { gcblo, ordre: r.ok === false ? 0 : faits.length ? 1 : 2, html: `<tr><td><button type="button" class="lien c-dossier" data-recap="open ${esc(gcblo)}">${esc(gcblo)}</button></td><td>${etat}</td></tr>` };
+    const ouvrir = r.principal || gcblo;
+    const nom = `<button type="button" class="lien c-dossier" data-recap="open ${esc(ouvrir)}">${esc(gcblo)}</button>${r.principal ? `<br><span class="dim">lié à ${esc(r.principal)}</span>` : ''}`;
+    return { gcblo, ordre: r.ok === false ? 0 : faits.length ? 1 : 2, html: `<tr><td>${nom}</td><td>${etat}</td></tr>` };
   }).sort((a, b) => a.ordre - b.ordre || a.gcblo.localeCompare(b.gcblo));
   const t = [...recap.items.values()];
   const compte = (n, un, plusieurs) => `<span class="rc-total"><b>${n}</b> ${n > 1 ? plusieurs : un}</span>`;
@@ -527,15 +529,19 @@ function reponseLine(commande) {
   }
   const doe = commande.match(COMMANDE_DOE);
   if (doe) {
-    const d = store.tous().find(x => x.gcblo === doe[1]);
+    // Le DOE peut être sur un dossier lié (SBA301460-ACD010) : on prévient sur son dossier principal du registre
+    let d = store.tous().find(x => x.gcblo === doe[1]);
+    const lie = !d && (lireLies()[doe[1].slice(0, 9)] || []).some(x => x.dossier === doe[1]) ? doe[1] : null;
+    if (lie) d = store.tous().find(x => x.gcblo.startsWith(`${lie.slice(0, 9)}-`));
     if (!d) return { etat: 'inconnu' };
     const vus = new Set(lireLocal(CLE_DOE_VUS, []));
-    if (vus.has(d.gcblo)) return { etat: 'deja' };
-    vus.add(d.gcblo);
+    const cle = lie || d.gcblo;
+    if (vus.has(cle)) return { etat: 'deja' };
+    vus.add(cle);
     try { localStorage.setItem(CLE_DOE_VUS, JSON.stringify([...vus])); } catch { /* facultatif */ }
-    regles.noter(d.id, 'line', 'DOE disponible sur LINE (Documents)');
-    noterRecap(d.gcblo, 'doe');
-    invite.ecran.journal(`📄 DOE disponible sur LINE · <button type="button" class="lien c-dossier" data-commande="open ${esc(d.gcblo)}">${esc(d.gcblo)}</button>`, 'ok');
+    regles.noter(d.id, 'line', lie ? `DOE disponible sur LINE (dossier lié ${lie})` : 'DOE disponible sur LINE (Documents)');
+    noterRecap(cle, 'doe');
+    invite.ecran.journal(`📄 DOE disponible sur LINE · <button type="button" class="lien c-dossier" data-commande="open ${esc(d.gcblo)}">${esc(d.gcblo)}</button>${lie ? `<span class="dim"> · dossier lié ${esc(lie)}</span>` : ''}`, 'ok');
     return { etat: 'maj' };
   }
   const c = commande.match(COMMANDE_COMMENTE);

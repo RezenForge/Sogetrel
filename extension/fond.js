@@ -64,11 +64,13 @@ async function suivants() {
     tournee.enCreation++;
     const onglet = await chrome.tabs.create({ url: 'about:blank', active: false });
     tournee.enCreation--;
-    const a = { item, etape: 'info', minuteur: null };
+    // Un dossier lié (sync … lies) : directement l'onglet Documents (le retour DOE), une seule étape
+    const a = { item, etape: item.principal ? 'docs' : 'info', minuteur: null };
+    const url = item.principal ? versDocuments(item.url) : item.url;
     a.minuteur = setTimeout(() => terminer(onglet.id, false), DELAI_MS);
     tournee.actifs.set(onglet.id, a);
-    chrome.tabs.update(onglet.id, { url: item.url }).catch(() => terminer(onglet.id, false));
-    surveillerChargement(onglet.id, a, item.url);
+    chrome.tabs.update(onglet.id, { url }).catch(() => terminer(onglet.id, false));
+    surveillerChargement(onglet.id, a, url);
     progres(item.gcblo);
   }
 }
