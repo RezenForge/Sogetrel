@@ -323,6 +323,22 @@ main.fit .list.scroll>*{flex:none}
 .offline{flex:none;display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 10px;border-radius:99px;background:#3a3f47;color:#e4e6e9;font:600 13px var(--body);margin-right:4px}
 .offline svg{width:16px;height:16px}
 .bar.hero .offline{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);right:max(10px,env(safe-area-inset-right,0px))}
+.helpbtn{flex:none;display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:10px 12px;min-height:60px}
+.helpbtn .q{flex:none;width:38px;height:38px;border-radius:50%;background:var(--fg);color:var(--bg);display:grid;place-items:center;font:700 24px var(--display)}
+.helpbtn .tx{flex:1;min-width:0;display:flex;flex-direction:column}
+.helpbtn b{font:700 21px/1.1 var(--display)}
+.helpbtn small{color:var(--muted);font-size:14px}
+.helpbtn svg{width:22px;height:22px;color:var(--muted);flex:none}
+.aide{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding-bottom:8px}
+.step{display:flex;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.step .n{flex:none;width:34px;height:34px;border-radius:50%;background:var(--fg);color:var(--bg);display:grid;place-items:center;font:700 19px var(--display)}
+.step .tx{min-width:0}
+.step h3{margin:2px 0 4px;font:700 21px/1.15 var(--display)}
+.step p{margin:0;color:var(--muted);font-size:15px;line-height:1.4}
+.step p b{color:var(--fg)}
+.tips{background:transparent;border:2px dashed var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.tips h3{margin:0;font:700 19px var(--display);text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.tips p{margin:0;font-size:15px;line-height:1.4}
 .lead{margin:0;color:var(--muted);font-size:16px;max-width:60ch}
 .techrow{margin-top:auto;flex:none;display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;border:1px dashed var(--line);border-radius:14px;padding:10px 12px}
 .techrow .av{flex:none;width:40px;height:40px;border-radius:50%;background:var(--fg);color:var(--bg);display:grid;place-items:center;font:700 17px var(--display);letter-spacing:.04em}
@@ -1349,18 +1365,41 @@ async function loadDemo(){
     S.chantiers[c.id]=c;S.current=c.id;await save();w.remove();renderHome();toast("Chantier de démo chargé");catchUp()
   }catch(e){w.remove();toast("La démo n'a pas pu être créée : "+e.message)}}
 
+/* ---------- Aide (écran simple, pour le terrain) ---------- */
+function renderAide(){
+  route={v:"aide"};view.className="fit";setBar("Aide","Utiliser Sogeo",true,false);
+  const S1=[
+    ["Créer le chantier","Appuie sur <b>Nouveau chantier</b> et tape son nom : <b>3 lettres + 6 chiffres</b> (ex. SBA209198). La ville se remplit toute seule."],
+    ["Ajouter un ouvrage","Dans le chantier, appuie sur <b>+ Chambre</b>, <b>+ Poteau</b> ou <b>+ Point technique</b>. Un point technique se rattache toujours à une chambre ou un poteau."],
+    ["Prendre les photos","Touche une case pour ouvrir l'appareil photo. Une case faite passe en <b>vert</b>. Pour ajouter une photo de plus, appuie sur <b>+ Autre</b>."],
+    ["Masque qui n'existe pas","<b>Reste appuyé</b> sur la lettre du masque (A, B, C ou D) : il est <b>barré en rouge</b>. Même geste pour le débarrer."],
+    ["Position et adresse","Prends la <b>première photo devant l'ouvrage</b> : la position GPS et l'adresse s'enregistrent toutes seules. Le bouton cible permet de la reprendre."],
+    ["Noter un problème","Le bouton <b>note</b> en bas permet d'ajouter une remarque : tampon cassé, élagage, accès impossible…"],
+    ["Terminer","Appuie sur <b>Terminé</b>. Dans la liste, <b>orange</b> = il manque des photos, <b>vert</b> = complet."],
+    ["Envoyer le DOE","À la fin du chantier, appuie sur <b>Créer le ZIP</b>, puis <b>Envoyer</b> (mail, WhatsApp…) ou <b>Enregistrer</b>."]];
+  view.innerHTML=`<div class="aide">${S1.map((s,i)=>`<div class="step"><span class="n">${i+1}</span><div class="tx"><h3>${s[0]}</h3><p>${s[1]}</p></div></div>`).join("")}
+    <div class="tips"><h3>Bon à savoir</h3>
+      <p><b>Pas de réseau ?</b> Aucun problème : tout est gardé dans le téléphone. Les adresses se complètent au retour du réseau.</p>
+      <p><b>Ne vide pas les données du navigateur</b> avant d'avoir envoyé le ZIP : les photos sont stockées dans le téléphone.</p>
+      <p><b>Carte</b> : l'icône carte dans un chantier montre les ouvrages et le trajet du câble.</p></div></div>`;
+  setDock(`<button class="primary" id="aideOk">${I.check}<span>J'ai compris</span></button>`);
+  $("#aideOk").onclick=renderAccueil;
+}
+
 function renderAccueil(){
   if(!S.tech)return renderProfil(true);
   route={v:"accueil"};view.className="fit";setBar("","Sogeo",false,false);
   const list=Object.values(S.chantiers).sort((a,b)=>b.created-a.created);
   const nR=list.reduce((t,c)=>t+c.points.length,0),nP=list.reduce((t,c)=>t+c.points.reduce((u,p)=>u+pointStatus(p).n,0),0);
-  view.innerHTML=list.length?`<div class="overview"><div><b>${list.length}</b><span>Chantier${list.length>1?"s":""}</span></div><div><b>${nR}</b><span>Relevé${nR>1?"s":""}</span></div><div><b>${nP}</b><span>Photo${nP>1?"s":""}</span></div></div>
+  const helpBtn=`<button class="helpbtn" id="helpBtn"><span class="q">?</span><span class="tx"><b>Aide</b><small>Comment utiliser Sogeo</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>`;
+  view.innerHTML=list.length?`${helpBtn}
     <div class="section-t">Chantiers</div><div class="list scroll">${list.map(c=>{
       const inc=c.points.filter(p=>pointStatus(p).miss).length;
       return `<button class="pt" data-go="${c.id}"><span class="ic">${I.folder}</span><span class="tx">
         <span class="n">${esc(c.name)}${c.demo?` <span class="demo">Démo</span>`:""}</span><span class="a">${c.city?esc(c.city)+" · ":""}${c.points.length} relevé${c.points.length>1?"s":""} · ${new Date(c.created).toLocaleDateString("fr-FR")}</span></span>
         ${!c.points.length?"":inc?`<span class="chip warn">${inc} à finir</span>`:`<span class="chip ok">Complet</span>`}</button>`}).join("")}</div>`
-    :`<div class="empty"><div>Crée un chantier pour photographier les chambres et les poteaux, puis exporter le ZIP du DOE.</div></div>`;
+    :`${helpBtn}<div class="empty"><div>Crée un chantier pour photographier les chambres et les poteaux, puis exporter le ZIP du DOE.</div></div>`;
+  $("#helpBtn").onclick=renderAide;
   view.insertAdjacentHTML("beforeend",`<button class="techrow" id="techBtn"><span class="av">${esc((S.tech.prenom[0]||"")+(S.tech.nom[0]||""))}</span>
     <span class="tx"><b>${esc(techLabel(S.tech))}</b><small>${esc(S.tech.email)}</small></span><span class="ed">Modifier</span></button>`);
   $("#techBtn").onclick=()=>renderProfil(false);
