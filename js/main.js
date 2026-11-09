@@ -520,19 +520,29 @@ const COMMANDE_ASK = /^ask ([A-Z]{3}\d{6}-[A-Z]+\d+)$/;
 const COMMANDE_DOE = /^doe ([A-Z]{3}\d{6}-[A-Z]+\d+)$/;
 const CLE_DOE_VUS = 'gcblo.v2.doeVus';
 const COMMANDE_COMMENTE = /^line-commentaire ([A-Z]{3}\d{6}-[A-Z]+\d+)((?: F\d{11})+)$/;
+/**
+ * R22 — Un GCBLO absent du registre mais dossier lié d'une affaire suivie (SBA301460-ACD010) : son dossier
+ * principal (SBA301460-THF010). → { d, lie } ; d null si ni l'un ni l'autre.
+ */
+function dossierOuPrincipal(gcblo) {
+  const d = store.tous().find(x => x.gcblo === gcblo);
+  if (d) return { d, lie: null };
+  const affaire = gcblo.slice(0, 9);
+  if (!(lireLies()[affaire] || []).some(x => x.dossier === gcblo)) return { d: null, lie: null };
+  return { d: store.tous().find(x => x.gcblo.startsWith(`${affaire}-`)) || null, lie: gcblo };
+}
 /** Réponse à l'extension : { etat, fci? } (etat : 'maj' | 'deja' | 'inconnu' | 'connu'), ou null si la commande est inconnue. */
 function reponseLine(commande) {
   const ask = commande.match(COMMANDE_ASK);
   if (ask) {
-    const d = store.tous().find(x => x.gcblo === ask[1]);
+    // Dossier lié : le FCI du GCBLO principal doit aussi être en commentaire sur LINE
+    const { d } = dossierOuPrincipal(ask[1]);
     return d ? { etat: 'connu', fci: [...d.fci] } : { etat: 'inconnu' };
   }
   const doe = commande.match(COMMANDE_DOE);
   if (doe) {
     // Le DOE peut être sur un dossier lié (SBA301460-ACD010) : on prévient sur son dossier principal du registre
-    let d = store.tous().find(x => x.gcblo === doe[1]);
-    const lie = !d && (lireLies()[doe[1].slice(0, 9)] || []).some(x => x.dossier === doe[1]) ? doe[1] : null;
-    if (lie) d = store.tous().find(x => x.gcblo.startsWith(`${lie.slice(0, 9)}-`));
+    const { d, lie } = dossierOuPrincipal(doe[1]);
     if (!d) return { etat: 'inconnu' };
     const vus = new Set(lireLocal(CLE_DOE_VUS, []));
     const cle = lie || d.gcblo;
@@ -546,11 +556,11 @@ function reponseLine(commande) {
   }
   const c = commande.match(COMMANDE_COMMENTE);
   if (c) {
-    const d = store.tous().find(x => x.gcblo === c[1]);
+    const { d, lie } = dossierOuPrincipal(c[1]);
     if (!d) return { etat: 'inconnu' };
-    regles.noter(d.id, 'line', `FCI écrit en commentaire sur LINE :${c[2]}`);
-    noterRecap(d.gcblo, 'commentaire', c[2].trim().split(' '));
-    invite.ecran.journal(`<span class="dim">LINE · ${esc(d.gcblo)} : FCI${esc(c[2])} ajouté en commentaire</span>`, 'ok');
+    regles.noter(d.id, 'line', `FCI écrit en commentaire sur LINE${lie ? ` (dossier lié ${lie})` : ''} :${c[2]}`);
+    noterRecap(c[1], 'commentaire', c[2].trim().split(' '));
+    invite.ecran.journal(`<span class="dim">LINE · ${esc(lie || d.gcblo)} : FCI${esc(c[2])} ajouté en commentaire</span>`, 'ok');
     return { etat: 'maj' };
   }
   const etat = fciDepuisLine(commande);
@@ -566,7 +576,8 @@ function fciDepuisLine(commande) {
   const mad = commande.match(COMMANDE_MAD);
   if (mad) {
     const d = store.tous().find(x => x.gcblo === mad[1]);
-    if (!d) return 'inconnu';
+    // Dossier lié : rien n'en est repris, sans le signaler comme inconnu
+    if (!d) return dossierOuPrincipal(mad[1]).lie ? 'deja' : 'inconnu';
     if (statutParCode(d.statutDft)?.clos) return 'deja';
     noterRecap(d.gcblo, 'mad');
     lancerDepuisLine(`set ${d.gcblo} to mis-a-dispo`);
@@ -575,7 +586,7 @@ function fciDepuisLine(commande) {
   const m = commande.match(COMMANDE_FCI);
   if (!m) return null;
   const d = store.tous().find(x => x.gcblo === m[1]);
-  if (!d) return 'inconnu';
+  if (!d) return dossierOuPrincipal(m[1]).lie ? 'deja' : 'inconnu';
   const fci = m[2].trim().split(' ');
   if (fci.every(f => d.fci.includes(f))) return 'deja';
   noterRecap(d.gcblo, 'fci', fci.filter(f => !d.fci.includes(f)));
