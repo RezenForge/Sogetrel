@@ -3,7 +3,7 @@
    - La bibliothèque de carte est gardée en cache.
    - Les fonds de carte déjà consultés (Plan IGN, cadastre, OpenStreetMap) sont gardés (jusqu'à 3000 tuiles) pour être revus sans réseau.
    Pour forcer une mise à jour chez tous les techs : changer VERSION. */
-const VERSION = "sogeo-v23";
+const VERSION = "sogeo-v24";
 const TILES = "sogeo-tuiles";
 const MAX_TILES = 3000;
 const CORE = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png"];

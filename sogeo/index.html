@@ -503,10 +503,10 @@ async function processPhotoMain(file){
   }catch(e){return{blob:file,thumb:null}}}
 
 /* Horodatage incrusté + métadonnées EXIF (code partagé entre l'appli et ses workers) */
-const SHARED_FN=String.raw`function band(c,lines){const g=c.getContext("2d"),W=c.width,H=c.height,fs=Math.round(Math.max(W,H*1.33)/24),m=Math.round(fs*.7),lh=Math.round(fs*1.18);
+const SHARED_FN=String.raw`function band(c,lines){const g=c.getContext("2d"),W=c.width,H=c.height,fs=Math.max(12,Math.round(Math.min(W,H)/19.8)),m=Math.round(fs*.96),lh=Math.round(fs*1.09);
   g.save();g.textAlign="right";g.textBaseline="top";g.font="400 "+fs+"px Roboto,'Helvetica Neue',Arial,sans-serif";
   g.shadowColor="rgba(0,0,0,.85)";g.shadowBlur=Math.max(2,fs*.08);g.shadowOffsetX=g.shadowOffsetY=Math.max(1,Math.round(fs*.05));g.fillStyle="rgba(255,255,255,.96)";
-  lines.filter(Boolean).forEach((t,i)=>g.fillText(t,W-m,m+i*lh));
+  lines.filter(Boolean).forEach((t,i)=>g.fillText(t,W-m,Math.round(fs*1.05)+i*lh));
   g.restore()}
 function exifBytes(f){
   const A=s=>{s=String(s==null?"":s).normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^\x20-\x7E]/g,"?");const b=new Uint8Array(s.length+1);for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i);return b};
@@ -1556,7 +1556,7 @@ async function loadDemo(){
   }catch(e){w.remove();toast("La démo n'a pas pu être créée : "+e.message)}}
 
 /* ---------- À propos ---------- */
-const APP_VERSION="1.23";
+const APP_VERSION="1.24";
 const AUTHOR={name:"Dylan Andriot",role:"Bureau d'étude fibre optique",mail:"dylan.andriot@sogetrel.fr"};
 function openAbout(){
   const ov=sheet(`<div class="about">
