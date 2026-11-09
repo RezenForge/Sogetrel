@@ -830,10 +830,21 @@ const fmtStamp=t=>{const d=new Date(t),z=n=>String(n).padStart(2,"0");return`${z
 // Format : « 23 octobre 2026 » / « +46.339348,-0.384559 » / rue / CP ville / France
 function addrPartsOf(c,p){const src=isTech(p)?(parentOf(c,p)||{}):p;if(src.addrParts&&(src.addrParts.name||src.addrParts.city))return src.addrParts;
   const a=(src.address||"").trim(),m=/^(.*?)[,\s]+(\d{5})\s+(.+)$/.exec(a);return m?{name:m[1].replace(/,$/,""),postcode:m[2],city:m[3]}:{name:a,postcode:"",city:a?"":(c.city||"")}}
-function stampLines(c,p,slotLabel,rec){
-  const g=gpsOf(c,p),sg=v=>(v>=0?"+":"")+v.toFixed(6),ap=addrPartsOf(c,p);
-  const date=new Date(rec.shot||rec.ts).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
-  return[date,g?`${sg(g.lat)},${sg(g.lon)}`:"",ap.name,[ap.postcode,ap.city].filter(Boolean).join(" "),"France"]}
+// L'horodatage est figé par ouvrage à la première photo : même date, même position, même adresse pour toutes ses photos.
+// Un point technique reprend celui de son support.
+const frDate=t=>new Date(t).toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+function stampOf(c,p,rec){const src=isTech(p)?(parentOf(c,p)||p):p;
+  if(!src.stamp){const g=gpsOf(c,src),sg=v=>(v>=0?"+":"")+v.toFixed(6),ap=addrPartsOf(c,src);
+    src.stamp={date:frDate(rec.shot||rec.ts),coords:g?`${sg(g.lat)},${sg(g.lon)}`:"",street:ap.name||"",city:[ap.postcode,ap.city].filter(Boolean).join(" ")};save()}
+  else if(!src.stamp.coords||!src.stamp.street){ // complété une seule fois si le GPS ou l'adresse n'étaient pas encore connus
+    const g=gpsOf(c,src),sg=v=>(v>=0?"+":"")+v.toFixed(6),ap=addrPartsOf(c,src);
+    if(!src.stamp.coords&&g)src.stamp.coords=`${sg(g.lat)},${sg(g.lon)}`;
+    if(!src.stamp.street&&ap.name){src.stamp.street=ap.name;src.stamp.city=[ap.postcode,ap.city].filter(Boolean).join(" ")}save()}
+  return src.stamp}
+function stampLines(c,p,slotLabel,rec){const st=stampOf(c,p,rec);
+  // photo importée d'un autre jour : on garde sa vraie date
+  const d=rec.mode==="import"&&rec.shot?frDate(rec.shot):st.date;
+  return[d,st.coords,st.street,st.city,"France"]}
 const needsStamp=rec=>rec&&rec.mode!=="ext"&&!rec.stamped;
 // Métadonnées EXIF : date/heure de prise de vue, GPS, auteur, description
 function exifFor(c,p,label,rec){const t=new Date(rec.shot||rec.ts),z=n=>String(n).padStart(2,"0"),g=gpsOf(c,p),acc=isTech(p)?(parentOf(c,p)||{}).gps:p.gps;
@@ -1100,10 +1111,10 @@ async function drawPath(c,m){
 /* Position automatique à la première photo d'un relevé (sans bloquer) */
 const locWait=new Map();
 function locateFor(p){ // position précise de l'ouvrage, prise devant lui à la première photo
-  if(isTech(p)||(p.gps&&p.gps.acc<=15))return Promise.resolve();
+  if(isTech(p)||p.gps)return Promise.resolve();
   if(!locWait.has(p.id))locWait.set(p.id,autoLocate(p).finally(()=>locWait.delete(p.id)));
   return Promise.race([locWait.get(p.id),new Promise(r=>setTimeout(r,20000))])}
-async function autoLocate(p){if(isTech(p))return;if(p._locating||(p.gps&&p.gps.acc<=15))return;p._locating=true;
+async function autoLocate(p){if(isTech(p))return;if(p._locating||p.gps)return;p._locating=true;
   try{const co=await getPrecisePos();
     // à chaque photo, on garde la mesure la plus précise prise devant l'ouvrage
     if(p.gps&&p.gps.acc<=co.accuracy)return;
@@ -1193,7 +1204,7 @@ async function renderPoint(id,isNew){
   const chkDup=()=>{const d=dupOf(c,p,ptName(p));nm.classList.toggle("bad",!!d);return d};chkDup();
   nm.oninput=()=>{p.name=nm.value.toUpperCase().trim();$("#barName").textContent=p.name||p.autoName;save();chkDup()};
   nm.addEventListener("blur",()=>{const d=chkDup();if(d)toast(`${ptName(p)} existe déjà dans ce chantier`)});
-  const addr=$("#pAddr");addr.oninput=()=>{p.address=addr.value;delete p.addrParts;save()};
+  const addr=$("#pAddr");addr.oninput=()=>{p.address=addr.value;delete p.addrParts;delete p.stamp;save()};
   [nm,addr].forEach(i=>i.onkeydown=e=>{if(e.key==="Enter")i.blur()});
   $("#gpsBtn").onclick=()=>locate(p);paintGps(p);
   view.querySelectorAll("[data-cam]").forEach(b=>b.onclick=()=>shoot(p,b.dataset.cam));
@@ -1337,7 +1348,8 @@ async function addFiles(files,src){
   }
   await save();if(touched.size)vibrate();
   // le bandeau est incrusté dès maintenant ; on attend la position GPS prise devant l'ouvrage (20 s max)
-  const gpsP=touched.size&&!ext?locateFor(p):Promise.resolve();
+  const sup=isTech(p)?parentOf(c,p):p;
+  const gpsP=touched.size&&!ext&&!(sup&&sup.stamp)?locateFor(p):Promise.resolve(); // déjà figé : aucune attente
   if(ext&&touched.size)autoLocate(p);
   newJobs.forEach(async([id,f,k])=>{await gpsP;const rec=await phGet(id);if(!rec)return;
     const list=p.photos[k]||[],n=list.indexOf(id),lab=slotLabelAt(p,k,n,list.length);
@@ -1375,7 +1387,7 @@ $("#delBtn").onclick=async()=>{if(route.v==="home"&&cur())return deleteChantier(
   c.points=c.points.filter(x=>x!==p&&!kids.includes(x));save();renderHome()};
 
 /* ---------- GPS + adresse (API Adresse du gouvernement) ---------- */
-async function locate(p){
+async function locate(p){delete p.stamp;
   const btn=$("#gpsBtn"),c=cur();
   btn.classList.add("busy");toast("Recherche de la position…");
   let co;try{co=await getPrecisePos(a=>toast(`Précision GPS : ±${Math.round(a)} m…`))}catch(e){btn.classList.remove("busy");toast(posErr(e));return}
@@ -1556,7 +1568,7 @@ async function loadDemo(){
   }catch(e){w.remove();toast("La démo n'a pas pu être créée : "+e.message)}}
 
 /* ---------- À propos ---------- */
-const APP_VERSION="1.24";
+const APP_VERSION="1.25";
 const AUTHOR={name:"Dylan Andriot",role:"Bureau d'étude fibre optique",mail:"dylan.andriot@sogetrel.fr"};
 function openAbout(){
   const ov=sheet(`<div class="about">
