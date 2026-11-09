@@ -1568,22 +1568,33 @@ async function loadDemo(){
   }catch(e){w.remove();toast("La démo n'a pas pu être créée : "+e.message)}}
 
 /* ---------- À propos ---------- */
-const APP_VERSION="1.25";
-const AUTHOR={name:"Dylan Andriot",role:"Bureau d'étude fibre optique",mail:"dylan.andriot@sogetrel.fr"};
+const APP_VERSION="1.26";
+const AUTHOR={name:"Dylan Andriot",mail:"dylan.andriot@sogetrel.fr"};
 function openAbout(){
   const ov=sheet(`<div class="about">
     <div class="hd"><span class="lg"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 5c-8.3 0-15 6.5-15 14.6C9 30.4 24 43 24 43s15-12.6 15-23.4C39 11.5 32.3 5 24 5z" fill="#f4f5f6"/><circle cx="24" cy="19.5" r="8.2" fill="none" stroke="#1f2227" stroke-width="3"/><circle cx="24" cy="19.5" r="3" fill="#1f2227"/></svg></span>
       <div><b>Sogeo</b><small>Relevés photo terrain · v${APP_VERSION}</small></div></div>
-    <div class="card"><span class="k">Conçue et développée par</span><span class="v">${AUTHOR.name}</span><span style="color:var(--muted);font-size:14px">${AUTHOR.role}</span></div>
+    <div class="card"><span class="k">Conçue et développée par</span><span class="v">${AUTHOR.name}</span></div>
     <div class="card"><span class="k">Contact</span><div class="mail"><a href="mailto:${AUTHOR.mail}?subject=Sogeo">${AUTHOR.mail}</a><button class="copy" data-copy>Copier</button></div>
       <span style="color:var(--muted);font-size:13px">Une question, un bug, une idée : écris-moi.</span></div>
     <p class="cred">Fonds de carte © IGN (Plan IGN, Parcellaire Express) et © contributeurs OpenStreetMap · Adresses : Base Adresse Nationale · Itinéraires : OSRM · Les photos et les chantiers restent dans le téléphone jusqu'à l'envoi du ZIP.</p>
-    <button class="ghost" data-x>Fermer</button></div>`);
+    <div class="duo"><button class="ghost" data-x>Fermer</button><button class="primary" data-upd><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg><span>Actualiser</span></button></div></div>`);
   ov.querySelector("[data-copy]").onclick=async e=>{const b=e.currentTarget;
     try{await navigator.clipboard.writeText(AUTHOR.mail);b.textContent="Copié ✓"}
     catch(_){const r=document.createRange();r.selectNodeContents(ov.querySelector(".mail a"));const s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent="Sélectionné"}
     setTimeout(()=>b.textContent="Copier",1800)};
-  ov.querySelector("[data-x]").onclick=()=>ov.remove()}
+  ov.querySelector("[data-x]").onclick=()=>ov.remove();
+  ov.querySelector("[data-upd]").onclick=e=>refreshApp(e.currentTarget)}
+/* Actualiser : récupère la dernière version publiée (les chantiers et photos restent dans le téléphone) */
+async function refreshApp(btn){
+  if(!navigator.onLine){toast("Pas de réseau : réessaie quand tu captes");return}
+  if(btn){btn.disabled=true;btn.querySelector("span").textContent="Mise à jour…"}
+  try{const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(reg)await reg.update().catch(()=>{});
+    if(window.caches){for(const k of (await caches.keys()).filter(k=>k.startsWith("sogeo-v"))){const c=await caches.open(k);
+      for(const u of ["./","./index.html","./manifest.webmanifest","./sw.js"]){try{const r=await fetch(u,{cache:"reload"});if(r.ok)await c.put(u,r.clone())}catch(_){}}}}
+  }catch(e){}
+  try{sessionStorage.setItem("sogeo-upd","1")}catch(_){}
+  location.reload()}
 
 /* ---------- Aide (écran simple, pour le terrain) ---------- */
 function renderAide(){
@@ -1683,6 +1694,7 @@ document.addEventListener("touchmove",e=>{if(e.touches.length>1&&!(e.target.clos
   for(const c of Object.values(S.chantiers))for(const p of c.points)if(isTech(p)&&p.gps)p.gps=null;
   renderAccueil();
   updateOnline();
+  try{if(sessionStorage.getItem("sogeo-upd")){sessionStorage.removeItem("sogeo-upd");setTimeout(()=>toast(`Sogeo est à jour (v${APP_VERSION})`),400)}}catch(_){}
   if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))navigator.serviceWorker.register("sw.js").catch(()=>{});
   if(navigator.onLine)setTimeout(catchUp,1500);
   for(const id of (S.pending||[]).slice()){try{const r=await phGet(id);if(r&&r.pending)compressQueue.add(id,r.blob);else S.pending=S.pending.filter(x=>x!==id)}catch(e){}}
