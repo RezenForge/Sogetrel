@@ -62,7 +62,8 @@ export const COMMANDES = Object.freeze([
   // Commande cachée : ni dans help, ni dans l'autocomplétion, ni dans l'historique, pas d'écho
   { id: 'morpion', verbes: ['morpion'], resume: 'une partie de morpion', forme: 'morpion', emplacements: [], cachee: true },
   { id: 'dame', verbes: ['dame'], resume: 'une partie de dames', forme: 'dame', emplacements: [], cachee: true },
-  { id: 'add', verbes: ['add'], resume: 'ajoute un affect à la liste (ex. add ELIOS)', forme: 'add ‹AFFECT›',
+  { id: 'add', verbes: ['add'], resume: 'ajoute un dossier à la main, avec ses champs (ou un affect : add affect ‹NOM›)',
+    forme: 'add ‹GCBLO› [affect|commune|valo|fci|statut|date|relance|note ‹valeur›]… · add affect ‹NOM›',
     emplacements: [{ nom: 'valeur', sorte: 'texte' }] },
   { id: 'refresh', verbes: ['refresh'], resume: 'recharge la page (dernière version)', forme: 'refresh', emplacements: [] },
   { id: 'help', verbes: ['help', '?'], resume: 'aide',

@@ -21,7 +21,8 @@ Ouvrir **https://rezenforge.github.io/Sogetrel/**.
 | `delete ‹dossiers›` | supprime, après confirmation |
 | `attachement fichier` | choisit le classeur d'attachement de référence (gardé dans le navigateur) |
 | `attachement ‹dossiers›` | remplit une copie de la référence (X5 commune, AG5 date, U6 GCBLO, paliers 30/60 en lignes 30-31) et l'enregistre en `‹GCBLO›.xlsx` dans le dossier des attachements (choisi une fois, retenu) ; le dossier passe au statut Attach ; le mail au pôle facturation est préparé pour Outlook (voir plus bas) |
-| `add ‹AFFECT›` | ajoute un affect à la liste (ex. `add ELIOS`) : utilisable ensuite partout où on choisit un affect (affect, set, ls, sync, tri, tableau de bord) ; étiquette seulement — pas de mail, pas d'import depuis le classeur ; la page se recharge |
+| `add ‹GCBLO› [champ valeur]…` | ajoute un dossier à la main, avec les champs voulus dans n'importe quel ordre : `add SBA301460-THF010 commune Le Haillan valo 58,40 affect num21` (champs : affect, commune, valo, fci, statut, date, relance, note) ; aucun mail préparé ; annulable (`cancel`) ; supprimer : `delete ‹dossier›` |
+| `add affect ‹NOM›` | ajoute un affect à la liste (ex. `add affect ELIOS`) : utilisable ensuite partout où on choisit un affect (affect, set, ls, sync, tri, tableau de bord) ; étiquette seulement — pas de mail, pas d'import depuis le classeur ; la page se recharge |
 | `attachement folder` | change le dossier des attachements |
 | `save` · `save folder` | la première fois, choisit un dossier ; ensuite, sauvegarde directement dans ce dossier sans rien redemander (`save folder` pour en changer). Écrit une sauvegarde datée ; seules les 10 plus récentes y restent. Ensuite, sauvegarde automatique toutes les heures dans ce dossier, tant que l'appli est ouverte. Écrit aussi `registre-gcblo.csv` pour le classeur partagé (voir plus bas) |
 | `restore` | recharge une sauvegarde : remplace toute la base après confirmation (annulable) |

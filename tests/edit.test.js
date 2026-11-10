@@ -245,3 +245,32 @@ groupe('R22 — sync … lies : la tournée passe sur les dossiers liés', () =>
     egal(e.items()[0].principal, undefined);
   });
 });
+
+groupe('R24 — add : un dossier à la main', () => {
+  test('GCBLO seul : créé sans affect, sans mail', async () => {
+    const e = env();
+    await e.lancer('add SBA301460-THF010');
+    const d = e.store.parGcblo('SBA301460-THF010');
+    egal([d.type, d.statutDft], [null, 'A_FAIRE']);
+  });
+  test('champs dans le désordre, commune en plusieurs mots, valo à la française', async () => {
+    const e = env();
+    await e.lancer('add sba301460-thf010 commune Le Haillan valo 58,40 affect air fci F11111111111 note à voir');
+    const d = e.store.parGcblo('SBA301460-THF010');
+    egal([d.type, d.commune, d.valorisation, d.fci, d.commentaire, d.dateAffectation], ['AIR', 'Le Haillan', 58.4, ['F11111111111'], 'à voir', '2026-11-03']);
+  });
+  test('refus : existe déjà, champ inconnu, valeur manquante, affect inconnu', async () => {
+    const e = env();
+    await e.lancer('add SBA501404-THF010'); vrai(e.lignes.at(-1).html.includes('existe déjà'));
+    await e.lancer('add SBA301460-THF010 couleur bleu'); vrai(e.lignes.at(-1).html.includes('nom de champ attendu'));
+    await e.lancer('add SBA301460-THF010 commune'); vrai(e.lignes.at(-1).html.includes('valeur manquante'));
+    await e.lancer('add SBA301460-THF010 affect zzz'); vrai(e.lignes.at(-1).html.includes('affect inconnu'));
+    egal(e.store.parGcblo('SBA301460-THF010'), null);
+  });
+  test('cancel : le dossier ajouté disparaît', async () => {
+    const e = env();
+    await e.lancer('add SBA301460-THF010 valo 10');
+    await e.lancer('cancel');
+    egal(e.store.parGcblo('SBA301460-THF010'), null);
+  });
+});

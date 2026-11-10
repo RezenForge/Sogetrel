@@ -34,13 +34,13 @@ import { cellulesAttachement } from '../attachement.js';
 import { mailAffectation, mailRelance, mailAttachement, csvMailsAttachement, NOM_CSV_MAILS, lienMailto, AFFECTS_MAIL } from '../mails.js';
 import { contenuSauvegarde, nomSauvegarde, lireSauvegarde, GARDER } from '../sauvegarde.js';
 import { lireAffectsClasseur, noterAffectsClasseur, ecartAffect } from '../affects-classeur.js';
-import { TYPES, typeParCode, statutParCode } from '../config.js';
+import { TYPES, FORMATS, typeParCode, statutParCode } from '../config.js';
 import { CARTES, carteHtml } from './aujourdhui.js';
 import { demarrerMorpion } from './morpion.js';
 import { demarrerDame } from './dame.js';
 import { lireLies, liesDe } from '../dossiers-lies.js';
 import { lienLine } from '../line.js';
-import { relanceRecente, quandRelance } from '../dossiers.js';
+import { relanceRecente, quandRelance, normaliserGcblo } from '../dossiers.js';
 import { RELANCE_DFT_JOURS } from '../config.js';
 import { depuisJour, ajouterJours, formater } from '../dates.js';
 
@@ -64,6 +64,22 @@ export function texteClasseur(c, complet = false) {
 }
 
 export function creerActions({ regles, store, reglages, ecran, confirmer, demander, choisirFichier, enregistrerFichier, coffre, sauvegarderDans, choisirSauvegarde, choisirDossier, ecrireDansDossier, lireDansDossier = async () => null, ouvrirMail = () => {}, recharger = () => location.reload(), lancerTournee = async () => false }) {
+  /** La valeur tapée pour un champ (edit, add) → { ok, valeur } ou { ok: false, erreur }. « - », « aucun », « vide » : vider. */
+  function convertirChamp(champ, texte) {
+    const brut = String(texte ?? '').trim().replace(/^"(.*)"$/, '$1');
+    const vide = ['-', 'aucun', 'aucune', 'vide'].includes(plat(brut));
+    const date = () => { const d = vide ? null : lireDate(brut, regles.aujourdhui()); return !vide && !d ? { ok: false, erreur: `date non comprise : « ${brut} »` } : { ok: true, valeur: d }; };
+    switch (champ) {
+      case 'type': { const t = vide ? null : MOTS_TYPE[plat(brut)]; return !vide && !t ? { ok: false, erreur: `affect inconnu : « ${brut} » (${LISTE_AFFECTS()})` } : { ok: true, valeur: t }; }
+      case 'statutDft': { const s = MOTS_STATUT[plat(brut)]; return s ? { ok: true, valeur: s } : { ok: false, erreur: `statut inconnu : « ${brut} »` }; }
+      case 'dateAffectation': case 'dateRelance': return date();
+      case 'valorisation': return { ok: true, valeur: vide ? null : brut };
+      case 'fci': return { ok: true, valeur: vide ? [] : brut };
+      case 'gcblo': return { ok: true, valeur: brut };
+      default: return { ok: true, valeur: vide ? '' : brut };          // commune, commentaire
+    }
+  }
+
   /**
    * R15 — Ajoute les mails d'attachement (NUM21, AIR) à mails-attachement.csv, dans le dossier des attachements.
    * La macro Outlook BrouillonsAttachement en fait des brouillons, l'attachement en pièce jointe.
@@ -185,20 +201,10 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
     /** Retrouve les dossiers d'une liste collée et affiche leurs infos (même liste que ls, éditable). */
     /** Modifie un champ d'un dossier (aussi lancé par le double-clic dans une fiche). */
     edit(v) {
-      const brut = v.valeur.trim().replace(/^"(.*)"$/, '$1');
-      const vide = ['-', 'aucun', 'aucune', 'vide'].includes(plat(brut));
       const nom = Object.keys(CHAMPS).find(k => CHAMPS[k] === v.champ);
-      let valeur;
-      switch (v.champ) {
-        case 'type': valeur = vide ? null : MOTS_TYPE[plat(brut)]; if (!vide && !valeur) return erreur(`affect inconnu : « ${esc(brut)} » (${esc(LISTE_AFFECTS())})`); break;
-        case 'statutDft': valeur = MOTS_STATUT[plat(brut)]; if (!valeur) return erreur(`statut inconnu : « ${esc(brut)} »`); break;
-        case 'dateAffectation': valeur = vide ? null : lireDate(brut, regles.aujourdhui()); if (!vide && !valeur) return erreur(`date non comprise : « ${esc(brut)} »`); break;
-        case 'dateRelance': valeur = vide ? null : lireDate(brut, regles.aujourdhui()); if (!vide && !valeur) return erreur(`date non comprise : « ${esc(brut)} »`); break;
-        case 'valorisation': valeur = vide ? null : brut; break;
-        case 'fci': valeur = vide ? [] : brut; break;
-        case 'gcblo': valeur = brut; break;
-        default: valeur = vide ? '' : brut;          // commune, commentaire
-      }
+      const c = convertirChamp(v.champ, v.valeur);
+      if (!c.ok) return erreur(esc(c.erreur));
+      const valeur = c.valeur;
       const r = regles.modifier(v.cible.id, { [v.champ]: valeur });
       if (!r.ok) return erreur(esc(premiereErreur(r)));
       if (r.inchange) return info(`${esc(nom)} déjà à jour`);
@@ -418,17 +424,45 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
     /** Recharge la page, en allant chercher la dernière version publiée (comme Ctrl+F5). */
     async refresh() { info('rechargement…'); await recharger(); },
 
-    /** R23 — « add ‹AFFECT› » : un affect de plus dans la liste (étiquette seulement), puis la page se recharge. */
+    /**
+     * R24 — « add ‹GCBLO› [champ valeur]… » : crée un dossier à la main, avec les champs qu'on veut
+     * (affect, commune, valo, fci, statut, date, relance, note…), dans n'importe quel ordre :
+     *   add SBA301460-THF010 commune Le Haillan valo 58,40 affect num21
+     * Aucun mail n'est préparé (pour affecter avec mail : affect). Annulable. Supprimer : delete.
+     * « add affect ‹NOM› » : R23, un affect de plus dans la liste.
+     */
     async add(v) {
-      const nom = String(v.valeur ?? '').trim();
-      const motsPris = [...Object.keys(MOTS_TYPE), ...Object.keys(MOTS_STATUT), ...Object.keys(MOTS_FILTRE), ...Object.keys(GROUPES),
-        ...Object.keys(PERIODES), ...JOURS, ...Object.keys(CHAMPS), ...COMMANDES.flatMap(c => c.verbes), 'fichier', 'folder', 'stop', 'chrome', 'mozilla', 'lies'];
-      const r = nouvelAffect(nom, motsPris, TYPES.map(t => t.code));
-      if (!r.ok) return erreur(esc(r.erreur));
-      if (!ajouterAffect(r.affect)) return erreur('le navigateur refuse d’enregistrer l’affect');
-      try { sessionStorage.setItem('gcblo.affectAjoute', r.affect.libelle); } catch { /* facultatif */ }
-      ok(`affect ${esc(r.affect.libelle)} ajouté <span class="dim">· rechargement…</span>`);
-      await recharger();
+      const texte = String(v.valeur ?? '').trim();
+      const [premier = '', ...reste] = texte.split(/\s+/);
+      if (plat(premier) === 'affect' && reste.length && !Object.keys(CHAMPS).includes(plat(reste[0]))) return ajouterUnAffect(reste.join(' '));
+      if (!premier) return erreur('add ‹GCBLO› [champ valeur]… · ex. add SBA301460-THF010 commune Le Haillan valo 58,40');
+      const gcblo = normaliserGcblo(premier);
+      if (!FORMATS.gcblo.test(gcblo)) return erreur(`« ${esc(premier)} » : GCBLO attendu (AAA000000-AAA000) · pour un affect : add affect ‹NOM›`);
+      const existant = store.tous().find(d => d.gcblo === gcblo);
+      if (existant) return erreur(`${esc(gcblo)} existe déjà · edit pour le modifier`);
+      // Les champs : un mot de champ, puis sa valeur (plusieurs mots possibles, jusqu'au champ suivant)
+      const champs = [];
+      for (const m of reste) {
+        const champ = CHAMPS[plat(m)];
+        if (champ && champ !== 'gcblo') champs.push({ champ, mot: m, valeur: [] });
+        else if (champs.length) champs.at(-1).valeur.push(m);
+        else return erreur(`« ${esc(m)} » : nom de champ attendu (${esc(Object.keys(CHAMPS).filter(k => CHAMPS[k] !== 'gcblo').join(', '))})`);
+      }
+      const saisie = { gcblo };
+      for (const c of champs) {
+        if (!c.valeur.length) return erreur(`valeur manquante pour « ${esc(c.mot)} »`);
+        const r = convertirChamp(c.champ, c.valeur.join(' '));
+        if (!r.ok) return erreur(esc(r.erreur));
+        saisie[c.champ] = r.valeur;
+      }
+      // Un affect sans date : affecté aujourd'hui (comme la commande affect)
+      if (saisie.type && !('dateAffectation' in saisie)) saisie.dateAffectation = regles.aujourdhui();
+      const r = regles.creer(saisie);
+      if (!r.ok) return erreur(esc(premiereErreur(r)));
+      annulation = { libelle: `ajout de ${r.dossier.gcblo}`, faire: () => regles.supprimer(r.dossier.id) };
+      const d = r.dossier;
+      const resume = [typeParCode(d.type)?.libelle, d.commune, d.valorisation != null ? `${d.valorisation} €` : '', d.fci?.length ? d.fci.join(' ') : '', statutParCode(d.statutDft)?.libelle].filter(Boolean).join(' · ');
+      ok(`<button type="button" class="lien c-dossier" data-commande="open ${esc(d.gcblo)}">${esc(d.gcblo)}</button> ajouté${resume ? ` <span class="dim">· ${esc(resume)}</span>` : ''} <span class="dim">·</span> ${LIEN_ANNULE}`);
     },
 
     /** Sans sujet : la liste des commandes (cliquables) ; avec un sujet : le détail d'une commande. */
@@ -442,6 +476,21 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       COMMANDES.filter(c => !c.cachee).forEach(c => info(`<button type="button" class="lien c-verbe" data-commande="help ${esc(c.verbes[0])}">${esc(c.verbes[0])}</button>${' '.repeat(Math.max(1, 8 - c.verbes[0].length))}<span class="dim">${esc(c.resume)}</span>`));
     }
   };
+
+  /** R23 — « add affect ‹NOM› » : un affect de plus dans la liste (étiquette seulement), puis la page se recharge. */
+  async function ajouterUnAffect(nomBrut) {
+    {
+      const nom = String(nomBrut ?? '').trim();
+      const motsPris = [...Object.keys(MOTS_TYPE), ...Object.keys(MOTS_STATUT), ...Object.keys(MOTS_FILTRE), ...Object.keys(GROUPES),
+        ...Object.keys(PERIODES), ...JOURS, ...Object.keys(CHAMPS), ...COMMANDES.flatMap(c => c.verbes), 'fichier', 'folder', 'stop', 'chrome', 'mozilla', 'lies'];
+      const r = nouvelAffect(nom, motsPris, TYPES.map(t => t.code));
+      if (!r.ok) return erreur(esc(r.erreur));
+      if (!ajouterAffect(r.affect)) return erreur('le navigateur refuse d’enregistrer l’affect');
+      try { sessionStorage.setItem('gcblo.affectAjoute', r.affect.libelle); } catch { /* facultatif */ }
+      ok(`affect ${esc(r.affect.libelle)} ajouté <span class="dim">· rechargement…</span>`);
+      await recharger();
+    }
+  }
 
   /** Ouvre le mail dans la messagerie, le résume dans le volet (lien pour le rouvrir), et le note dans l'historique. */
   function preparerMail(mail, dossier, note) {
