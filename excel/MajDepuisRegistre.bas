@@ -17,6 +17,8 @@ Attribute VB_Name = "MajDepuisRegistre"
 '       (et Attach, qui sont passes par la mise a disposition) ; deja present -> pas touchee ;
 '       pas de FCI dans le registre ni dans J -> laisse de cote et signale
 '   - colonne E : "FACTU" pour les dossiers en Attach dans le registre
+'   - colonne I : l'affect du registre (NUM21, AIR, Sogetrel...) si la cellule est VIDE ;
+'       deja le meme -> rien ; un autre affect ou une autre entreprise -> pas touchee, signale en orange
 '
 ' Rien n'est efface. Les cas laisses de cote (cellule protegee, formule...) sont signales.
 ' A la fin, une fenetre "Compte rendu" montre ce qui a ete fait
@@ -40,6 +42,7 @@ Private Const ONGLETS As String = "33,16,17,79,86"
 Private Const COL_DOSSIER As String = "D"
 Private Const COL_FILTRE As String = "E"
 Private Const COL_FCI As String = "J"
+Private Const COL_AFFECT As String = "I"
 Private Const PREMIERE_LIGNE As Long = 2
 Private Const APPLI As String = "RegistreGCBLO"
 Private Const NOM_CSV_CLASSEUR As String = "classeur-gcblo.csv"
@@ -65,7 +68,7 @@ Public Sub MajDepuisRegistre()
     Dim chemin As String, registre As Object, nomOnglet As Variant
     Dim ws As Worksheet, derniere As Long, i As Long
     Dim cle As String, filtre As String, info As Variant
-    Dim ancienJ As String, nouveauJ As String, vus As Long, absents As String, exportees As String
+    Dim ancienJ As String, nouveauJ As String, ancienI As String, vus As Long, absents As String, exportees As String
 
     Set cible = ClasseurCible()
     If cible Is Nothing Then
@@ -108,7 +111,7 @@ Public Sub MajDepuisRegistre()
                         filtre = UCase$(Trim$(CStr(ws.Cells(i, COL_FILTRE).Value)))
                         If filtre = "GCBLO" Or filtre = Factu() Then
                             vus = vus + 1
-                            info = registre(cle)          ' (0) = FCI, (1) = code statut
+                            info = registre(cle)          ' (0) = FCI, (1) = code statut, (2) = affect
 
                             ' --- Colonne J : le FCI, puis " / GCBLO OK" si les documents sont mis a disposition
                             ancienJ = CStr(ws.Cells(i, COL_FCI).Value)
@@ -122,6 +125,18 @@ Public Sub MajDepuisRegistre()
                                 End If
                             End If
                             If nouveauJ <> ancienJ Then Ecrire ws, i, COL_FCI, cle, ancienJ, nouveauJ
+
+                            ' --- Colonne I : l'affect du registre, seulement dans une cellule vide
+                            If info(2) <> "" Then
+                                ancienI = CStr(ws.Cells(i, COL_AFFECT).Value)
+                                If Trim$(ancienI) = "" Then
+                                    Ecrire ws, i, COL_AFFECT, cle, ancienI, CStr(info(2))
+                                ElseIf AffectNormal(ancienI) <> AffectNormal(CStr(info(2))) Then
+                                    Noter ws, i, cle, COL_AFFECT, ancienI, ancienI, _
+                                        "Non modifi" & ChrW(233) & " : le registre dit " & info(2) & " (colonne I d" & ChrW(233) & "j" & ChrW(224) & " remplie)"
+                                    nbIgnores = nbIgnores + 1
+                                End If
+                            End If
 
                             ' --- Colonne E : FACTU pour les dossiers Attach
                             If info(1) = "ATTACH" And filtre = "GCBLO" Then
@@ -360,7 +375,9 @@ Private Function CompteRendu(bilan As String, erreur As String) As Boolean
 
     For Each f In faits
         r = r + 1: n = n + 1
-        If f(3) <> COL_FCI Then
+        If f(3) = COL_AFFECT Then
+            quoi = "I " & ChrW(183) & " affect"
+        ElseIf f(3) <> COL_FCI Then
             quoi = "E " & ChrW(183) & " " & Factu()
         ElseIf InStr(1, f(5), GCBLO_OK, vbTextCompare) > 0 And InStr(1, f(4), GCBLO_OK, vbTextCompare) = 0 Then
             quoi = "J " & ChrW(183) & " " & GCBLO_OK
@@ -404,11 +421,21 @@ End Function
 
 
 '------------------------------------------------------------------------------
+' Pour comparer deux affects : majuscules, sans espaces ni tirets ; "Numerus 21" = "NUM21"
+Private Function AffectNormal(ByVal t As String) As String
+    t = UCase$(Replace(Replace(Replace(Trim$(t), " ", ""), "-", ""), "_", ""))
+    t = Replace(Replace(t, ChrW(201), "E"), ChrW(200), "E")
+    If t = "NUMERUS21" Then t = "NUM21"
+    If Left$(t, 4) = "SOGE" Then t = "SOGETREL"
+    AffectNormal = t
+End Function
+
+'------------------------------------------------------------------------------
 ' Lit registre-gcblo.csv (UTF-8, separateur ;). Colonnes reperees par leur en-tete.
-' Renvoie un dictionnaire : GCBLO -> Array(FCI separes par un espace, code statut)
+' Renvoie un dictionnaire : GCBLO -> Array(FCI separes par un espace, code statut, affect)
 Private Function LireRegistre(chemin As String) As Object
     Dim flux As Object, texte As String, lignes() As String, entetes() As String, champs() As String
-    Dim iGcblo As Long, iFci As Long, iStatut As Long, i As Long, k As Long, d As Object, cle As String
+    Dim iGcblo As Long, iFci As Long, iStatut As Long, iAffect As Long, i As Long, k As Long, d As Object, cle As String, affect As String
 
     On Error GoTo Echec
     Set flux = CreateObject("ADODB.Stream")
@@ -422,13 +449,14 @@ Private Function LireRegistre(chemin As String) As Object
     lignes = Split(texte, vbLf)
     If UBound(lignes) < 0 Then GoTo MauvaisFormat
 
-    iGcblo = -1: iFci = -1: iStatut = -1
+    iGcblo = -1: iFci = -1: iStatut = -1: iAffect = -1
     entetes = Split(lignes(0), ";")
     For k = 0 To UBound(entetes)
         Select Case UCase$(Trim$(entetes(k)))
             Case "GCBLO": iGcblo = k
             Case "FCI": iFci = k
             Case "CODE STATUT": iStatut = k
+            Case "AFFECT": iAffect = k
         End Select
     Next k
     If iGcblo < 0 Or iFci < 0 Or iStatut < 0 Then GoTo MauvaisFormat
@@ -439,7 +467,9 @@ Private Function LireRegistre(chemin As String) As Object
             champs = Split(lignes(i), ";")
             If UBound(champs) >= Application.Max(iGcblo, iFci, iStatut) Then
                 cle = NormaliserGcblo(champs(iGcblo))
-                If cle <> "" Then d(cle) = Array(Application.Trim(champs(iFci)), UCase$(Trim$(champs(iStatut))))
+                affect = ""
+                If iAffect >= 0 And iAffect <= UBound(champs) Then affect = Trim$(champs(iAffect))
+                If cle <> "" Then d(cle) = Array(Application.Trim(champs(iFci)), UCase$(Trim$(champs(iStatut))), affect)
             End If
         End If
     Next i

@@ -181,6 +181,7 @@ Le registre écrit `registre-gcblo.csv` à chaque sauvegarde, et quelques second
 - colonne **J** : `Numéro de commande FCI : ‹fci›`, sauf si le FCI s'y trouve déjà (à n'importe quel endroit) ;
 - colonne **J**, dossiers **Mis à disposition** (et Attach) : ` / GCBLO OK` juste après le numéro, soit `Numéro de commande FCI : F… / GCBLO OK` (sans FCI ni au registre ni dans J : laissé de côté et signalé) ;
 - colonne **E** : `FACTU` pour les dossiers en Attach ;
+- colonne **I** : l'affect du registre (NUM21, AIR…) **si la cellule est vide** ; déjà le même : rien ; autre chose (autre affect, autre entreprise) : pas touché, signalé en orange dans le compte rendu ;
 - à la fin, une fenêtre « Compte rendu » montre ce qui a été fait (vert = modifié, orange = laissé de côté, lien « voir » vers la cellule). Elle se ferme sans demander d'enregistrer.
 
 La relancer ne change rien de plus : un FCI, un `GCBLO OK` et un `FACTU` déjà posés ne sont pas réécrits.
