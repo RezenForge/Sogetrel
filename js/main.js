@@ -621,6 +621,11 @@ tableauBord.addEventListener('click', e => {
 });
 setInterval(() => { dessinerBord(); sauvegardeAutomatique(); lireMailsSiAccesDonne(); }, 60 * 1000);
 setTimeout(lireMailsSiAccesDonne, 5000);
+// R23 — après « add ‹AFFECT› » (la page s'est rechargée) : confirmer
+try {
+  const ajoute = sessionStorage.getItem('gcblo.affectAjoute');
+  if (ajoute) { sessionStorage.removeItem('gcblo.affectAjoute'); invite.ecran.journal(`affect ${esc(ajoute)} ajouté · utilisable dans affect, set, ls, sync…`, 'ok'); }
+} catch { /* facultatif */ }
 dessinerBord();
 setTimeout(sauvegardeAutomatique, 3000);   // à l'ouverture, si la dernière date de plus d'une heure
 

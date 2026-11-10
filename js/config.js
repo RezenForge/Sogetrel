@@ -8,12 +8,15 @@
  * Utilisé par : dossiers.js (règles), puis l'invite et l'affichage.
  */
 
-/** Types de dossiers, dans l'ordre d'affichage. */
+import { lireAffectsAjoutes } from './affects-ajoutes.js';
+
+/** Types de dossiers (affects), dans l'ordre d'affichage ; puis ceux ajoutés avec « add » (R23). */
 export const TYPES = Object.freeze([
   { code: 'NUM21', libelle: 'NUM21' },
   { code: 'AIR', libelle: 'AIR' },
-  { code: 'SOGETREL', libelle: 'Sogetrel' }
-]);
+  { code: 'SOGETREL', libelle: 'Sogetrel' },
+  ...lireAffectsAjoutes().map(a => ({ code: a.code, libelle: a.libelle }))
+].filter((t, i, l) => l.findIndex(x => x.code === t.code) === i));
 
 /**
  * Statuts DFT. `clos: true` signifie que le dossier est terminé :

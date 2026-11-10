@@ -18,6 +18,7 @@
  * Verbes en anglais (choix du 03/11/2026) ; messages et valeurs (statuts, types) en français.
  * Chaque commande a sa fonction du même id dans actions.js.
  */
+import { lireAffectsAjoutes } from '../affects-ajoutes.js';
 export const COMMANDES = Object.freeze([
   { id: 'ls', verbes: ['ls', 'list'], resume: 'liste les dossiers',
     forme: 'ls [affect] [statut] [date] [retard|proches] [sans-fci|fci-retard] [sans-valo] [sans-affect] [texte]',
@@ -61,6 +62,8 @@ export const COMMANDES = Object.freeze([
   // Commande cachée : ni dans help, ni dans l'autocomplétion, ni dans l'historique, pas d'écho
   { id: 'morpion', verbes: ['morpion'], resume: 'une partie de morpion', forme: 'morpion', emplacements: [], cachee: true },
   { id: 'dame', verbes: ['dame'], resume: 'une partie de dames', forme: 'dame', emplacements: [], cachee: true },
+  { id: 'add', verbes: ['add'], resume: 'ajoute un affect à la liste (ex. add ELIOS)', forme: 'add ‹AFFECT›',
+    emplacements: [{ nom: 'valeur', sorte: 'texte' }] },
   { id: 'refresh', verbes: ['refresh'], resume: 'recharge la page (dernière version)', forme: 'refresh', emplacements: [] },
   { id: 'help', verbes: ['help', '?'], resume: 'aide',
     forme: 'help [commande]',
@@ -80,7 +83,9 @@ export const MOTS_STATUT = Object.freeze({
   'attente-travaux': 'ATTENTE_TRAVAUX', attente: 'ATTENTE_TRAVAUX', travaux: 'ATTENTE_TRAVAUX',
   litige: 'LITIGE', annule: 'ANNULE', attach: 'ATTACH', attache: 'ATTACH'
 });
-export const MOTS_TYPE = Object.freeze({ num21: 'NUM21', air: 'AIR', sogetrel: 'SOGETREL' });
+export const MOTS_TYPE = Object.freeze({ ...Object.fromEntries(lireAffectsAjoutes().map(a => [a.mot, a.code])), num21: 'NUM21', air: 'AIR', sogetrel: 'SOGETREL' });
+/** Liste des affects pour les messages : « num21, air, sogetrel, … » */
+export const LISTE_AFFECTS = () => [...new Set(Object.values(MOTS_TYPE))].map(c => Object.keys(MOTS_TYPE).find(m => MOTS_TYPE[m] === c)).join(', ');
 /** Périodes (jour, demain, semaine). */
 export const PERIODES = Object.freeze({ jour: 'jour', aujourdhui: 'jour', demain: 'demain', semaine: 'semaine', '7j': 'semaine' });
 

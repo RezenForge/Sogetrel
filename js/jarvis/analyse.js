@@ -16,7 +16,7 @@
  *
  * Elle est appelée à chaque touche : elle doit rester rapide et sans effet.
  */
-import { COMMANDES, MOTS_STATUT, MOTS_TYPE, MOTS_FILTRE, GROUPES, PERIODES, JOURS, CHAMPS, plat, commandeParVerbe } from './grammaire.js';
+import { COMMANDES, MOTS_STATUT, MOTS_TYPE, MOTS_FILTRE, GROUPES, PERIODES, JOURS, CHAMPS, LISTE_AFFECTS, plat, commandeParVerbe } from './grammaire.js';
 import { FORMATS, typeParCode } from '../config.js';
 import { normaliserGcblo, etatRelance } from '../dossiers.js';
 import { chercherListe } from '../info.js';
@@ -140,7 +140,7 @@ export function accepter(sorte, mot, ctx, { multiple = false } = {}) {
       return { ok: true, valeur: g };
     }
     case 'type':
-      return MOTS_TYPE[p] ? { ok: true, valeur: MOTS_TYPE[p] } : { ok: false, erreur: `affect inconnu : « ${mot} » (num21, air, sogetrel)` };
+      return MOTS_TYPE[p] ? { ok: true, valeur: MOTS_TYPE[p] } : { ok: false, erreur: `affect inconnu : « ${mot} » (${LISTE_AFFECTS()})` };
     case 'statut-ou-type':
       if (MOTS_STATUT[p]) return { ok: true, valeur: { statut: MOTS_STATUT[p] } };
       if (MOTS_TYPE[p]) return { ok: true, valeur: { type: MOTS_TYPE[p] } };

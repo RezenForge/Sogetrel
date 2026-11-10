@@ -14,7 +14,7 @@
 import { analyser, criteresListe, resultatLs } from './analyse.js';
 import { proposer, apercu } from './completion.js';
 import { esc } from './actions.js';
-import { STATUTS, typeParCode, statutParCode } from '../config.js';
+import { STATUTS, TYPES, typeParCode, statutParCode } from '../config.js';
 import { formater } from '../dates.js';
 import { formaterMontant, etatFci, relanceRecente, quandRelance } from '../dossiers.js';
 import { lireLies, liesDe, totalLies, chaleurs, chaleur } from '../dossiers-lies.js';
@@ -622,7 +622,7 @@ export function creerInvite({ racine, contexte }) {
     barreEl.innerHTML = `<span class="sel-n">${n} sélectionné${n > 1 ? 's' : ''}</span>`
       + `<select data-sel="set" aria-label="Changer le statut ou l'affect"><option value="">statut / affect…</option>`
       + options('statut DFT', STATUTS.map(s => [motPourCode(MOTS_STATUT, s.code), s.libelle]))
-      + options('affect', ['NUM21', 'AIR', 'SOGETREL'].map(c => [motPourCode(MOTS_TYPE, c), typeParCode(c).libelle])) + '</select>'
+      + options('affect', TYPES.map(t => [motPourCode(MOTS_TYPE, t.code), t.libelle])) + '</select>'
       + '<button type="button" data-sel="attachement">attachement</button>'
       + '<button type="button" data-sel="copier" title="copie les GCBLO, un par ligne (à coller dans Excel)">copier</button>'
       + '<button type="button" data-sel="delete" class="sel-danger">supprimer</button>'

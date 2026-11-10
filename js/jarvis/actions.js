@@ -25,7 +25,8 @@
  *   ouvrirMail(lien)         ouvre un lien mailto: dans la messagerie
  */
 import { criteresListe, resultatLs, analyser } from './analyse.js';
-import { COMMANDES, SORTES, MOTS_TYPE, MOTS_STATUT, CHAMPS, plat } from './grammaire.js';
+import { COMMANDES, SORTES, MOTS_TYPE, MOTS_STATUT, MOTS_FILTRE, GROUPES, PERIODES, JOURS, CHAMPS, LISTE_AFFECTS, plat } from './grammaire.js';
+import { nouvelAffect, ajouterAffect } from '../affects-ajoutes.js';
 import { lireDate } from './analyse.js';
 import { IMPORT_EXCEL } from '../config.js';
 import { lireClasseur, modifierClasseur, contientMacros } from '../xlsx.js';
@@ -33,7 +34,7 @@ import { cellulesAttachement } from '../attachement.js';
 import { mailAffectation, mailRelance, mailAttachement, csvMailsAttachement, NOM_CSV_MAILS, lienMailto, AFFECTS_MAIL } from '../mails.js';
 import { contenuSauvegarde, nomSauvegarde, lireSauvegarde, GARDER } from '../sauvegarde.js';
 import { lireAffectsClasseur, noterAffectsClasseur, ecartAffect } from '../affects-classeur.js';
-import { typeParCode, statutParCode } from '../config.js';
+import { TYPES, typeParCode, statutParCode } from '../config.js';
 import { CARTES, carteHtml } from './aujourdhui.js';
 import { demarrerMorpion } from './morpion.js';
 import { demarrerDame } from './dame.js';
@@ -189,7 +190,7 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
       const nom = Object.keys(CHAMPS).find(k => CHAMPS[k] === v.champ);
       let valeur;
       switch (v.champ) {
-        case 'type': valeur = vide ? null : MOTS_TYPE[plat(brut)]; if (!vide && !valeur) return erreur(`affect inconnu : « ${esc(brut)} » (num21, air, sogetrel)`); break;
+        case 'type': valeur = vide ? null : MOTS_TYPE[plat(brut)]; if (!vide && !valeur) return erreur(`affect inconnu : « ${esc(brut)} » (${esc(LISTE_AFFECTS())})`); break;
         case 'statutDft': valeur = MOTS_STATUT[plat(brut)]; if (!valeur) return erreur(`statut inconnu : « ${esc(brut)} »`); break;
         case 'dateAffectation': valeur = vide ? null : lireDate(brut, regles.aujourdhui()); if (!vide && !valeur) return erreur(`date non comprise : « ${esc(brut)} »`); break;
         case 'dateRelance': valeur = vide ? null : lireDate(brut, regles.aujourdhui()); if (!vide && !valeur) return erreur(`date non comprise : « ${esc(brut)} »`); break;
@@ -416,6 +417,19 @@ export function creerActions({ regles, store, reglages, ecran, confirmer, demand
 
     /** Recharge la page, en allant chercher la dernière version publiée (comme Ctrl+F5). */
     async refresh() { info('rechargement…'); await recharger(); },
+
+    /** R23 — « add ‹AFFECT› » : un affect de plus dans la liste (étiquette seulement), puis la page se recharge. */
+    async add(v) {
+      const nom = String(v.valeur ?? '').trim();
+      const motsPris = [...Object.keys(MOTS_TYPE), ...Object.keys(MOTS_STATUT), ...Object.keys(MOTS_FILTRE), ...Object.keys(GROUPES),
+        ...Object.keys(PERIODES), ...JOURS, ...Object.keys(CHAMPS), ...COMMANDES.flatMap(c => c.verbes), 'fichier', 'folder', 'stop', 'chrome', 'mozilla', 'lies'];
+      const r = nouvelAffect(nom, motsPris, TYPES.map(t => t.code));
+      if (!r.ok) return erreur(esc(r.erreur));
+      if (!ajouterAffect(r.affect)) return erreur('le navigateur refuse d’enregistrer l’affect');
+      try { sessionStorage.setItem('gcblo.affectAjoute', r.affect.libelle); } catch { /* facultatif */ }
+      ok(`affect ${esc(r.affect.libelle)} ajouté <span class="dim">· rechargement…</span>`);
+      await recharger();
+    },
 
     /** Sans sujet : la liste des commandes (cliquables) ; avec un sujet : le détail d'une commande. */
     help(v) {
